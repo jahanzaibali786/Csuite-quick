@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\DataTables\GeneralLedgerListDataTable;
 use App\Exports\AccountStatementExport;
 use App\Exports\BalanceSheetExport;
 use App\Exports\LeaveReportExport;
@@ -1863,6 +1864,127 @@ class ReportController extends Controller
         }
     }
 
+    public function general_ledger_list(GeneralLedgerListDataTable $dataTable, Request $request, $account = '', $account_id = '')
+{
+    if (!\Auth::user()->can('ledger report')) {
+        return redirect()->back()->with('error', __('Permission Denied.'));
+    }
+
+    // Handle report period filter (like Trial Balance)
+    $reportPeriod = $request->get('report_period', '');
+
+    if (!empty($reportPeriod)) {
+        $dates = $this->getReportPeriodDates($reportPeriod);
+        $start = $dates['start'];
+        $end   = $dates['end'];
+    } elseif (!empty($request->start_date) && !empty($request->end_date)) {
+        $start = $request->start_date;
+        $end   = $request->end_date;
+    } else {
+        $start = Carbon::now()->startOfMonth()->format('Y-m-d');
+        $end   = Carbon::now()->format('Y-m-d');
+    }
+
+    $accountingMethod = $request->accounting_method ?? 'accrual';
+    $selectedAccount  = $request->account ?? '';
+
+    // Get chart of accounts based on filter
+    if (!empty($selectedAccount)) {
+        $chart_accounts = ChartOfAccount::where('id', $selectedAccount)
+            ->where('created_by', \Auth::user()->creatorId())
+            ->get();
+    } else {
+        $chart_accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get();
+    }
+
+    // Get parent accounts for dropdown
+    $accounts = ChartOfAccount::select('id', 'code', 'name', 'parent')
+        ->where('parent', 0)
+        ->where('created_by', \Auth::user()->creatorId())
+        ->orderBy('name')
+        ->get()
+        ->toArray();
+
+    // Get sub accounts
+    $subAccounts = ChartOfAccount::select(
+            'chart_of_accounts.id',
+            'chart_of_accounts.code',
+            'chart_of_accounts.name',
+            'chart_of_account_parents.account'
+        )
+        ->leftJoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id')
+        ->where('chart_of_accounts.parent', '!=', 0)
+        ->where('chart_of_accounts.created_by', \Auth::user()->creatorId())
+        ->orderBy('chart_of_accounts.name')
+        ->get()
+        ->toArray();
+
+    $filter = [
+        'startDateRange'   => $start,
+        'endDateRange'     => $end,
+        'accountingMethod' => $accountingMethod,
+        'selectedAccount'  => $selectedAccount,
+        'balance'          => 0,
+        'credit'           => 0,
+        'debit'            => 0,
+    ];
+
+    $companyName = "Craig's Design and Landscaping Services"; // This should come from settings
+
+    return $dataTable->render(
+        'report.general_ledger_list',
+        compact('filter', 'chart_accounts', 'accounts', 'subAccounts', 'account', 'account_id', 'companyName', 'reportPeriod')
+    );
+}
+
+private function getReportPeriodDatesTwo($period)
+{
+    $today = Carbon::today();
+
+    switch ($period) {
+        case 'this_month':
+            return [
+                'start' => $today->copy()->startOfMonth()->toDateString(),
+                'end'   => $today->copy()->endOfMonth()->toDateString(),
+            ];
+        case 'last_month':
+            return [
+                'start' => $today->copy()->subMonth()->startOfMonth()->toDateString(),
+                'end'   => $today->copy()->subMonth()->endOfMonth()->toDateString(),
+            ];
+        case 'this_year':
+            return [
+                'start' => $today->copy()->startOfYear()->toDateString(),
+                'end'   => $today->copy()->endOfYear()->toDateString(),
+            ];
+        // TODO: extend with all your options
+        default:
+            return [
+                'start' => request('start_date'),
+                'end'   => request('end_date'),
+            ];
+    }
+}
+
+
+    public function getAccountData(Request $request)
+    {
+        $accountId = $request->account_id;
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+
+        $query = GeneralEntry::with(['account', 'journalEntry.user'])
+            ->whereBetween('date', [$startDate, $endDate]);
+
+        if ($accountId) {
+            $query->where('account_id', $accountId);
+        }
+
+        $entries = $query->orderBy('date', 'desc')->get();
+
+        return response()->json($entries);
+    }
+
     // public function trialBalanceSummary(Request $request)
     // {
     //     if (\Auth::user()->can('trial balance report')) {
@@ -1990,7 +2112,14 @@ class ReportController extends Controller
     {
         if (\Auth::user()->can('trial balance report')) {
 
-            if (!empty($request->start_date) && !empty($request->end_date)) {
+            // Handle report period filter
+            $reportPeriod = $request->get('report_period', '');
+
+            if (!empty($reportPeriod)) {
+                $dates = $this->getReportPeriodDates($reportPeriod);
+                $start = $dates['start'];
+                $end = $dates['end'];
+            } elseif (!empty($request->start_date) && !empty($request->end_date)) {
                 $start = $request->start_date;
                 $end = $request->end_date;
             } else {
@@ -2043,7 +2172,6 @@ class ReportController extends Controller
                             $parentAccs = $parentAccs->get()->toArray();
                         } elseif ($parentAccs != [] && $accounts == []) {
                             $parentAccs = [];
-
                         }
 
                         $parenttotalBalance = 0;
@@ -2171,10 +2299,128 @@ class ReportController extends Controller
 
             $filter['startDateRange'] = $start;
             $filter['endDateRange'] = $end;
-            return view('report.trial_balance', compact('filter', 'totalAccounts', 'view'));
+
+            // Handle view_type parameter for compact/normal views
+            $viewType = $request->get('view_type', 'normal');
+
+            return view('report.trial_balance', compact('filter', 'totalAccounts', 'view', 'viewType', 'reportPeriod'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
+    }
+
+    /**
+     * Get start and end dates based on report period
+     */
+    private function getReportPeriodDates($period)
+    {
+        $today = now();
+        $dates = [];
+
+        switch ($period) {
+            case 'all_dates':
+                $dates['start'] = '1900-01-01';
+                $dates['end'] = '2099-12-31';
+                break;
+            case 'today':
+                $dates['start'] = $today->format('Y-m-d');
+                $dates['end'] = $today->format('Y-m-d');
+                break;
+            case 'this_week':
+                $dates['start'] = $today->startOfWeek()->format('Y-m-d');
+                $dates['end'] = $today->endOfWeek()->format('Y-m-d');
+                break;
+            case 'this_week_to_date':
+                $dates['start'] = $today->startOfWeek()->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'this_month':
+                $dates['start'] = $today->startOfMonth()->format('Y-m-d');
+                $dates['end'] = $today->endOfMonth()->format('Y-m-d');
+                break;
+            case 'this_month_to_date':
+                $dates['start'] = $today->startOfMonth()->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'this_quarter':
+                $dates['start'] = $today->startOfQuarter()->format('Y-m-d');
+                $dates['end'] = $today->endOfQuarter()->format('Y-m-d');
+                break;
+            case 'this_quarter_to_date':
+                $dates['start'] = $today->startOfQuarter()->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'this_year':
+                $dates['start'] = $today->startOfYear()->format('Y-m-d');
+                $dates['end'] = $today->endOfYear()->format('Y-m-d');
+                break;
+            case 'this_year_to_date':
+                $dates['start'] = $today->startOfYear()->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'this_year_to_last_month':
+                $dates['start'] = $today->startOfYear()->format('Y-m-d');
+                $dates['end'] = now()->subMonth()->endOfMonth()->format('Y-m-d');
+                break;
+            case 'yesterday':
+                $dates['start'] = $today->subDay()->format('Y-m-d');
+                $dates['end'] = $today->subDay()->format('Y-m-d');
+                break;
+            case 'last_week':
+                $dates['start'] = $today->subWeek()->startOfWeek()->format('Y-m-d');
+                $dates['end'] = $today->subWeek()->endOfWeek()->format('Y-m-d');
+                break;
+            case 'last_month':
+                $dates['start'] = $today->subMonth()->startOfMonth()->format('Y-m-d');
+                $dates['end'] = $today->subMonth()->endOfMonth()->format('Y-m-d');
+                break;
+            case 'last_quarter':
+                $dates['start'] = $today->subQuarter()->startOfQuarter()->format('Y-m-d');
+                $dates['end'] = $today->subQuarter()->endOfQuarter()->format('Y-m-d');
+                break;
+            case 'last_year':
+                $dates['start'] = $today->subYear()->startOfYear()->format('Y-m-d');
+                $dates['end'] = $today->subYear()->endOfYear()->format('Y-m-d');
+                break;
+            case 'last_7_days':
+                $dates['start'] = $today->subDays(7)->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'last_30_days':
+                $dates['start'] = $today->subDays(30)->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'last_90_days':
+                $dates['start'] = $today->subDays(90)->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'last_12_months':
+                $dates['start'] = $today->subMonths(12)->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'since_30_days':
+                $dates['start'] = $today->subDays(30)->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'since_60_days':
+                $dates['start'] = $today->subDays(60)->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'since_90_days':
+                $dates['start'] = $today->subDays(90)->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            case 'since_365_days':
+                $dates['start'] = $today->subDays(365)->format('Y-m-d');
+                $dates['end'] = now()->format('Y-m-d');
+                break;
+            default:
+                $dates['start'] = date('Y-01-01');
+                $dates['end'] = date('Y-m-d');
+                break;
+        }
+
+        return $dates;
     }
     public function leave(Request $request)
     {
