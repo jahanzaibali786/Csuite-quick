@@ -790,10 +790,8 @@ Route::group(['middleware' => ['verified']], function () {
 
     //Abdullah Reports
     Route::get("/receivables/agingsummary", [VoucherController::class, 'AgingSummary'])->name("AgingSummary.index");
-    Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])
-        ->name("AgingDetails.index");
-    Route::get("/receivables/customerbalance", [VoucherController::class, 'CustomerBalance'])
-        ->name("Customer.index");
+    Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])->name("AgingDetails.index");
+    Route::get("/receivables/customerbalance", [VoucherController::class, 'CustomerBalance'])->name("Customer.index");
 
 
     // cya routes
