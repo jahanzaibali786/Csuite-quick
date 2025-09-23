@@ -4,7 +4,7 @@
     <div class="content-wrapper">
         <!-- Header with actions -->
         <div class="report-header">
-            <h4 class="mb-0">A/R Aging Summary Report</h4>
+            <h4 class="mb-0">{{ $pageTitle }}</h4>
             <div class="header-actions">
                 <span class="last-updated">Last updated 8 minutes ago</span>
                 <div class="actions">
@@ -20,7 +20,7 @@
         <!-- Filter Controls -->
         <div class="filter-controls">
             <div class="filter-row">
-                <div class="filter-group row mb-2">
+                <div class="filter-group row mb-2 align-items-end">
                     <div class="filter-item col-md-3">
                         <label class="filter-label">Report period</label>
                         <select id="filter-period" class="form-control">
@@ -29,19 +29,13 @@
                             <option value="today">Today</option>
                             <option value="this_week">This week</option>
                             <option value="this_week_to_date">This week to date</option>
-                            <option value="this_fiscal_week">This fiscal week</option>
                             <option value="this_month">This month</option>
                             <option value="this_month_to_date" selected>This month to date</option>
                             <option value="this_quarter">This quarter</option>
                             <option value="this_quarter_to_date">This quarter to date</option>
-                            <option value="this_fiscal_quarter">This fiscal quarter</option>
-                            <option value="this_fiscal_quarter_to_date">This fiscal quarter to date</option>
                             <option value="this_year">This year</option>
                             <option value="this_year_to_date">This year to date</option>
                             <option value="this_year_to_last_month">This year to last month</option>
-                            <option value="this_fiscal_year">This fiscal year</option>
-                            <option value="this_fiscal_year_to_date">This fiscal year to date</option>
-                            <option value="this_fiscal_year_to_last_month">This fiscal year to last month</option>
                             <option value="yesterday">Yesterday</option>
                             <option value="recent">Recent</option>
                             <option value="last_week">Last week</option>
@@ -53,13 +47,9 @@
                             <option value="last_quarter">Last quarter</option>
                             <option value="last_quarter_to_date">Last quarter to date</option>
                             <option value="last_quarter_to_today">Last quarter to today</option>
-                            <option value="last_fiscal_quarter">Last fiscal quarter</option>
-                            <option value="last_fiscal_quarter_to_date">Last fiscal quarter to date</option>
                             <option value="last_year">Last year</option>
                             <option value="last_year_to_date">Last year to date</option>
                             <option value="last_year_to_today">Last year to today</option>
-                            <option value="last_fiscal_year">Last fiscal year</option>
-                            <option value="last_fiscal_year_to_date">Last fiscal year to date</option>
                             <option value="last_7_days">Last 7 days</option>
                             <option value="last_30_days">Last 30 days</option>
                             <option value="last_90_days">Last 90 days</option>
@@ -72,53 +62,45 @@
                             <option value="next_4_weeks">Next 4 weeks</option>
                             <option value="next_month">Next month</option>
                             <option value="next_quarter">Next quarter</option>
-                            <option value="next_fiscal_quarter">Next fiscal quarter</option>
                             <option value="next_year">Next year</option>
-                            <option value="next_fiscal_year">Next fiscal year</option>
                         </select>
 
                     </div>
 
                     <div class="filter-item col-md-3">
                         <label class="filter-label">as of</label>
-                        <input type="text" id="daterange" class="form-control date-input"
-                            value="{{ Carbon\Carbon::now()->startOfMonth()->format('m/d/Y') }} - {{ Carbon\Carbon::now()->format('m/d/Y') }}">
-                        <input type="hidden" id="filter-start-date"
+                        {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                        <input type="date" class="form-control d-none" name="start_date" id="filter-start-date"
                             value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                        <input type="hidden" id="filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                        <input type="date" class="form-control " name="end_date" id="filter-end-date"
+                            value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                    </div>
+                    <div class="filter-item col-md-2 mt-4">
+                        <button class="btn btn-view-options" id="view-options-btn"
+                            style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
+                            <i class="fa fa-eye"></i> View options
+                        </button>
                     </div>
 
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Accounting method</label>
-                        <select id="accounting-method" class="form-control">
-                            <option value="accrual" selected>Accrual</option>
-                            <option value="cash">Cash</option>
-                        </select>
+                    <!-- Action buttons row -->
+                    <div class="col-md-4 d-flex align-items-end gap-2 " style="justify-content: end;">
+
+                        <button class="btn btn-outline" id="filter-btn">
+                            <i class="fa fa-filter"></i> Filter
+                        </button>
+                        <button class="btn btn-outline" id="general-options-btn">
+                            <i class="fa fa-cog"></i> General options
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Action buttons row -->
-            <div class="action-buttons-row">
-                <button class="btn btn-outline" id="columns-btn">
-                    <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
-                </button>
-                <button class="btn btn-outline" id="filter-btn">
-                    <i class="fa fa-filter"></i> Filter
-                </button>
-                <button class="btn btn-outline" id="general-options-btn">
-                    <i class="fa fa-cog"></i> General options
-                </button>
-                <button class="btn btn-view-options" id="view-options-btn">
-                    <i class="fa fa-eye"></i> View options
-                </button>
             </div>
         </div>
 
         <!-- Report Content -->
         <div class="report-content">
             <div class="report-title-section">
-                <h2 class="report-title">A/R Aging Summary Report</h2>
+                <h2 class="report-title">{{ $pageTitle }}</h2>
                 {{-- <p class="company-name">{{ config('app.name', 'Craig\'s Design and Landscaping Services') }}</p> --}}
                 <p class="date-range">
                     <span id="date-range-display">
@@ -759,10 +741,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                            flex-direction: column;
-                            width: 100%;
-                            gap: 16px;
-                        } */
+                                    flex-direction: column;
+                                    width: 100%;
+                                    gap: 16px;
+                                } */
 
             .filter-item {
                 width: 100%;
@@ -907,56 +889,212 @@
                 let startDate, endDate;
 
                 switch (period) {
+                    case 'all_dates':
+                        startDate = null;
+                        endDate = null;
+                        break;
+
+                    case 'custom_date':
+                        // Do nothing, let user pick manually
+                        return;
+
                     case 'today':
                         startDate = today.clone();
                         endDate = today.clone();
                         break;
+
+                    case 'yesterday':
+                        startDate = today.clone().subtract(1, 'day');
+                        endDate = today.clone().subtract(1, 'day');
+                        break;
+
                     case 'this_week':
                         startDate = today.clone().startOf('week');
                         endDate = today.clone().endOf('week');
                         break;
+
+                    case 'this_week_to_date':
+                        startDate = today.clone().startOf('week');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_week':
+                        startDate = today.clone().subtract(1, 'week').startOf('week');
+                        endDate = today.clone().subtract(1, 'week').endOf('week');
+                        break;
+
+                    case 'last_week_to_date':
+                        startDate = today.clone().subtract(1, 'week').startOf('week');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_week_to_today':
+                        startDate = today.clone().subtract(1, 'week').startOf('week');
+                        endDate = today.clone();
+                        break;
+
                     case 'this_month':
                         startDate = today.clone().startOf('month');
                         endDate = today.clone().endOf('month');
                         break;
+
                     case 'this_month_to_date':
                         startDate = today.clone().startOf('month');
                         endDate = today.clone();
                         break;
-                    case 'this_quarter':
-                        startDate = today.clone().startOf('quarter');
-                        endDate = today.clone().endOf('quarter');
-                        break;
-                    case 'this_year':
-                        startDate = today.clone().startOf('year');
-                        endDate = today.clone().endOf('year');
-                        break;
+
                     case 'last_month':
                         startDate = today.clone().subtract(1, 'month').startOf('month');
                         endDate = today.clone().subtract(1, 'month').endOf('month');
                         break;
+
+                    case 'last_month_to_date':
+                        startDate = today.clone().subtract(1, 'month').startOf('month');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_month_to_today':
+                        startDate = today.clone().subtract(1, 'month').startOf('month');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_quarter':
+                        startDate = today.clone().startOf('quarter');
+                        endDate = today.clone().endOf('quarter');
+                        break;
+
+                    case 'this_quarter_to_date':
+                        startDate = today.clone().startOf('quarter');
+                        endDate = today.clone();
+                        break;
+
                     case 'last_quarter':
                         startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
                         endDate = today.clone().subtract(1, 'quarter').endOf('quarter');
                         break;
+
+                    case 'last_quarter_to_date':
+                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_quarter_to_today':
+                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_year':
+                        startDate = today.clone().startOf('year');
+                        endDate = today.clone().endOf('year');
+                        break;
+
+                    case 'this_year_to_date':
+                        startDate = today.clone().startOf('year');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_year_to_last_month':
+                        startDate = today.clone().startOf('year');
+                        endDate = today.clone().subtract(1, 'month').endOf('month');
+                        break;
+
                     case 'last_year':
                         startDate = today.clone().subtract(1, 'year').startOf('year');
                         endDate = today.clone().subtract(1, 'year').endOf('year');
                         break;
+
+                    case 'last_year_to_date':
+                        startDate = today.clone().subtract(1, 'year').startOf('year');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_year_to_today':
+                        startDate = today.clone().subtract(1, 'year').startOf('year');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_7_days':
+                        startDate = today.clone().subtract(6, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_30_days':
+                        startDate = today.clone().subtract(29, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_90_days':
+                        startDate = today.clone().subtract(89, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_12_months':
+                        startDate = today.clone().subtract(12, 'months').startOf('month');
+                        endDate = today.clone().endOf('month');
+                        break;
+
+                    case 'since_30_days_ago':
+                        startDate = today.clone().subtract(30, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'since_60_days_ago':
+                        startDate = today.clone().subtract(60, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'since_90_days_ago':
+                        startDate = today.clone().subtract(90, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'since_365_days_ago':
+                        startDate = today.clone().subtract(365, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'next_week':
+                        startDate = today.clone().add(1, 'week').startOf('week');
+                        endDate = today.clone().add(1, 'week').endOf('week');
+                        break;
+
+                    case 'next_4_weeks':
+                        startDate = today.clone().add(1, 'week').startOf('week');
+                        endDate = today.clone().add(4, 'week').endOf('week');
+                        break;
+
+                    case 'next_month':
+                        startDate = today.clone().add(1, 'month').startOf('month');
+                        endDate = today.clone().add(1, 'month').endOf('month');
+                        break;
+
+                    case 'next_quarter':
+                        startDate = today.clone().add(1, 'quarter').startOf('quarter');
+                        endDate = today.clone().add(1, 'quarter').endOf('quarter');
+                        break;
+
+                    case 'next_year':
+                        startDate = today.clone().add(1, 'year').startOf('year');
+                        endDate = today.clone().add(1, 'year').endOf('year');
+                        break;
+
                     default:
                         startDate = today.clone().startOf('month');
                         endDate = today.clone();
                 }
 
+                // Update the inputs if not custom_date or all_dates
+                // if (startDate && endDate) {
+                //     $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
+                //     $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
+                // }
                 // Update hidden date fields
                 $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
                 $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
 
                 // Update DateRangePicker to reflect the new dates
-                $('#daterange').data('daterangepicker').setStartDate(startDate);
-                $('#daterange').data('daterangepicker').setEndDate(endDate);
-
-                // Update display
+                // $('#daterange').data('daterangepicker').setStartDate(startDate);
+                // $('#daterange').data('daterangepicker').setEndDate(endDate);
                 updateDateDisplay();
                 refreshData();
             }
@@ -969,14 +1107,14 @@
                 const formattedStart = startDate.format('MMMM D, YYYY');
                 const formattedEnd = endDate.format('MMMM D, YYYY');
 
-                $('#date-range-display').text(formattedStart + ' - ' + formattedEnd);
+                $('#date-range-display').text(' As of  ' + formattedEnd);
             }
 
             // Refresh data function
             function refreshData() {
                 if (window.LaravelDataTables && window.LaravelDataTables["aging-summary-table"]) {
                     window.LaravelDataTables["aging-summary-table"].draw();
-                    {{-- console.log("HI") --}}
+                    // {{-- console.log("HI") --}}
                 } else {
                     console.log('DataTable not yet initialized');
                     setTimeout(refreshData, 100);
@@ -984,13 +1122,17 @@
             }
 
             // Handle date changes
-            $('#start-date, #end-date').on('apply.daterangepicker', function() {
+            $('#filter-start-date, #filter-end-date').on('apply.daterangepicker', function() {
                 updateDateDisplay();
                 refreshData();
             });
 
             // Handle account filter changes
             $('#filter-account').on('change', function() {
+                refreshData();
+            });
+            $('#filter-end-date').on('change', function() {
+                updateDateDisplay();
                 refreshData();
             });
 
@@ -1001,12 +1143,11 @@
 
             // Setup DataTable ajax parameters
             $('#aging-summary-table').on('preXhr.dt', function(e, settings, data) {
-                data.startDate = moment($('#start-date').val(), 'MM/DD/YYYY').format('YYYY-MM-DD');
-                data.endDate = moment($('#end-date').val(), 'MM/DD/YYYY').format('YYYY-MM-DD');
+                data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
+                data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.account_id = $('#filter-account').val();
                 data.accounting_method = $('#accounting-method').val();
 
-                // Add general options to the request
                 data.reportOptions = window.reportOptions;
             });
 
@@ -1252,8 +1393,8 @@
                     // Save current settings to localStorage for demo
                     const settings = {
                         name: reportName,
-                        startDate: $('#start-date').val(),
-                        endDate: $('#end-date').val(),
+                        startDate: $('#filter-start-date').val(),
+                        endDate: $('#filter-end-date').val(),
                         account: $('#filter-account').val(),
                         accountingMethod: $('#accounting-method').val(),
                         options: window.reportOptions,

@@ -675,6 +675,7 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('profit-loss-report/{view?}/{collapseView?}', [ReportController::class, 'profitLoss'])->name('report.profit.loss');
 
             Route::get('ledger-report/{account?}', [ReportController::class, 'ledgerSummary'])->name('report.ledger');
+            Route::get('general-ledger-list/{account?}/{account_id?}', [ReportController::class, 'general_ledger_list'])->name('report.general.ledger');
             Route::get('trial-balance-report/{view?}', [ReportController::class, 'trialBalanceSummary'])->name('trial.balance');
 
             Route::get('reports-monthly-cashflow', [ReportController::class, 'monthlyCashflow'])->name('report.monthly.cashflow')->middleware(['auth', 'XSS']);
@@ -688,6 +689,7 @@ Route::group(['middleware' => ['verified']], function () {
             Route::post('export/receivables', [ReportController::class, 'ReceivablesExport'])->name('receivables.export');
             Route::get('report/payables', [ReportController::class, 'PayablesReport'])->name('report.payables');
             Route::get('report/recurring-invoices', [ReportController::class, 'RecurringInvoices'])->name('report.recurring');
+            Route::get('report/recurring-payments', [ReportController::class, 'RecurringPayments'])->name('report.recurring-payments');
         }
     );
 
@@ -788,10 +790,8 @@ Route::group(['middleware' => ['verified']], function () {
 
     //Abdullah Reports
     Route::get("/receivables/agingsummary", [VoucherController::class, 'AgingSummary'])->name("AgingSummary.index");
-    Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])
-        ->name("AgingDetails.index");
-    Route::get("/receivables/customerbalance", [VoucherController::class, 'CustomerBalance'])
-        ->name("Customer.index");
+    Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])->name("AgingDetails.index");
+    Route::get("/receivables/customerbalance", [VoucherController::class, 'CustomerBalance'])->name("Customer.index");
 
 
     // cya routes
