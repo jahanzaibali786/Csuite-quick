@@ -1814,55 +1814,56 @@ class ReportController extends Controller
     //     }
     // }
 
-    public function ledgerSummary(Request $request, $account = '')
-    {
+        public function ledgerSummary(Request $request, $account = '')
+        {
 
-        if (\Auth::user()->can('ledger report')) {
+            if (\Auth::user()->can('ledger report')) {
 
-            if (!empty($request->start_date) && !empty($request->end_date)) {
-                $start = $request->start_date;
-                $end = $request->end_date;
+                if (!empty($request->start_date) && !empty($request->end_date)) {
+                    $start = $request->start_date;
+                    $end = $request->end_date;
+                } else {
+                    $start = date('Y-m-01');
+                    $end = date('Y-m-t');
+                }
+                if (!empty($request->account)) {
+                    $chart_accounts = ChartOfAccount::where('id', $request->account)->where('created_by', \Auth::user()->creatorId())->get();
+                    // $accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+                    $accounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_accounts.parent')
+                        ->where('parent', '=', 0)
+                        ->where('created_by', \Auth::user()->creatorId())->get()
+                        ->toarray();
+
+                } else {
+                    $chart_accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get();
+                    // $accounts = $chart_accounts->pluck('name', 'id');
+                    $accounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_accounts.parent')
+                        ->where('parent', '=', 0)
+                        ->where('created_by', \Auth::user()->creatorId())->get()
+                        ->toarray();
+                }
+
+                $subAccounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_account_parents.account');
+                $subAccounts->leftjoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id');
+                $subAccounts->where('chart_of_accounts.parent', '!=', 0);
+                $subAccounts->where('chart_of_accounts.created_by', \Auth::user()->creatorId());
+                $subAccounts = $subAccounts->get()->toArray();
+
+                $balance = 0;
+                $debit = 0;
+                $credit = 0;
+                $filter['balance'] = $balance;
+                $filter['credit'] = $credit;
+                $filter['debit'] = $debit;
+                $filter['startDateRange'] = $start;
+                $filter['endDateRange'] = $end;
+
+                return view('report.ledger_summary', compact('filter', 'chart_accounts', 'accounts', 'subAccounts'));
+
             } else {
-                $start = date('Y-m-01');
-                $end = date('Y-m-t');
+                return redirect()->back()->with('error', __('Permission Denied.'));
             }
-            if (!empty($request->account)) {
-                $chart_accounts = ChartOfAccount::where('id', $request->account)->where('created_by', \Auth::user()->creatorId())->get();
-                // $accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-                $accounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_accounts.parent')
-                    ->where('parent', '=', 0)
-                    ->where('created_by', \Auth::user()->creatorId())->get()
-                    ->toarray();
-
-            } else {
-                $chart_accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get();
-                // $accounts = $chart_accounts->pluck('name', 'id');
-                $accounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_accounts.parent')
-                    ->where('parent', '=', 0)
-                    ->where('created_by', \Auth::user()->creatorId())->get()
-                    ->toarray();
-            }
-
-            $subAccounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_account_parents.account');
-            $subAccounts->leftjoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id');
-            $subAccounts->where('chart_of_accounts.parent', '!=', 0);
-            $subAccounts->where('chart_of_accounts.created_by', \Auth::user()->creatorId());
-            $subAccounts = $subAccounts->get()->toArray();
-
-            $balance = 0;
-            $debit = 0;
-            $credit = 0;
-            $filter['balance'] = $balance;
-            $filter['credit'] = $credit;
-            $filter['debit'] = $debit;
-            $filter['startDateRange'] = $start;
-            $filter['endDateRange'] = $end;
-            return view('report.ledger_summary', compact('filter', 'chart_accounts', 'accounts', 'subAccounts'));
-
-        } else {
-            return redirect()->back()->with('error', __('Permission Denied.'));
         }
-    }
 
     public function general_ledger_list(GeneralLedgerListDataTable $dataTable, Request $request, $account = '', $account_id = '')
 {

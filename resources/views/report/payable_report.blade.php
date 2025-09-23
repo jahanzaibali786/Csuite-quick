@@ -259,9 +259,12 @@
                                                     $total = 0;
                                                     $totalAmount = 0;
 
-                                                    function compare($a, $b)
-                                                    {
-                                                        return strtotime($b['bill_date']) - strtotime($a['bill_date']);
+                                                    if (!function_exists('compare')) {
+                                                        function compare($a, $b)
+                                                        {
+                                                            return strtotime($b['issue_date']) -
+                                                                strtotime($a['issue_date']);
+                                                        }
                                                     }
                                                     usort($payableSummaries, 'compare');
                                                 @endphp
