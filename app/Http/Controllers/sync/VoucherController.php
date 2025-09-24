@@ -268,7 +268,7 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('accounting.profit_loss.index', $this->data);
+        return $dataTable->render('sync.profit_loss.index', $this->data);
     }
 
     public function profitLossDetail(\App\DataTables\ProfitLossDetailDataTable $dataTable, Request $request)

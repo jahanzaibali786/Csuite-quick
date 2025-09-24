@@ -13,6 +13,8 @@ class ProfitLossDataTable extends DataTable
     protected $startDate;
     protected $endDate;
 
+    protected $companyId;
+
     public function __construct()
     {
         parent::__construct();
@@ -24,6 +26,8 @@ class ProfitLossDataTable extends DataTable
         $this->endDate = request('endDate')
             ? Carbon::parse(request('endDate'))->endOfDay()
             : Carbon::now()->endOfDay();
+
+        $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
     }
 
     public function dataTable($query)
@@ -104,22 +108,20 @@ class ProfitLossDataTable extends DataTable
 
     public function query()
     {
-        $accounts = ChartOfAccount::where('chart_of_accounts.company_id', company()->id)
-            ->leftJoin('chart_of_account_types', 'chart_of_accounts.chart_of_account_type_id', '=', 'chart_of_account_types.id')
-            ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.chart_of_account_sub_type_id', '=', 'chart_of_account_sub_types.id')
-            ->leftJoin('journal_entry_lines', 'chart_of_accounts.id', '=', 'journal_entry_lines.chart_of_account_id')
-            ->leftJoin('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
-            ->where('journal_entries.company_id', company()->id)
+        $accounts = ChartOfAccount::where('chart_of_accounts.company_id', $this->companyId)
+            ->leftJoin('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
+            ->leftJoin('journal_items', 'chart_of_accounts.id', '=', 'journal_items.account')
+            ->leftJoin('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->where('journal_entries.'.\Auth::user()->type === 'company' ? 'created_by' : 'owned_by', $this->companyId)
             ->whereBetween('journal_entries.date', [$this->startDate, $this->endDate])
-            ->where('journal_entries.status', 'draft')
             ->select([
                 'chart_of_accounts.id',
                 'chart_of_accounts.name',
                 'chart_of_accounts.code',
                 'chart_of_account_types.name as account_type',
-                'chart_of_account_sub_types.code as sub_type_code',
-                DB::raw('COALESCE(SUM(journal_entry_lines.debit), 0) as total_debit'),
-                DB::raw('COALESCE(SUM(journal_entry_lines.credit), 0) as total_credit'),
+                DB::raw('COALESCE(SUM(journal_items.debit), 0) as total_debit'),
+                DB::raw('COALESCE(SUM(journal_items.credit), 0) as total_credit'),
             ])
             ->whereIn('chart_of_account_types.name', ['Income', 'Expense', 'Cost of Sales'])
             ->groupBy(
@@ -127,10 +129,10 @@ class ProfitLossDataTable extends DataTable
                 'chart_of_accounts.name',
                 'chart_of_accounts.code',
                 'chart_of_account_types.name',
-                'chart_of_account_sub_types.code'
+                // 'chart_of_account_sub_types.code'
             )
             ->orderBy('chart_of_account_types.name')
-            ->orderBy('chart_of_accounts.code')
+            // ->orderBy('chart_of_accounts.code')
             ->get();
 
         $report = collect();
@@ -265,7 +267,7 @@ class ProfitLossDataTable extends DataTable
             ->setTableId('profit-loss-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->dom('Bfrtip')
+            // ->dom('Bfrtip')
             ->parameters([
                 'paging' => false,
                 'searching' => false,
