@@ -791,8 +791,11 @@ Route::group(['middleware' => ['verified']], function () {
     //Abdullah Reports
     Route::get("/receivables/agingsummary", [VoucherController::class, 'AgingSummary'])->name("AgingSummary.index");
     Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])->name("AgingDetails.index");
+    Route::get("/receivables/collectiondetails", [VoucherController::class, 'CollectionDetails'])->name("Collections.index");
+    Route::get("/receivables/customerbalancedetailreport", [VoucherController::class, 'CustomerBalanceDetailReport'])->name("Collections.index");
     Route::get("/receivables/customerbalance", [VoucherController::class, 'CustomerBalance'])->name("Customer.index");
-
+    Route::get("/receivables/invoicelist", [VoucherController::class, 'InvoiceList'])->name("Collections.index");
+    Route::get("/receivables/openinvoicelist", [VoucherController::class, 'OpenInvoiceList'])->name("Collections.index");
 
     // cya routes
     Route::post('/ai/ask-assistant', [ciaController::class, 'performaction'])->name('askassistant');
