@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\DataTables\SalesbyCustomerTypeDetailDataTable;
 use App\DataTables\GeneralLedgerListDataTable;
 use App\Exports\AccountStatementExport;
 use App\Exports\BalanceSheetExport;
@@ -44,6 +45,8 @@ use App\Models\Revenue;
 use App\Models\Source;
 use App\Models\StockReport;
 use App\Models\Tax;
+use App\Models\Transaction;
+use App\Models\TransactionType;
 use App\Models\TransactionLines;
 use App\Models\User;
 use App\Models\UserDeal;
@@ -59,74 +62,74 @@ use Maatwebsite\Excel\Facades\Excel;
 class ReportController extends Controller
 {
 
-   public function RecurringInvoices(Request $request)
-{
-    $customer = Customer::where('created_by', \Auth::user()->creatorId())
-        ->pluck('name', 'id')
-        ->prepend('Select Customer', '');
+    public function RecurringInvoices(Request $request)
+    {
+        $customer = Customer::where('created_by', \Auth::user()->creatorId())
+            ->pluck('name', 'id')
+            ->prepend('Select Customer', '');
 
-    $account = BankAccount::where('created_by', \Auth::user()->creatorId())
-        ->pluck('holder_name', 'id')
-        ->prepend('Select Account', '');
+        $account = BankAccount::where('created_by', \Auth::user()->creatorId())
+            ->pluck('holder_name', 'id')
+            ->prepend('Select Account', '');
 
-    $category = ProductServiceCategory::where('created_by', \Auth::user()->creatorId())
-        ->where('type', 'income')
-        ->pluck('name', 'id')
-        ->prepend('Select Category', '');
+        $category = ProductServiceCategory::where('created_by', \Auth::user()->creatorId())
+            ->where('type', 'income')
+            ->pluck('name', 'id')
+            ->prepend('Select Category', '');
 
-    // Default: last 2 months
-    $startDate = now()->subMonths(2)->startOfDay();
-    $endDate   = now()->endOfDay();
+        // Default: last 2 months
+        $startDate = now()->subMonths(2)->startOfDay();
+        $endDate   = now()->endOfDay();
 
-    $invquery = InvoicePayment::join('invoices', 'invoices.id', '=', 'invoice_payments.invoice_id')
-        ->where('invoices.created_by', \Auth::user()->creatorId());
+        $invquery = InvoicePayment::join('invoices', 'invoices.id', '=', 'invoice_payments.invoice_id')
+            ->where('invoices.created_by', \Auth::user()->creatorId());
         // ->whereBetween('invoice_payments.date', [$startDate, $endDate]);
-    // dd($invquery->get());
-    // Apply filters
-    if (!empty($request->date)) {
-        if (str_contains($request->date, 'to')) {
-            $date_range = explode(' to ', $request->date);
-            $invquery->whereBetween('invoice_payments.date', $date_range);
-        } else {
-            $invquery->whereDate('invoice_payments.date', $request->date);
+        // dd($invquery->get());
+        // Apply filters
+        if (!empty($request->date)) {
+            if (str_contains($request->date, 'to')) {
+                $date_range = explode(' to ', $request->date);
+                $invquery->whereBetween('invoice_payments.date', $date_range);
+            } else {
+                $invquery->whereDate('invoice_payments.date', $request->date);
+            }
         }
-    }
 
-    if (!empty($request->customer)) {
-        $invquery->where('invoices.customer_id', $request->customer);
-    }
+        if (!empty($request->customer)) {
+            $invquery->where('invoices.customer_id', $request->customer);
+        }
 
-    if (!empty($request->account)) {
-        $invquery->where('invoice_payments.account_id', $request->account);
-    }
+        if (!empty($request->account)) {
+            $invquery->where('invoice_payments.account_id', $request->account);
+        }
 
-    if (!empty($request->category)) {
-        $invquery->where('invoices.category_id', $request->category);
-    }
+        if (!empty($request->category)) {
+            $invquery->where('invoices.category_id', $request->category);
+        }
 
-    if (!empty($request->payment)) {
-        $invquery->where('invoice_payments.payment_method', $request->payment);
-    }
+        if (!empty($request->payment)) {
+            $invquery->where('invoice_payments.payment_method', $request->payment);
+        }
 
-    // Get invoice payments and group by customer + invoice
-    $Invoicerevenues = $invquery
-        ->select(
-            'invoice_payments.*',
-            'invoices.customer_id',
-            'invoices.category_id'
-        )
-        ->get()
-        ->groupBy(function ($item) {
-            return $item->customer_id . '-' . $item->invoice_id; // group by same invoice of same customer
+        // Get invoice payments and group by customer + invoice
+        $Invoicerevenues = $invquery
+            ->select(
+                'invoice_payments.*',
+                'invoices.customer_id',
+                'invoices.category_id'
+            )
+            ->get()
+            ->groupBy(function ($item) {
+                return $item->customer_id . '-' . $item->invoice_id; // group by same invoice of same customer
+            });
+
+        // Only keep customers with multiple payments (recurring-like)
+        $recurring = $Invoicerevenues->filter(function ($group) {
+            return $group->count() > 1;
         });
 
-    // Only keep customers with multiple payments (recurring-like)
-    $recurring = $Invoicerevenues->filter(function ($group) {
-        return $group->count() > 1;
-    });
-
-    return view('transaction.recurringinvoice', compact('recurring', 'customer', 'account', 'category'));
-}
+        return view('transaction.recurringinvoice', compact('recurring', 'customer', 'account', 'category'));
+    }
 
     public function incomeSummary(Request $request)
     {
@@ -164,15 +167,13 @@ class ReportController extends Controller
             $filter['customer'] = __('All');
 
             if ($request->period === 'yearly') {
-            $year = array_reverse($this->yearList());
-            $yearList = [];
-            foreach ($year as $value) {
-                $yearList[$value] = $value;
-            }
-            }
-            else
-            {
-            $yearList[($request->year) ? $request->year : date('Y')] = ($request->year) ? $request->year : date('Y');
+                $year = array_reverse($this->yearList());
+                $yearList = [];
+                foreach ($year as $value) {
+                    $yearList[$value] = $value;
+                }
+            } else {
+                $yearList[($request->year) ? $request->year : date('Y')] = ($request->year) ? $request->year : date('Y');
             }
 
             if (isset($request->year)) {
@@ -189,8 +190,8 @@ class ReportController extends Controller
 
             // ------------------------------REVENUE INCOME-----------------------------------
 
-                $incomes = Revenue::selectRaw('sum(revenues.amount) as amount,MONTH(date) as month,YEAR(date) as year, product_service_categories.name as category_id')->leftjoin('product_service_categories', 'revenues.category_id', '=', 'product_service_categories.id')->where('product_service_categories.type', '=', 'income');
-                $incomes->where('revenues.created_by', '=', \Auth::user()->creatorId());
+            $incomes = Revenue::selectRaw('sum(revenues.amount) as amount,MONTH(date) as month,YEAR(date) as year, product_service_categories.name as category_id')->leftjoin('product_service_categories', 'revenues.category_id', '=', 'product_service_categories.id')->where('product_service_categories.type', '=', 'income');
+            $incomes->where('revenues.created_by', '=', \Auth::user()->creatorId());
             if ($request->period != 'yearly') {
                 $incomes->whereRAW('YEAR(date) =?', [$year]);
             }
@@ -240,9 +241,9 @@ class ReportController extends Controller
                 ->leftjoin('product_service_categories', 'invoices.category_id', '=', 'product_service_categories.id')
                 ->where('invoices.created_by', \Auth::user()->creatorId())->where('status', '!=', 0);
 
-                if ($request->period != 'yearly') {
-            $invoices->whereRAW('YEAR(send_date) =?', [$year]);
-                }
+            if ($request->period != 'yearly') {
+                $invoices->whereRAW('YEAR(send_date) =?', [$year]);
+            }
 
             if (!empty($request->customer)) {
                 $invoices->where('customer_id', '=', $request->customer);
@@ -287,7 +288,7 @@ class ReportController extends Controller
                 }
             }
 
-            $invoicesum = Utility::billInvoiceData($invoiceArray, $request , $yearList);
+            $invoicesum = Utility::billInvoiceData($invoiceArray, $request, $yearList);
 
             $invoiceTotalArray = [];
 
@@ -300,25 +301,24 @@ class ReportController extends Controller
             $invoiceArr = [];
             $incomesum = [];
 
-        foreach ($yearList as $year) {
-            $invoiceArr[$year] = [];
+            foreach ($yearList as $year) {
+                $invoiceArr[$year] = [];
 
-            for ($i = 1; $i <= 12; $i++) {
-                $invoiceArr[$year][$i] = 0;
-            }
+                for ($i = 1; $i <= 12; $i++) {
+                    $invoiceArr[$year][$i] = 0;
+                }
 
-            if (isset($invoiceTotalArray[$year])) {
-                foreach ($invoiceTotalArray[$year] as $month => $values) {
-                    $invoiceArr[$year][$month] = array_sum($values);
+                if (isset($invoiceTotalArray[$year])) {
+                    foreach ($invoiceTotalArray[$year] as $month => $values) {
+                        $invoiceArr[$year][$month] = array_sum($values);
+                    }
                 }
             }
-        }
 
 
             foreach ($array as $key => $categoryData) {
 
-                $incomesum[] = Utility::revenuePaymentData($key , $categoryData, $request ,$yearList);
-
+                $incomesum[] = Utility::revenuePaymentData($key, $categoryData, $request, $yearList);
             }
 
             $revenueTotalArray = [];
@@ -342,7 +342,7 @@ class ReportController extends Controller
             }
 
 
-            $chartIncomeArr = Utility::totalData($invoiceArr, $incomeArr, $request ,$yearList);
+            $chartIncomeArr = Utility::totalData($invoiceArr, $incomeArr, $request, $yearList);
 
 
             $data['chartIncomeArr'] = $chartIncomeArr;
@@ -401,11 +401,9 @@ class ReportController extends Controller
                 foreach ($year as $value) {
                     $yearList[$value] = $value;
                 }
-                }
-                else
-                {
+            } else {
                 $yearList[($request->year) ? $request->year : date('Y')] = ($request->year) ? $request->year : date('Y');
-                }
+            }
 
             if (isset($request->year)) {
                 $year = $request->year;
@@ -469,7 +467,7 @@ class ReportController extends Controller
 
             if ($request->period != 'yearly') {
                 $bills->whereRAW('YEAR(send_date) =?', [$year]);
-                    }
+            }
 
             if (!empty($request->vender)) {
                 $bills->where('vender_id', '=', $request->vender);
@@ -510,7 +508,7 @@ class ReportController extends Controller
                 }
             }
 
-            $billsum = Utility::billInvoiceData($billArray, $request , $yearList);
+            $billsum = Utility::billInvoiceData($billArray, $request, $yearList);
 
             $billTotalArray = [];
             foreach ($bills as $bill) {
@@ -521,47 +519,47 @@ class ReportController extends Controller
             $billArr = [];
             $expensesum = [];
 
-        foreach ($yearList as $year) {
-            $billArr[$year] = [];
+            foreach ($yearList as $year) {
+                $billArr[$year] = [];
 
-            for ($i = 1; $i <= 12; $i++) {
-                $billArr[$year][$i] = 0;
-            }
+                for ($i = 1; $i <= 12; $i++) {
+                    $billArr[$year][$i] = 0;
+                }
 
-            if (isset($billTotalArray[$year])) {
-                foreach ($billTotalArray[$year] as $month => $values) {
-                    $billArr[$year][$month] = array_sum($values);
+                if (isset($billTotalArray[$year])) {
+                    foreach ($billTotalArray[$year] as $month => $values) {
+                        $billArr[$year][$month] = array_sum($values);
+                    }
                 }
             }
-        }
 
 
-        foreach ($array as $key => $categoryData) {
+            foreach ($array as $key => $categoryData) {
 
-            $expensesum[] = Utility::revenuePaymentData($key , $categoryData, $request ,$yearList);
-        }
-
-        $paymentTotalArray = [];
-
-        foreach ($expenses as $expense) {
-            $paymentTotalArray[$expense->year][$expense->month][] = $expense->amount;
-        }
-
-        foreach ($yearList as $year) {
-            $expenseArr[$year] = [];
-
-            for ($i = 1; $i <= 12; $i++) {
-                $expenseArr[$year][$i] = 0;
+                $expensesum[] = Utility::revenuePaymentData($key, $categoryData, $request, $yearList);
             }
 
-            if (isset($paymentTotalArray[$year])) {
-                foreach ($paymentTotalArray[$year] as $month => $values) {
-                    $expenseArr[$year][$month] = array_sum($values);
+            $paymentTotalArray = [];
+
+            foreach ($expenses as $expense) {
+                $paymentTotalArray[$expense->year][$expense->month][] = $expense->amount;
+            }
+
+            foreach ($yearList as $year) {
+                $expenseArr[$year] = [];
+
+                for ($i = 1; $i <= 12; $i++) {
+                    $expenseArr[$year][$i] = 0;
+                }
+
+                if (isset($paymentTotalArray[$year])) {
+                    foreach ($paymentTotalArray[$year] as $month => $values) {
+                        $expenseArr[$year][$month] = array_sum($values);
+                    }
                 }
             }
-        }
 
-            $chartExpenseArr = Utility::totalData($billArr, $expenseArr, $request , $yearList);
+            $chartExpenseArr = Utility::totalData($billArr, $expenseArr, $request, $yearList);
 
             $data['chartExpenseArr'] = $chartExpenseArr;
             $data['expenseArr'] = $expensesum;
@@ -577,7 +575,6 @@ class ReportController extends Controller
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
     }
 
     public function incomeVsExpenseSummary(Request $request)
@@ -591,7 +588,8 @@ class ReportController extends Controller
             $customer->prepend('Select Customer', '');
 
             $category = ProductServiceCategory::where('created_by', '=', \Auth::user()->creatorId())->whereIn(
-                'type', [
+                'type',
+                [
                     'income',
                     'expense',
                 ]
@@ -612,7 +610,6 @@ class ReportController extends Controller
                 ];
             } elseif ($request->period === 'yearly') {
                 $month = array_values(array_reverse($this->yearList()));
-
             } else {
                 $month = $this->yearMonth();
             }
@@ -633,11 +630,9 @@ class ReportController extends Controller
                 foreach ($year as $value) {
                     $yearList[$value] = $value;
                 }
-                }
-                else
-                {
+            } else {
                 $yearList[($request->year) ? $request->year : date('Y')] = ($request->year) ? $request->year : date('Y');
-                }
+            }
 
             if (isset($request->year)) {
                 $year = $request->year;
@@ -657,7 +652,6 @@ class ReportController extends Controller
                 $expensesData->where('category_id', '=', $request->category);
                 $cat = ProductServiceCategory::find($request->category);
                 $filter['category'] = !empty($cat) ? $cat->name : '';
-
             }
             if (!empty($request->vender)) {
                 $expensesData->where('vender_id', '=', $request->vender);
@@ -677,7 +671,6 @@ class ReportController extends Controller
 
             if (!empty($request->vender)) {
                 $bills->where('vender_id', '=', $request->vender);
-
             }
 
             if (!empty($request->category)) {
@@ -729,11 +722,11 @@ class ReportController extends Controller
             }
 
 
-            $billsum = Utility::totalSum($billArr, $request , $yearList);
+            $billsum = Utility::totalSum($billArr, $request, $yearList);
 
-            $expensesum = Utility::totalSum($expenseArr, $request , $yearList);
+            $expensesum = Utility::totalSum($expenseArr, $request, $yearList);
 
-            $chartExpenseArr = Utility::totalData($billArr, $expenseArr, $request , $yearList);
+            $chartExpenseArr = Utility::totalData($billArr, $expenseArr, $request, $yearList);
 
             // ------------------------------TOTAL REVENUE INCOME-----------------------------------------------------------
 
@@ -757,9 +750,9 @@ class ReportController extends Controller
             // ------------------------------TOTAL INVOICE INCOME-----------------------------------------------------------
             $invoices = Invoice::selectRaw('MONTH(send_date) as month,YEAR(send_date) as year,category_id,invoice_id,id')
                 ->where('created_by', \Auth::user()->creatorId())->where('status', '!=', 0);
-                if ($request->period != 'yearly') {
-                    $invoices->whereRAW('YEAR(send_date) =?', [$year]);
-                }
+            if ($request->period != 'yearly') {
+                $invoices->whereRAW('YEAR(send_date) =?', [$year]);
+            }
             if (!empty($request->customer)) {
                 $invoices->where('customer_id', '=', $request->customer);
             }
@@ -811,23 +804,23 @@ class ReportController extends Controller
                 }
             }
 
-            $invoicesum = Utility::totalSum($invoiceArr, $request , $yearList);
+            $invoicesum = Utility::totalSum($invoiceArr, $request, $yearList);
 
-            $incomesum = Utility::totalSum($incomeArr, $request , $yearList);
+            $incomesum = Utility::totalSum($incomeArr, $request, $yearList);
 
-            $chartIncomeArr = Utility::totalData($invoiceArr, $incomeArr, $request , $yearList);
+            $chartIncomeArr = Utility::totalData($invoiceArr, $incomeArr, $request, $yearList);
 
 
 
             $profit = [];
 
-                if (count($chartIncomeArr) === count($chartExpenseArr) && count($chartIncomeArr[0]) === count($chartExpenseArr[0])) {
-                    foreach ($chartIncomeArr as $i => $values1) {
-                        foreach ($values1 as $j => $value1) {
-                            $profit[$i][$j] = $value1 - $chartExpenseArr[$i][$j];
-                        }
+            if (count($chartIncomeArr) === count($chartExpenseArr) && count($chartIncomeArr[0]) === count($chartExpenseArr[0])) {
+                foreach ($chartIncomeArr as $i => $values1) {
+                    foreach ($values1 as $j => $value1) {
+                        $profit[$i][$j] = $value1 - $chartExpenseArr[$i][$j];
                     }
                 }
+            }
 
 
             $data['paymentExpenseTotal'] = $expensesum;
@@ -905,7 +898,6 @@ class ReportController extends Controller
                     }
                     $income['data'][$month] = $incomeTaxRecord;
                 }
-
             }
 
             foreach ($income as $incomeMonth => $incomeTaxData) {
@@ -913,7 +905,6 @@ class ReportController extends Controller
                 for ($i = 1; $i <= 12; $i++) {
                     $incomeData[$i] = array_key_exists($i, $incomeTaxData) ? $incomeTaxData[$i] : 0;
                 }
-
             }
 
             $incomes = [];
@@ -973,7 +964,6 @@ class ReportController extends Controller
                     }
                     $bill['data'][$month] = $billTaxRecord;
                 }
-
             }
 
             foreach ($bill as $billMonth => $billTaxData) {
@@ -981,7 +971,6 @@ class ReportController extends Controller
                 for ($i = 1; $i <= 12; $i++) {
                     $billData[$i] = array_key_exists($i, $billTaxData) ? $billTaxData[$i] : 0;
                 }
-
             }
             $expenses = [];
             if (isset($billData) && !empty($billData)) {
@@ -998,7 +987,6 @@ class ReportController extends Controller
                             $expenses[$taxArr->name][$month] = 0;
                         }
                     }
-
                 }
             }
 
@@ -1012,7 +1000,6 @@ class ReportController extends Controller
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
     }
 
     public function yearMonth()
@@ -1116,7 +1103,7 @@ class ReportController extends Controller
 
     public function billSummary(Request $request)
     {
-//        dd($request->all());
+        //        dd($request->all());
         if (\Auth::user()->can('bill report')) {
 
             $filter['vender'] = __('All');
@@ -1277,7 +1264,6 @@ class ReportController extends Controller
                 if ($bankAccount->holder_name == 'Cash') {
                     $filter['account'] = 'Cash';
                 }
-
             }
 
             if ($request->type == 'revenue' || !isset($request->type)) {
@@ -1285,7 +1271,6 @@ class ReportController extends Controller
 
                 $revenueAccounts->where('revenues.created_by', '=', \Auth::user()->creatorId());
                 $reportData['revenueAccounts'] = $revenueAccounts->get();
-
             }
 
             if ($request->type == 'payment') {
@@ -1514,9 +1499,7 @@ class ReportController extends Controller
                                 $totalArray = array_merge($parentAccountArray, $parentAccountArrayTotal);
                                 $totalParentAccountArray[] = $totalArray;
                             }
-
                         }
-
                     }
                     if ($totalParentAccountArray != []) {
                         $accounts = TransactionLines::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', \DB::raw('sum(debit) as totalDebit'), \DB::raw('sum(credit) as totalCredit'));
@@ -1594,7 +1577,6 @@ class ReportController extends Controller
                         }
                         $accountArrayTotal[][] = $dataTotal;
                         $totalAccountArray = array_merge($totalParentAccountArray, $accountArray, $accountArrayTotal);
-
                     } elseif ($totalParentAccountArray != []) {
                         $dataTotal['account_id'] = '';
                         $dataTotal['account_code'] = '';
@@ -1626,94 +1608,93 @@ class ReportController extends Controller
             $filter['startDateRange'] = $start;
             $filter['endDateRange'] = $end;
 
-              $loss =$this->profitLoss($request,'','','balance_lp');
-                $totalIncome = 0;
-                $netProfit = 0;
-                $totalCosts = 0;
-                $grossProfit = 0;
+            $loss = $this->profitLoss($request, '', '', 'balance_lp');
+            $totalIncome = 0;
+            $netProfit = 0;
+            $totalCosts = 0;
+            $grossProfit = 0;
 
-                foreach ($loss as $accounts){
-                    if ($accounts['Type'] == 'Income'){
-                        foreach ($accounts['account'] as $records){
-                            // if ($collapseView == 'collapse'){
+            foreach ($loss as $accounts) {
+                if ($accounts['Type'] == 'Income') {
+                    foreach ($accounts['account'] as $records) {
+                        // if ($collapseView == 'collapse'){
 
-                            //     foreach ($records as $key => $record){
+                        //     foreach ($records as $key => $record){
 
-                            //         if ($record['account_name'] === 'Total Income') {
-                            //             $totalIncome = $record['netAmount'];
-                            //         }
+                        //         if ($record['account_name'] === 'Total Income') {
+                        //             $totalIncome = $record['netAmount'];
+                        //         }
 
-                            //         if ($record['account_name'] == 'Total Costs of Goods Sold') {
-                            //             $totalCosts = $record['netAmount'];
-                            //         }
-                            //         $grossProfit = $totalIncome - $totalCosts;
-                            //     }
-                            // }
-                            // else{
+                        //         if ($record['account_name'] == 'Total Costs of Goods Sold') {
+                        //             $totalCosts = $record['netAmount'];
+                        //         }
+                        //         $grossProfit = $totalIncome - $totalCosts;
+                        //     }
+                        // }
+                        // else{
 
-                                foreach ($records as $key => $record){
-                                    
-                                        if ($record['account_name'] === 'Total Income') {
-                                            $totalIncome = $record['netAmount'];
-                                        }
-        
-                                        if ($record['account_name'] == 'Total Costs of Goods Sold') {
-                                            $totalCosts = $record['netAmount'];
-                                        }
-                                        $grossProfit = $totalIncome - $totalCosts;
-                                }
-                            // }
+                        foreach ($records as $key => $record) {
+
+                            if ($record['account_name'] === 'Total Income') {
+                                $totalIncome = $record['netAmount'];
+                            }
+
+                            if ($record['account_name'] == 'Total Costs of Goods Sold') {
+                                $totalCosts = $record['netAmount'];
+                            }
+                            $grossProfit = $totalIncome - $totalCosts;
                         }
+                        // }
                     }
-                    if ($accounts['Type'] == 'Costs of Goods Sold'){
-                        foreach ($accounts['account'] as $records)
-                        {
-                            //  if ($collapseView == 'collapse'){
-                            //      foreach ($records as $key => $record){
-
-                            //          if ($record['netAmount'] > 0) {
-                            //              $netAmount = $record['netAmount'];
-                            //          } else {
-                            //              $netAmount = -$record['netAmount'];
-                            //          }
-                            //          if ($record['account_name'] === 'Total Income') {
-                            //              $totalIncome = $netAmount;
-                            //          }
-    
-                            //          if ($record['account_name'] == 'Total Costs of Goods Sold') {
-                            //              $totalCosts = $netAmount;
-                            //          }
-                            //          $grossProfit = $totalIncome - $totalCosts;
-                            //      }
-                            //  }
-                            // else{
-
-                                foreach ($records as $key => $record){
-
-                                    if ($record['netAmount'] > 0) {
-                                        $netAmount = $record['netAmount'];
-                                    } else {
-                                        $netAmount = -$record['netAmount'];
-                                    }
-                                    if ($record['account_name'] === 'Total Income') {
-                                        $totalIncome = $netAmount;
-                                    }
-
-                                    if ($record['account_name'] == 'Total Costs of Goods Sold') {
-                                        $totalCosts = $netAmount;
-                                    }
-                                    $grossProfit = $totalIncome - $totalCosts;
-                                }
-                            // }
-                        }
-                    }  
                 }
+                if ($accounts['Type'] == 'Costs of Goods Sold') {
+                    foreach ($accounts['account'] as $records) {
+                        //  if ($collapseView == 'collapse'){
+                        //      foreach ($records as $key => $record){
 
-            foreach ($loss as $accounts){
+                        //          if ($record['netAmount'] > 0) {
+                        //              $netAmount = $record['netAmount'];
+                        //          } else {
+                        //              $netAmount = -$record['netAmount'];
+                        //          }
+                        //          if ($record['account_name'] === 'Total Income') {
+                        //              $totalIncome = $netAmount;
+                        //          }
 
-                if ($accounts['Type'] == 'Expenses'){
+                        //          if ($record['account_name'] == 'Total Costs of Goods Sold') {
+                        //              $totalCosts = $netAmount;
+                        //          }
+                        //          $grossProfit = $totalIncome - $totalCosts;
+                        //      }
+                        //  }
+                        // else{
 
-                    foreach ($accounts['account'] as $records){
+                        foreach ($records as $key => $record) {
+
+                            if ($record['netAmount'] > 0) {
+                                $netAmount = $record['netAmount'];
+                            } else {
+                                $netAmount = -$record['netAmount'];
+                            }
+                            if ($record['account_name'] === 'Total Income') {
+                                $totalIncome = $netAmount;
+                            }
+
+                            if ($record['account_name'] == 'Total Costs of Goods Sold') {
+                                $totalCosts = $netAmount;
+                            }
+                            $grossProfit = $totalIncome - $totalCosts;
+                        }
+                        // }
+                    }
+                }
+            }
+
+            foreach ($loss as $accounts) {
+
+                if ($accounts['Type'] == 'Expenses') {
+
+                    foreach ($accounts['account'] as $records) {
                         // if ($collapseView == 'collapse'){
                         //     foreach ($records as $key => $record){
                         //         if ($record['netAmount'] > 0) {
@@ -1733,18 +1714,18 @@ class ReportController extends Controller
                         // }
                         // else{
 
-                            foreach ($records as $key => $record){
+                        foreach ($records as $key => $record) {
 
-                                if ($record['netAmount'] > 0) {
-                                    $netAmount = $record['netAmount'];
-                                } else {
-                                    $netAmount = -$record['netAmount'];
-                                }
-                                if ($record['account_name'] == 'Total Expenses') {
-                                    $totalCosts = $netAmount;
-                                }
-                                $netProfit = $grossProfit - $totalCosts;
+                            if ($record['netAmount'] > 0) {
+                                $netAmount = $record['netAmount'];
+                            } else {
+                                $netAmount = -$record['netAmount'];
                             }
+                            if ($record['account_name'] == 'Total Expenses') {
+                                $totalCosts = $netAmount;
+                            }
+                            $netProfit = $grossProfit - $totalCosts;
+                        }
                         // }
 
                     }
@@ -1753,9 +1734,9 @@ class ReportController extends Controller
             // dd($netProfit);
 
             if ($request->view == 'horizontal' || $view == 'horizontal') {
-                return view('report.balance_sheet_horizontal', compact('filter', 'totalAccounts', 'collapseview','netProfit'));
+                return view('report.balance_sheet_horizontal', compact('filter', 'totalAccounts', 'collapseview', 'netProfit'));
             } elseif ($view == '' || $view == 'vertical') {
-                return view('report.balance_sheet', compact('filter', 'totalAccounts', 'collapseview','netProfit'));
+                return view('report.balance_sheet', compact('filter', 'totalAccounts', 'collapseview', 'netProfit'));
             } else {
                 return redirect()->back();
             }
@@ -1833,7 +1814,6 @@ class ReportController extends Controller
                     ->where('parent', '=', 0)
                     ->where('created_by', \Auth::user()->creatorId())->get()
                     ->toarray();
-
             } else {
                 $chart_accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get();
                 // $accounts = $chart_accounts->pluck('name', 'id');
@@ -1858,113 +1838,112 @@ class ReportController extends Controller
             $filter['startDateRange'] = $start;
             $filter['endDateRange'] = $end;
             return view('report.ledger_summary', compact('filter', 'chart_accounts', 'accounts', 'subAccounts'));
-
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
 
     public function general_ledger_list(GeneralLedgerListDataTable $dataTable, Request $request, $account = '', $account_id = '')
-{
-    if (!\Auth::user()->can('ledger report')) {
-        return redirect()->back()->with('error', __('Permission Denied.'));
-    }
+    {
+        if (!\Auth::user()->can('ledger report')) {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
 
-    // Handle report period filter (like Trial Balance)
-    $reportPeriod = $request->get('report_period', '');
+        // Handle report period filter (like Trial Balance)
+        $reportPeriod = $request->get('report_period', '');
 
-    if (!empty($reportPeriod)) {
-        $dates = $this->getReportPeriodDates($reportPeriod);
-        $start = $dates['start'];
-        $end   = $dates['end'];
-    } elseif (!empty($request->start_date) && !empty($request->end_date)) {
-        $start = $request->start_date;
-        $end   = $request->end_date;
-    } else {
-        $start = Carbon::now()->startOfMonth()->format('Y-m-d');
-        $end   = Carbon::now()->format('Y-m-d');
-    }
+        if (!empty($reportPeriod)) {
+            $dates = $this->getReportPeriodDates($reportPeriod);
+            $start = $dates['start'];
+            $end   = $dates['end'];
+        } elseif (!empty($request->start_date) && !empty($request->end_date)) {
+            $start = $request->start_date;
+            $end   = $request->end_date;
+        } else {
+            $start = Carbon::now()->startOfMonth()->format('Y-m-d');
+            $end   = Carbon::now()->format('Y-m-d');
+        }
 
-    $accountingMethod = $request->accounting_method ?? 'accrual';
-    $selectedAccount  = $request->account ?? '';
+        $accountingMethod = $request->accounting_method ?? 'accrual';
+        $selectedAccount  = $request->account ?? '';
 
-    // Get chart of accounts based on filter
-    if (!empty($selectedAccount)) {
-        $chart_accounts = ChartOfAccount::where('id', $selectedAccount)
+        // Get chart of accounts based on filter
+        if (!empty($selectedAccount)) {
+            $chart_accounts = ChartOfAccount::where('id', $selectedAccount)
+                ->where('created_by', \Auth::user()->creatorId())
+                ->get();
+        } else {
+            $chart_accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get();
+        }
+
+        // Get parent accounts for dropdown
+        $accounts = ChartOfAccount::select('id', 'code', 'name', 'parent')
+            ->where('parent', 0)
             ->where('created_by', \Auth::user()->creatorId())
-            ->get();
-    } else {
-        $chart_accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get();
-    }
+            ->orderBy('name')
+            ->get()
+            ->toArray();
 
-    // Get parent accounts for dropdown
-    $accounts = ChartOfAccount::select('id', 'code', 'name', 'parent')
-        ->where('parent', 0)
-        ->where('created_by', \Auth::user()->creatorId())
-        ->orderBy('name')
-        ->get()
-        ->toArray();
-
-    // Get sub accounts
-    $subAccounts = ChartOfAccount::select(
+        // Get sub accounts
+        $subAccounts = ChartOfAccount::select(
             'chart_of_accounts.id',
             'chart_of_accounts.code',
             'chart_of_accounts.name',
             'chart_of_account_parents.account'
         )
-        ->leftJoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id')
-        ->where('chart_of_accounts.parent', '!=', 0)
-        ->where('chart_of_accounts.created_by', \Auth::user()->creatorId())
-        ->orderBy('chart_of_accounts.name')
-        ->get()
-        ->toArray();
+            ->leftJoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id')
+            ->where('chart_of_accounts.parent', '!=', 0)
+            ->where('chart_of_accounts.created_by', \Auth::user()->creatorId())
+            ->orderBy('chart_of_accounts.name')
+            ->get()
+            ->toArray();
 
-    $filter = [
-        'startDateRange'   => $start,
-        'endDateRange'     => $end,
-        'accountingMethod' => $accountingMethod,
-        'selectedAccount'  => $selectedAccount,
-        'balance'          => 0,
-        'credit'           => 0,
-        'debit'            => 0,
-    ];
+        $filter = [
+            'startDateRange'   => $start,
+            'endDateRange'     => $end,
+            'accountingMethod' => $accountingMethod,
+            'selectedAccount'  => $selectedAccount,
+            'balance'          => 0,
+            'credit'           => 0,
+            'debit'            => 0,
+        ];
 
-    $companyName = "Craig's Design and Landscaping Services"; // This should come from settings
+        $companyName = "Craig's Design and Landscaping Services"; // This should come from settings
 
-    return $dataTable->render(
-        'report.general_ledger_list',
-        compact('filter', 'chart_accounts', 'accounts', 'subAccounts', 'account', 'account_id', 'companyName', 'reportPeriod')
-    );
-}
-
-private function getReportPeriodDatesTwo($period)
-{
-    $today = Carbon::today();
-
-    switch ($period) {
-        case 'this_month':
-            return [
-                'start' => $today->copy()->startOfMonth()->toDateString(),
-                'end'   => $today->copy()->endOfMonth()->toDateString(),
-            ];
-        case 'last_month':
-            return [
-                'start' => $today->copy()->subMonth()->startOfMonth()->toDateString(),
-                'end'   => $today->copy()->subMonth()->endOfMonth()->toDateString(),
-            ];
-        case 'this_year':
-            return [
-                'start' => $today->copy()->startOfYear()->toDateString(),
-                'end'   => $today->copy()->endOfYear()->toDateString(),
-            ];
-        // TODO: extend with all your options
-        default:
-            return [
-                'start' => request('start_date'),
-                'end'   => request('end_date'),
-            ];
+        return $dataTable->render(
+            'report.general_ledger_list',
+            compact('filter', 'chart_accounts', 'accounts', 'subAccounts', 'account', 'account_id', 'companyName', 'reportPeriod')
+        );
     }
-}
+
+    private function getReportPeriodDatesTwo($period)
+    {
+        $today = Carbon::today();
+
+        switch ($period) {
+            case 'this_month':
+                return [
+                    'start' => $today->copy()->startOfMonth()->toDateString(),
+                    'end'   => $today->copy()->endOfMonth()->toDateString(),
+                ];
+            case 'last_month':
+                return [
+                    'start' => $today->copy()->subMonth()->startOfMonth()->toDateString(),
+                    'end'   => $today->copy()->subMonth()->endOfMonth()->toDateString(),
+                ];
+            case 'this_year':
+                return [
+                    'start' => $today->copy()->startOfYear()->toDateString(),
+                    'end'   => $today->copy()->endOfYear()->toDateString(),
+                ];
+                // TODO: extend with all your options
+            default:
+                return [
+                    'start' => request('start_date'),
+                    'end'   => request('end_date'),
+                ];
+        }
+    }
 
 
     public function getAccountData(Request $request)
@@ -2471,7 +2450,6 @@ private function getReportPeriodDatesTwo($period)
 
                     $filterYear['dateYearRange'] = date('M-Y', strtotime($request->month));
                     $filterYear['type'] = __('Monthly');
-
                 } elseif (!isset($request->type)) {
                     $month = date('m');
                     $year = date('Y');
@@ -2564,7 +2542,6 @@ private function getReportPeriodDatesTwo($period)
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
     }
 
     public function monthlyAttendance(Request $request)
@@ -2599,7 +2576,6 @@ private function getReportPeriodDatesTwo($period)
                 $month = date('m', $currentdate);
                 $year = date('Y', $currentdate);
                 $curMonth = date('M-Y', strtotime($request->month));
-
             } else {
                 $month = date('m');
                 $year = date('Y');
@@ -2641,7 +2617,6 @@ private function getReportPeriodDatesTwo($period)
                                 $lateHours += date('h', strtotime($employeeAttendance->late));
                                 $lateMins += date('i', strtotime($employeeAttendance->late));
                             }
-
                         } elseif (!empty($employeeAttendance) && $employeeAttendance->status == 'Leave') {
                             $attendanceStatus[$date] = 'A';
                             $totalLeave += 1;
@@ -2651,7 +2626,6 @@ private function getReportPeriodDatesTwo($period)
                     } else {
                         $attendanceStatus[$date] = '';
                     }
-
                 }
                 $attendances['status'] = $attendanceStatus;
                 $employeesAttendance[] = $attendances;
@@ -2672,7 +2646,6 @@ private function getReportPeriodDatesTwo($period)
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
     }
 
     public function payroll(Request $request)
@@ -2746,13 +2719,11 @@ private function getReportPeriodDatesTwo($period)
                 $allowances = json_decode($payslip->allowance);
                 foreach ($allowances as $allowance) {
                     $totalAllowance += $allowance->amount;
-
                 }
 
                 $commisions = json_decode($payslip->commission);
                 foreach ($commisions as $commision) {
                     $totalCommision += $commision->amount;
-
                 }
 
                 $loans = json_decode($payslip->loan);
@@ -2778,7 +2749,6 @@ private function getReportPeriodDatesTwo($period)
 
                     $totalOverTime += ($rate * $hours) * $days;
                 }
-
             }
 
             $filterData['totalBasicSalary'] = $totalBasicSalary;
@@ -2800,7 +2770,6 @@ private function getReportPeriodDatesTwo($period)
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
     }
 
     //branch wise department get in Payroll report
@@ -2872,7 +2841,6 @@ private function getReportPeriodDatesTwo($period)
                     } else {
                         $attendanceStatus[$date] = '-';
                     }
-
                 } else {
                     $attendanceStatus[$date] = '-';
                 }
@@ -2918,7 +2886,6 @@ private function getReportPeriodDatesTwo($period)
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
-
     }
 
     //for export in account statement report
@@ -3042,7 +3009,6 @@ private function getReportPeriodDatesTwo($period)
 
             if (!empty($request->start_month)) {
                 $leadFilter = Lead::where('created_by', \Auth::user()->creatorId())->whereMonth('date', $request->start_month)->whereYear('date', $year)->get();
-
             } else {
                 $leadFilter = Lead::where('created_by', \Auth::user()->creatorId())->whereMonth('date', $month)->whereYear('date', $year)->get();
                 // dd($request->leadFilter);
@@ -3289,11 +3255,9 @@ private function getReportPeriodDatesTwo($period)
             }
 
             return view('report.warehouse', compact('warehouse', 'totalWarehouse', 'totalProduct', 'warehouseProductData', 'warehousename'));
-
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
     }
 
     public function purchaseDailyReport(Request $request)
@@ -3325,7 +3289,8 @@ private function getReportPeriodDatesTwo($period)
             $purchases = $query->get()->groupBy(
                 function ($val) {
                     return Carbon::parse($val->purchase_date)->format('Y-m-d');
-                });
+                }
+            );
             $total = [];
             if (!empty($purchases) && count($purchases) > 0) {
                 foreach ($purchases as $day => $onepurchase) {
@@ -3355,7 +3320,6 @@ private function getReportPeriodDatesTwo($period)
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
     }
 
     public function purchaseMonthlyReport(Request $request)
@@ -3385,7 +3349,8 @@ private function getReportPeriodDatesTwo($period)
             $purchases = $query->get()->groupBy(
                 function ($val) {
                     return Carbon::parse($val->purchase_date)->format('m');
-                });
+                }
+            );
             $total = [];
             if (!empty($purchases) && count($purchases) > 0) {
                 foreach ($purchases as $month => $onepurchase) {
@@ -3410,7 +3375,6 @@ private function getReportPeriodDatesTwo($period)
             $filter['vendor'] = !empty($vendors) ? $vendors->name : '';
 
             return view('report.monthly_purchase', compact('monthList', 'yearList', 'warehouse', 'vendor', 'arrDuration', 'data', 'filter'));
-
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -3440,13 +3404,13 @@ private function getReportPeriodDatesTwo($period)
             } else {
                 $first_date = date('Y-m-d', strtotime('today - 30 days'));
                 $end_date = date('Y-m-d', strtotime('today - 1 days'));
-
             }
             $query->whereBetween('pos_date', [$first_date, $end_date]);
             $poses = $query->get()->groupBy(
                 function ($val) {
                     return Carbon::parse($val->pos_date)->format('Y-m-d');
-                });
+                }
+            );
             $total = [];
             if (!empty($poses) && count($poses) > 0) {
                 foreach ($poses as $day => $onepos) {
@@ -3477,7 +3441,6 @@ private function getReportPeriodDatesTwo($period)
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
     }
 
     public function posMonthlyReport(Request $request)
@@ -3508,7 +3471,8 @@ private function getReportPeriodDatesTwo($period)
             $poses = $query->get()->groupBy(
                 function ($val) {
                     return Carbon::parse($val->pos_date)->format('m');
-                });
+                }
+            );
             $total = [];
             if (!empty($poses) && count($poses) > 0) {
                 foreach ($poses as $month => $onepos) {
@@ -3533,7 +3497,6 @@ private function getReportPeriodDatesTwo($period)
             $filter['customer'] = !empty($customers) ? $customers->name : '';
 
             return view('report.monthly_pos', compact('monthList', 'yearList', 'warehouse', 'customer', 'arrDuration', 'data', 'filter'));
-
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -3574,23 +3537,24 @@ private function getReportPeriodDatesTwo($period)
                 $purchaseTotalArray[$purchase->month] = $purchase->getTotal();
             }
 
-//            -----------------------------
+            //            -----------------------------
 
             for ($i = 1; $i <= 12; $i++) {
                 $PosTotal[] = array_key_exists($i, $posTotalArray) ? $posTotalArray[$i] : 0;
                 $PurchaseTotal[] = array_key_exists($i, $purchaseTotalArray) ? $purchaseTotalArray[$i] : 0;
-
             }
             $totalPos = array_map(
                 function () {
                     return array_sum(func_get_args());
-                }, $PosTotal
+                },
+                $PosTotal
             );
 
             $totalPurchase = array_map(
                 function () {
                     return array_sum(func_get_args());
-                }, $PurchaseTotal
+                },
+                $PurchaseTotal
             );
 
             $profits = [];
@@ -3691,7 +3655,7 @@ private function getReportPeriodDatesTwo($period)
     //     }
     // }
 
-    public function profitLoss(Request $request, $view = '', $collapseView = 'expand',$ty='')
+    public function profitLoss(Request $request, $view = '', $collapseView = 'expand', $ty = '')
     {
         if (\Auth::user()->can('income vs expense report')) {
             if (!empty($request->start_date) && !empty($request->end_date)) {
@@ -3812,9 +3776,7 @@ private function getReportPeriodDatesTwo($period)
                             $totalArray = array_merge($parentAccountArray, $parentAccountArrayTotal);
                             $totalParentAccountArray[] = $totalArray;
                         }
-
                     }
-
                 }
 
                 if ($totalParentAccountArray != []) {
@@ -3877,7 +3839,6 @@ private function getReportPeriodDatesTwo($period)
                     $dataTotal['netAmount'] = $totalAmount;
                     $accountArray[][] = $dataTotal;
                     $totalAccountArray = array_merge($totalParentAccountArray, $accountArray);
-
                 } elseif ($totalParentAccountArray != []) {
 
                     $dataTotal['account_id'] = '';
@@ -3903,9 +3864,9 @@ private function getReportPeriodDatesTwo($period)
                 }
                 $totalAccounts = $subTypeArray;
             }
-                if($ty == 'balance_lp'){
-                    return $totalAccounts;
-                }
+            if ($ty == 'balance_lp') {
+                return $totalAccounts;
+            }
             $filter['startDateRange'] = $start;
             $filter['endDateRange'] = $end;
             if ($request->view == 'horizontal' || $view == 'horizontal') {
@@ -4037,7 +3998,9 @@ private function getReportPeriodDatesTwo($period)
             $chartIncomeArr = array_map(
                 function () {
                     return array_sum(func_get_args());
-                }, $incomeTotal, $invoiceTotal
+                },
+                $incomeTotal,
+                $invoiceTotal
             );
 
             $data['chartIncomeArr'] = $chartIncomeArr;
@@ -4141,7 +4104,9 @@ private function getReportPeriodDatesTwo($period)
             $chartExpenseArr = array_map(
                 function () {
                     return array_sum(func_get_args());
-                }, $expenseTotal, $billTotal
+                },
+                $expenseTotal,
+                $billTotal
             );
 
             $netProfit = [];
@@ -4162,7 +4127,6 @@ private function getReportPeriodDatesTwo($period)
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
     }
 
     public function quarterlyCashflow(Request $request)
@@ -4236,7 +4200,6 @@ private function getReportPeriodDatesTwo($period)
                 $tmp['amount'] = array_values($incomeData);
 
                 $revenueIncomeArray[] = $tmp;
-
             }
 
             $data['incomeCatAmount'] = $incomeCatAmount = [
@@ -4280,7 +4243,6 @@ private function getReportPeriodDatesTwo($period)
                 $invoiceSumData = [];
                 for ($i = 1; $i <= 12; $i++) {
                     $invoiceSumData[] = array_key_exists($i, $record) ? array_sum($record[$i]) : 0;
-
                 }
 
                 $month_1 = array_slice($invoiceSumData, 0, 3);
@@ -4307,7 +4269,6 @@ private function getReportPeriodDatesTwo($period)
                 $invoiceTmp['amount'] = array_values($invoiceIncomeData);
 
                 $invoiceIncomeArray[] = $invoiceTmp;
-
             }
 
             $data['invoiceIncomeCatAmount'] = $invoiceIncomeCatAmount = [
@@ -4330,7 +4291,9 @@ private function getReportPeriodDatesTwo($period)
             $data['totalIncome'] = $totalIncome = array_map(
                 function () {
                     return array_sum(func_get_args());
-                }, $invoiceIncomeCatAmount, $incomeCatAmount
+                },
+                $invoiceIncomeCatAmount,
+                $incomeCatAmount
             );
 
             //---------------------------------PAYMENT EXPENSE-----------------------------------
@@ -4354,7 +4317,6 @@ private function getReportPeriodDatesTwo($period)
                 $expenseSumData = [];
                 for ($i = 1; $i <= 12; $i++) {
                     $expenseSumData[] = array_key_exists($i, $record) ? $record[$i] : 0;
-
                 }
 
                 $month_1 = array_slice($expenseSumData, 0, 3);
@@ -4384,7 +4346,6 @@ private function getReportPeriodDatesTwo($period)
                 $tmp['amount'] = array_values($expenseData);
 
                 $expenseArray[] = $tmp;
-
             }
 
             $data['expenseCatAmount'] = $expenseCatAmount = [
@@ -4453,7 +4414,6 @@ private function getReportPeriodDatesTwo($period)
                 $billTmp['amount'] = array_values($billExpenseData);
 
                 $billExpenseArray[] = $billTmp;
-
             }
 
             $data['billExpenseCatAmount'] = $billExpenseCatAmount = [
@@ -4476,7 +4436,9 @@ private function getReportPeriodDatesTwo($period)
             $data['totalExpense'] = $totalExpense = array_map(
                 function () {
                     return array_sum(func_get_args());
-                }, $billExpenseCatAmount, $expenseCatAmount
+                },
+                $billExpenseCatAmount,
+                $expenseCatAmount
             );
 
             foreach ($totalIncome as $k => $income) {
@@ -4552,7 +4514,6 @@ private function getReportPeriodDatesTwo($period)
                         $parentAccs = $parentAccs->get()->toArray();
                     } elseif ($parentAccs != [] && $accounts == []) {
                         $parentAccs = [];
-
                     }
 
                     $parenttotalBalance = 0;
@@ -4816,9 +4777,7 @@ private function getReportPeriodDatesTwo($period)
                             $totalArray = array_merge($parentAccountArray, $parentAccountArrayTotal);
                             $totalParentAccountArray[] = $totalArray;
                         }
-
                     }
-
                 }
                 if ($totalParentAccountArray != []) {
                     $accounts = TransactionLines::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', \DB::raw('sum(debit) as totalDebit'), \DB::raw('sum(credit) as totalCredit'));
@@ -4896,7 +4855,6 @@ private function getReportPeriodDatesTwo($period)
                     }
                     $accountArrayTotal[][] = $dataTotal;
                     $totalAccountArray = array_merge($totalParentAccountArray, $accountArray, $accountArrayTotal);
-
                 } elseif ($totalParentAccountArray != []) {
                     $dataTotal['account_id'] = '';
                     $dataTotal['account_code'] = '';
@@ -4933,7 +4891,6 @@ private function getReportPeriodDatesTwo($period)
         ob_end_clean();
 
         return $data;
-
     }
 
     public function profitLossExport(Request $request)
@@ -5060,9 +5017,7 @@ private function getReportPeriodDatesTwo($period)
                             $totalArray = array_merge($parentAccountArray, $parentAccountArrayTotal);
                             $totalParentAccountArray[] = $totalArray;
                         }
-
                     }
-
                 }
 
                 if ($totalParentAccountArray != []) {
@@ -5125,7 +5080,6 @@ private function getReportPeriodDatesTwo($period)
                     $dataTotal['netAmount'] = $totalAmount;
                     $accountArray[][] = $dataTotal;
                     $totalAccountArray = array_merge($totalParentAccountArray, $accountArray);
-
                 } elseif ($totalParentAccountArray != []) {
 
                     $dataTotal['account_id'] = '';
@@ -5163,6 +5117,150 @@ private function getReportPeriodDatesTwo($period)
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
+
+    public function SalesbyCustomerTypeDetailReport(SalesbyCustomerTypeDetailDataTable $dataTable, Request $request)
+    {
+        if (!empty($request->start_date) && !empty($request->end_date)) {
+            $start = $request->start_date;
+            $end   = $request->end_date;
+        } else {
+            $start = date('Y-01-01'); // Jan 1st current year
+            $end   = date('Y-m-d');   // today
+        }
+
+        // 🔹 Invoice Items
+        $invoiceItems = InvoiceProduct::select(
+            'product_services.name',
+            \DB::raw('sum(invoice_products.quantity) as quantity'),
+            \DB::raw('sum(invoice_products.price * invoice_products.quantity) as price'),
+            \DB::raw('sum(invoice_products.price)/sum(invoice_products.quantity) as avg_price')
+        )
+            ->leftjoin('product_services', 'product_services.id', 'invoice_products.product_id')
+            ->leftjoin('invoices', 'invoices.id', 'invoice_products.invoice_id')
+            ->where('product_services.created_by', \Auth::user()->creatorId())
+            ->whereBetween(\DB::raw('DATE(invoices.issue_date)'), [$start, $end])
+            ->groupBy('invoice_products.product_id')
+            ->get()
+            ->toArray();
+
+        // 🔹 Invoice Customers
+        $invoiceCustomeres = Invoice::select(
+            'customers.name',
+            \DB::raw('count(DISTINCT invoices.customer_id, invoice_products.invoice_id) as invoice_count')
+        )
+            ->selectRaw('sum((invoice_products.price * invoice_products.quantity) - invoice_products.discount) as price')
+            ->selectRaw('(SELECT SUM((price * quantity - discount) * (taxes.rate / 100)) 
+                      FROM invoice_products
+                      LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
+                      WHERE invoice_products.invoice_id = invoices.id) as total_tax')
+            ->leftJoin('customers', 'customers.id', 'invoices.customer_id')
+            ->leftJoin('invoice_products', 'invoice_products.invoice_id', 'invoices.id')
+            ->where('invoices.created_by', \Auth::user()->creatorId())
+            ->whereBetween(\DB::raw('DATE(invoices.issue_date)'), [$start, $end])
+            ->groupBy('invoices.invoice_id')
+            ->get()
+            ->toArray();
+
+        $mergedArray = [];
+        foreach ($invoiceCustomeres as $item) {
+            $name = $item["name"];
+            if (!isset($mergedArray[$name])) {
+                $mergedArray[$name] = [
+                    "name" => $name,
+                    "invoice_count" => 0,
+                    "price" => 0.0,
+                    "total_tax" => 0.0,
+                ];
+            }
+            $mergedArray[$name]["invoice_count"] += $item["invoice_count"];
+            $mergedArray[$name]["price"] += $item["price"];
+            $mergedArray[$name]["total_tax"] += $item["total_tax"];
+        }
+        $invoiceCustomers = array_values($mergedArray);
+
+        // 🔹 Filter values for Blade
+        $filter['startDateRange'] = $start;
+        $filter['endDateRange']   = $end;
+
+        // 🔹 Apply same filters to raw models
+        $transactions = Transaction::whereBetween(\DB::raw('DATE(date)'), [$start, $end])->get()->toArray();
+        $Invoice = Invoice::whereBetween(\DB::raw('DATE(issue_date)'), [$start, $end])->get()->toArray();
+        $InvoiceProduct = InvoiceProduct::whereBetween(\DB::raw('DATE(created_at)'), [$start, $end])->get()->toArray();
+        $InvoicePayment = InvoicePayment::whereBetween(\DB::raw('DATE(date)'), [$start, $end])->get()->toArray();
+
+        // ✅ Normalize for Blade
+        $normalizedCustomers = [];
+
+        foreach ($transactions as $transaction) {
+            $normalizedCustomers[] = [
+                'type'            => $transaction['type'] ?? 'Transaction',
+                'date'            => $transaction['date'] ?? '',
+                'invoice_number'  => $transaction['payment_id'] ?? '',
+                'memo'            => $transaction['description'] ?? '',
+                'name'            => $transaction['user_type'] === 'Customer' ? 'Customer #' . ($transaction['user_id'] ?? '') : '',
+                'quantity'        => '',
+                'sales_price'     => '',
+                'amount'          => $transaction['amount'] ?? '',
+                'balance'         => '',
+                'sales_with_tax'  => '',
+            ];
+        }
+
+        foreach ($Invoice as $invoice) {
+            $normalizedCustomers[] = [
+                'type'            => 'Invoice',
+                'date'            => $invoice['issue_date'] ?? '',
+                'invoice_number'  => $invoice['ref_number'] ?? '',
+                'memo'            => 'Invoice Ref #' . ($invoice['ref_number'] ?? ''),
+                'name'            => 'Customer #' . ($invoice['customer_id'] ?? ''),
+                'quantity'        => '',
+                'sales_price'     => '',
+                'amount'          => '',
+                'balance'         => '',
+                'sales_with_tax'  => '',
+            ];
+        }
+
+        foreach ($InvoiceProduct as $product) {
+            $normalizedCustomers[] = [
+                'type'            => 'InvoiceProduct',
+                'date'            => $product['created_at'] ?? '',
+                'invoice_number'  => $product['invoice_id'] ?? '',
+                'memo'            => $product['description'] ?? '',
+                'name'            => '',
+                'quantity'        => $product['quantity'] ?? '',
+                'sales_price'     => $product['price'] ?? '',
+                'amount'          => $product['price'] ?? '',
+                'balance'         => '',
+                'sales_with_tax'  => '',
+            ];
+        }
+
+        foreach ($InvoicePayment as $payment) {
+            $normalizedCustomers[] = [
+                'type'            => 'InvoicePayment',
+                'date'            => $payment['date'] ?? '',
+                'invoice_number'  => $payment['invoice_id'] ?? '',
+                'memo'            => $payment['description'] ?? '',
+                'name'            => '',
+                'quantity'        => '',
+                'sales_price'     => '',
+                'amount'          => $payment['amount'] ?? '',
+                'balance'         => '',
+                'sales_with_tax'  => '',
+            ];
+        }
+
+        // Merge normalized data with original invoiceCustomers
+        $invoiceCustomers = array_merge($invoiceCustomers, $normalizedCustomers);
+
+        // return view('report.salesbyCustomerTypeDetail', compact('filter', 'invoiceItems', 'invoiceCustomers'));
+        return $dataTable->render('report.salesbyCustomerTypeDetail', compact('filter', 'invoiceItems'));
+    }
+    
+
+
+
 
     public function salesReport(Request $request)
     {
@@ -5283,7 +5381,6 @@ private function getReportPeriodDatesTwo($period)
         ob_end_clean();
 
         return $data;
-
     }
 
     public function ReceivablesReport(Request $request)
@@ -5710,5 +5807,4 @@ private function getReportPeriodDatesTwo($period)
     {
         return view('allReports.reports');
     }
-
 }
