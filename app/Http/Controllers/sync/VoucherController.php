@@ -562,7 +562,67 @@ class VoucherController extends Controller
         }
 
         return $dataTable->render('sync.customerbalance.index', [
-            'pageTitle' => 'Customer Balances',
+            'pageTitle' => 'Customer Balance Summary',
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function CollectionDetails(\App\DataTables\CollectionDetailsDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Collections Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function InvoiceList(\App\DataTables\InvoiceListbyDate $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Invoice List by Date';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function OpenInvoiceList(\App\DataTables\OpenInvoiceList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Open Invoices Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function CustomerBalanceDetailReport(\App\DataTables\CustomerBalanceDetailReport $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Customer Balance Detail Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
         ]);

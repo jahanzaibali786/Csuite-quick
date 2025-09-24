@@ -23,7 +23,7 @@
                 <div class="filter-group row mb-2 align-items-end">
                     <div class="filter-item col-md-3">
                         <label class="filter-label">Report period</label>
-                        <select id="filter-period" class="form-control">
+                        <select id="header-filter-period" class="form-control filter-period">
                             <option value="all_dates">All Dates</option>
                             <option value="custom_date">Custom dates</option>
                             <option value="today">Today</option>
@@ -85,9 +85,97 @@
                     <!-- Action buttons row -->
                     <div class="col-md-4 d-flex align-items-end gap-2 " style="justify-content: end;">
 
-                        <button class="btn btn-outline" id="filter-btn">
+                        <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
+                            data-bs-target="#filterSidebar" aria-controls="filterSidebar">
                             <i class="fa fa-filter"></i> Filter
                         </button>
+
+                        {{-- Filter Side Bar --}}
+                        <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="filterSidebar"
+                            aria-labelledby="filterSidebarLabel">
+                            <div class="offcanvas-header " style="background: #f9fafb; border-bottom: 1px solid #e6e6e6;">
+                                <h5 class="offcanvas-title" id="filterSidebarLabel">
+                                    Filters
+                                </h5>
+                                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                    aria-label="Close">
+                                    <i class="fa fa-close"></i>
+                                </button>
+                            </div>
+                            <div class="offcanvas-body">
+                                <div class="filter-item mb-2">
+                                    <label class="filter-label">Report period</label>
+                                    <select id="sidebar-filter-period" class="form-control filter-period">
+                                        <option value="all_dates">All Dates</option>
+                                        <option value="custom_date">Custom dates</option>
+                                        <option value="today">Today</option>
+                                        <option value="this_week">This week</option>
+                                        <option value="this_week_to_date">This week to date</option>
+                                        <option value="this_month">This month</option>
+                                        <option value="this_month_to_date" selected>This month to date</option>
+                                        <option value="this_quarter">This quarter</option>
+                                        <option value="this_quarter_to_date">This quarter to date</option>
+                                        <option value="this_year">This year</option>
+                                        <option value="this_year_to_date">This year to date</option>
+                                        <option value="this_year_to_last_month">This year to last month</option>
+                                        <option value="yesterday">Yesterday</option>
+                                        <option value="recent">Recent</option>
+                                        <option value="last_week">Last week</option>
+                                        <option value="last_week_to_date">Last week to date</option>
+                                        <option value="last_week_to_today">Last week to today</option>
+                                        <option value="last_month">Last month</option>
+                                        <option value="last_month_to_date">Last month to date</option>
+                                        <option value="last_month_to_today">Last month to today</option>
+                                        <option value="last_quarter">Last quarter</option>
+                                        <option value="last_quarter_to_date">Last quarter to date</option>
+                                        <option value="last_quarter_to_today">Last quarter to today</option>
+                                        <option value="last_year">Last year</option>
+                                        <option value="last_year_to_date">Last year to date</option>
+                                        <option value="last_year_to_today">Last year to today</option>
+                                        <option value="last_7_days">Last 7 days</option>
+                                        <option value="last_30_days">Last 30 days</option>
+                                        <option value="last_90_days">Last 90 days</option>
+                                        <option value="last_12_months">Last 12 months</option>
+                                        <option value="since_30_days_ago">Since 30 days ago</option>
+                                        <option value="since_60_days_ago">Since 60 days ago</option>
+                                        <option value="since_90_days_ago">Since 90 days ago</option>
+                                        <option value="since_365_days_ago">Since 365 days ago</option>
+                                        <option value="next_week">Next week</option>
+                                        <option value="next_4_weeks">Next 4 weeks</option>
+                                        <option value="next_month">Next month</option>
+                                        <option value="next_quarter">Next quarter</option>
+                                        <option value="next_year">Next year</option>
+                                    </select>
+
+                                </div>
+
+                                <div class="filter-item mb-2">
+                                    <label class="filter-label">as of</label>
+                                    {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                    <input type="date" class="form-control d-none" name="start_date"
+                                        id="sidebar-filter-start-date"
+                                        value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                                    <input type="date" class="form-control " name="end_date"
+                                        id="sidebar-filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                                </div>
+                            </div>
+                        </div>
+
+
+                        {{-- JS to sync filters --}}
+                        <script>
+                            $(document).ready(function() {
+                                // Sync Report Period
+                                $('#sidebar-filter-period').on('change', function() {
+                                    $('#header-filter-period').val($(this).val());
+                                });
+                                $('#header-filter-period').on('change', function() {
+                                    $('#sidebar-filter-period').val($(this).val());
+                                });
+                            });
+                        </script>
+                        {{-- Filter Side Bar --}}
+
                         <button class="btn btn-outline" id="general-options-btn">
                             <i class="fa fa-cog"></i> General options
                         </button>
@@ -741,10 +829,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                    flex-direction: column;
-                                    width: 100%;
-                                    gap: 16px;
-                                } */
+                                                                        flex-direction: column;
+                                                                        width: 100%;
+                                                                        gap: 16px;
+                                                                    } */
 
             .filter-item {
                 width: 100%;
@@ -879,7 +967,7 @@
             }
 
             // Handle period filter changes
-            $('#filter-period').on('change', function() {
+            $('.filter-period').on('change', function() {
                 updateDateRange($(this).val());
             });
 
@@ -1132,6 +1220,13 @@
                 refreshData();
             });
             $('#filter-end-date').on('change', function() {
+                $('#sidebar-filter-end-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+
+            $('#sidebar-filter-end-date').on('change', function() {
+                $('#filter-end-date').val($(this).val());
                 updateDateDisplay();
                 refreshData();
             });
