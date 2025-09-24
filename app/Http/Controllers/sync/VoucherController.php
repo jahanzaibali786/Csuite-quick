@@ -251,7 +251,7 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        $accounts = ChartOfAccount::where('company_id', 2)->get();
+        $accounts = ChartOfAccount::get();
 
         return $dataTable->render('sync.ledger.index', [
             'accounts' => $accounts,
@@ -518,6 +518,134 @@ class VoucherController extends Controller
 
         return $pdf->download('profit-loss-detail-' . $fromDate->format('Y-m-d') . '-to-' . $toDate->format('Y-m-d') . '.pdf');
     }
+
+    public function AgingSummary(\App\DataTables\AgingSummaryDataTable $dataTable, Request $request)
+    {
+        $pageTitle = 'A/R Aging Summary Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.agingsummary.index', [
+            'pageTitle' => $pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function AgingDetails(\App\DataTables\AgingDetailsDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Receivables Aging Details';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.agingdetails.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+
+    public function CustomerBalance(\App\DataTables\CustomerBalanceDataTable $dataTable, Request $request)
+    {
+        // $start = $request->start_date ?? date('Y-01-01');
+        // $end = $request->end_date ?? date('Y-m-d');
+
+        // $dataTable->setDateRange($start, $end);
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => 'Customer Balance Summary',
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function CollectionDetails(\App\DataTables\CollectionDetailsDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Collections Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function InvoiceList(\App\DataTables\InvoiceListbyDate $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Invoice List by Date';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function OpenInvoiceList(\App\DataTables\OpenInvoiceList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Open Invoices Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function CustomerBalanceDetailReport(\App\DataTables\CustomerBalanceDetailReport $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Customer Balance Detail Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+
+    // public function AgingDetails(\App\DataTables\AgingDetailsDataTable $dataTable, Request $request)
+    // {
+    //     $this->pageTitle = 'Receivables Aging Details';
+
+    //     if ($request->ajax()) {
+    //         return $dataTable->ajax();
+    //     }
+
+    //     return $dataTable->render('sync.agingdetails.index', [
+    //         'pageTitle' => $this->pageTitle,
+    //         'startDate' => $request->get('start_date', date('Y-01-01')),
+    //         'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+    //     ]);
+    // }
+
+
+
 }
 
 

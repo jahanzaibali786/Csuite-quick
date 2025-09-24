@@ -200,14 +200,14 @@ Route::post('/ai-sql', [AiSqlController::class, 'ask'])->name('ai-sql.ask')->mid
 Route::get('/createLinkToken', 'App\Http\Controllers\PlaidController@createLinkToken')->name('createLinkToken');
 Route::post('/storePlaidAccount', 'App\Http\Controllers\PlaidController@storePlaidAccount')->name('linkPlaidAccount');
 Route::post('/getInvestmentHoldings', 'App\Http\Controllers\PlaidController@getInvestmentHoldings')->name('getInvestmentHoldings');
-Route::get('/getBalance/{id}',         'App\Http\Controllers\PlaidController@showBalance')->name('getBalance');
-Route::get('/updateBalance/{id}',         'App\Http\Controllers\PlaidController@updateBalance')->name('updateBalance');
-Route::get('/getBanks',         'App\Http\Controllers\PlaidController@getConnectedBank')->name('getBanks');
-Route::get('/getTransactions',    'App\Http\Controllers\PlaidController@showTransactions')->name('getTransactions');
-Route::post('/plaid/transfer',       'App\Http\Controllers\PlaidController@createTransfer')->name('plaid.transfer');
+Route::get('/getBalance/{id}', 'App\Http\Controllers\PlaidController@showBalance')->name('getBalance');
+Route::get('/updateBalance/{id}', 'App\Http\Controllers\PlaidController@updateBalance')->name('updateBalance');
+Route::get('/getBanks', 'App\Http\Controllers\PlaidController@getConnectedBank')->name('getBanks');
+Route::get('/getTransactions', 'App\Http\Controllers\PlaidController@showTransactions')->name('getTransactions');
+Route::post('/plaid/transfer', 'App\Http\Controllers\PlaidController@createTransfer')->name('plaid.transfer');
 Route::get('/plaid/relink/token', 'App\Http\Controllers\PlaidController@createRelinkToken')->name('plaid.relink.token');
 Route::post('/plaid/transaction', 'App\Http\Controllers\PlaidController@placeTransaction')->name('plaid.transaction');
-Route::post('/plaid/exchange-public-token',  'App\Http\Controllers\PlaidController@exchangePublicToken')->name('plaid.exchangePublicToken');
+Route::post('/plaid/exchange-public-token', 'App\Http\Controllers\PlaidController@exchangePublicToken')->name('plaid.exchangePublicToken');
 
 ///copy link
 Route::get('/customer/invoice/{id}/', [InvoiceController::class, 'invoiceLink'])->name('invoice.link.copy');
@@ -442,6 +442,7 @@ Route::group(['middleware' => ['verified']], function () {
     );
 
     Route::get('productservice/index', [ProductServiceController::class, 'index'])->name('productservice.index');
+    Route::get('productservice/inventory-valuation-summary', [ProductServiceController::class, 'inventoryValuationSummary'])->name('productservice.inventoryValuationSummary');
     Route::get('productservice/{id}/detail', [ProductServiceController::class, 'warehouseDetail'])->name('productservice.detail');
     Route::post('empty-cart', [ProductServiceController::class, 'emptyCart'])->middleware(['auth', 'XSS']);
     Route::post('warehouse-empty-cart', [ProductServiceController::class, 'warehouseemptyCart'])->name('warehouse-empty-cart')->middleware(['auth', 'XSS']);
@@ -629,7 +630,7 @@ Route::group(['middleware' => ['verified']], function () {
     Route::resource('payment', PaymentController::class)->middleware(['auth', 'XSS', 'revalidate']);
 
     Route::group([
-        'middleware' => ['auth','XSS','revalidate'],
+        'middleware' => ['auth', 'XSS', 'revalidate'],
     ], function () {
         Route::get('report/transaction', [TransactionController::class, 'index'])
             ->name('transaction.index');
@@ -639,17 +640,17 @@ Route::group(['middleware' => ['verified']], function () {
             ->name('transaction.reccuringtrans');
         Route::get('/transactions/all-sales', [TransactionController::class, 'allSales'])
             ->name('allSales');
-    
+
         Route::prefix('report')->group(function () {
             Route::get('receipts/{invoice?}', [TransactionController::class, 'receipts'])
                 ->name('receipts.index');
-    
+
             // Back-compat for old links
             Route::get('reciept/{invoice?}', [TransactionController::class, 'receipts'])
                 ->name('reciept.index');
         });
     });
-    
+
 
     Route::group(
         [
@@ -675,6 +676,7 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('profit-loss-report/{view?}/{collapseView?}', [ReportController::class, 'profitLoss'])->name('report.profit.loss');
 
             Route::get('ledger-report/{account?}', [ReportController::class, 'ledgerSummary'])->name('report.ledger');
+            Route::get('general-ledger-list/{account?}/{account_id?}', [ReportController::class, 'general_ledger_list'])->name('report.general.ledger');
             Route::get('trial-balance-report/{view?}', [ReportController::class, 'trialBalanceSummary'])->name('trial.balance');
 
             Route::get('reports-monthly-cashflow', [ReportController::class, 'monthlyCashflow'])->name('report.monthly.cashflow')->middleware(['auth', 'XSS']);
@@ -683,11 +685,14 @@ Route::group(['middleware' => ['verified']], function () {
             Route::post('export/balance-sheet', [ReportController::class, 'balanceSheetExport'])->name('balance.sheet.export');
             Route::post('export/profit-loss', [ReportController::class, 'profitLossExport'])->name('profit.loss.export');
             Route::get('report/sales', [ReportController::class, 'salesReport'])->name('report.sales');
+            Route::get('report/sales/salesbyCustomerTypeDetail', [ReportController::class, 'SalesbyCustomerTypeDetailReport'])->name('report.salesbyCustomerTypeDetail');
+            // Route::get('report/sales/salesbyCustomerTypeDetail/data', [ReportController::class, 'SalesbyCustomerTypeDetailReportData'])->name('report.salesbyCustomerTypeDetail.data');
             Route::post('export/sales', [ReportController::class, 'salesReportExport'])->name('sales.export');
             Route::get('report/receivables', [ReportController::class, 'ReceivablesReport'])->name('report.receivables');
             Route::post('export/receivables', [ReportController::class, 'ReceivablesExport'])->name('receivables.export');
             Route::get('report/payables', [ReportController::class, 'PayablesReport'])->name('report.payables');
             Route::get('report/recurring-invoices', [ReportController::class, 'RecurringInvoices'])->name('report.recurring');
+            Route::get('report/recurring-payments', [ReportController::class, 'RecurringPayments'])->name('report.recurring-payments');
         }
     );
 
@@ -785,6 +790,16 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('balance-sheet-detail/export', [VoucherController::class, 'exportBalanceSheetDetail'])->name('balance-sheet-detail.export');
     Route::get('profit-loss-detail', [VoucherController::class, 'profitLossDetail'])->name('profit-loss-detail.index');
     Route::get('profit-loss-detail/export', [VoucherController::class, 'exportProfitLossDetail'])->name('profit-loss-detail.export');
+
+    //Abdullah Reports
+    Route::get("/receivables/agingsummary", [VoucherController::class, 'AgingSummary'])->name("AgingSummary.index");
+    Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])->name("AgingDetails.index");
+    Route::get("/receivables/collectiondetails", [VoucherController::class, 'CollectionDetails'])->name("Collections.index");
+    Route::get("/receivables/customerbalancedetailreport", [VoucherController::class, 'CustomerBalanceDetailReport'])->name("Collections.index");
+    Route::get("/receivables/customerbalance", [VoucherController::class, 'CustomerBalance'])->name("Customer.index");
+    Route::get("/receivables/invoicelist", [VoucherController::class, 'InvoiceList'])->name("Collections.index");
+    Route::get("/receivables/openinvoicelist", [VoucherController::class, 'OpenInvoiceList'])->name("Collections.index");
+
     // cya routes
     Route::post('/ai/ask-assistant', [ciaController::class, 'performaction'])->name('askassistant');
     Route::get('dynamic-reporting', [ciaController::class, 'reportingview'])->name('dynamicreportingview');
