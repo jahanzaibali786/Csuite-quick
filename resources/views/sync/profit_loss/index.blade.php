@@ -392,26 +392,30 @@
         }
 
         .view-option-item .checkmark {
-    visibility: hidden;
-    margin-right: 6px;
-}
-.view-option-item.active .checkmark {
-    visibility: visible;
-}
+            visibility: hidden;
+            margin-right: 6px;
+        }
 
-/* Your existing compact styles */
-.compact-view .child-row {
-    display: none !important;
-}
-.compact-view .subtotal-row {
-    display: none !important;
-}
-.compact-view .section-total-amount {
-    display: inline-block !important;
-}
-.compact-view .toggle-chevron {
-    transform: rotate(-90deg);
-}
+        .view-option-item.active .checkmark {
+            visibility: visible;
+        }
+
+        /* Your existing compact styles */
+        .compact-view .child-row {
+            display: none !important;
+        }
+
+        .compact-view .subtotal-row {
+            display: none !important;
+        }
+
+        .compact-view .section-total-amount {
+            display: inline-block !important;
+        }
+
+        .compact-view .toggle-chevron {
+            transform: rotate(-90deg);
+        }
 
         /* Filter modal specific styles */
         .filter-section {
@@ -487,23 +491,23 @@
                             <i class="fa fa-eye"></i> View options
                         </button>
                         <div class="view-options-dropdown" id="view-options-dropdown">
-    <div class="view-option-item" data-value="normal">
-        <span class="checkmark"><i class="fa fa-check"></i></span>
-        Normal view
-    </div>
-    <div class="view-option-item" data-value="compact">
-        <span class="checkmark"><i class="fa fa-check"></i></span>
-        Compact view
-    </div>
-    <div class="view-option-item divider" data-value="expand">
-        <span class="checkmark"><i class="fa fa-check"></i></span>
-        Expand
-    </div>
-    <div class="view-option-item" data-value="collapse">
-        <span class="checkmark"><i class="fa fa-check"></i></span>
-        Collapse
-    </div>
-</div>
+                            <div class="view-option-item" data-value="normal">
+                                <span class="checkmark"><i class="fa fa-check"></i></span>
+                                Normal view
+                            </div>
+                            <div class="view-option-item" data-value="compact">
+                                <span class="checkmark"><i class="fa fa-check"></i></span>
+                                Compact view
+                            </div>
+                            <div class="view-option-item divider" data-value="expand">
+                                <span class="checkmark"><i class="fa fa-check"></i></span>
+                                Expand
+                            </div>
+                            <div class="view-option-item" data-value="collapse">
+                                <span class="checkmark"><i class="fa fa-check"></i></span>
+                                Collapse
+                            </div>
+                        </div>
 
                     </div>
                 </div>
@@ -692,12 +696,6 @@
 
 @push('script-page')
     @include('sections.datatable_js')
-
-    <!-- Date Range Picker Dependencies -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-
     <script>
         $(document).ready(function() {
             window.reportOptions = {
@@ -783,79 +781,80 @@
             $('#view-options-dropdown').toggle();
         });
 
-       // initialize state if not set
-window.viewState = window.viewState || {
-    viewType: 'normal',    // 'normal' or 'compact'
-    expandState: 'expand'  // 'expand' or 'collapse'
-};
+        // initialize state if not set
+        window.viewState = window.viewState || {
+            viewType: 'normal', // 'normal' or 'compact'
+            expandState: 'expand' // 'expand' or 'collapse'
+        };
 
-// strict linking
-function setViewType(type) {
-    if (type === 'compact') {
-        window.viewState.viewType = 'compact';
-        window.viewState.expandState = 'collapse';
-    } else if (type === 'normal') {
-        window.viewState.viewType = 'normal';
-        window.viewState.expandState = 'expand';
-    }
-}
-function setExpandState(state) {
-    if (state === 'collapse') {
-        window.viewState.expandState = 'collapse';
-        window.viewState.viewType = 'compact';
-    } else if (state === 'expand') {
-        window.viewState.expandState = 'expand';
-        window.viewState.viewType = 'normal';
-    }
-}
+        // strict linking
+        function setViewType(type) {
+            if (type === 'compact') {
+                window.viewState.viewType = 'compact';
+                window.viewState.expandState = 'collapse';
+            } else if (type === 'normal') {
+                window.viewState.viewType = 'normal';
+                window.viewState.expandState = 'expand';
+            }
+        }
 
-// click handler
-$('.view-option-item').off('click.viewOptions').on('click.viewOptions', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
+        function setExpandState(state) {
+            if (state === 'collapse') {
+                window.viewState.expandState = 'collapse';
+                window.viewState.viewType = 'compact';
+            } else if (state === 'expand') {
+                window.viewState.expandState = 'expand';
+                window.viewState.viewType = 'normal';
+            }
+        }
 
-    const value = $(this).data('value');
+        // click handler
+        $('.view-option-item').off('click.viewOptions').on('click.viewOptions', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-    if (value === 'compact' || value === 'normal') {
-        setViewType(value);
-    } else if (value === 'expand' || value === 'collapse') {
-        setExpandState(value);
-    }
+            const value = $(this).data('value');
 
-    applyViewState();
-    updateViewCheckmarks();
-    $('#view-options-dropdown').hide();
-});
+            if (value === 'compact' || value === 'normal') {
+                setViewType(value);
+            } else if (value === 'expand' || value === 'collapse') {
+                setExpandState(value);
+            }
 
-// apply state to table
-function applyViewState() {
-    const $reportContent = $('#report-content');
-    $reportContent.removeClass('compact-view');
+            applyViewState();
+            updateViewCheckmarks();
+            $('#view-options-dropdown').hide();
+        });
 
-    if (window.viewState.viewType === 'compact') {
-        $reportContent.addClass('compact-view');
-    }
+        // apply state to table
+        function applyViewState() {
+            const $reportContent = $('#report-content');
+            $reportContent.removeClass('compact-view');
 
-    if (window.viewState.expandState === 'expand') {
-        handleExpandAll();
-    } else {
-        handleCollapseAll();
-    }
-}
+            if (window.viewState.viewType === 'compact') {
+                $reportContent.addClass('compact-view');
+            }
 
-// update checkmarks (only 2 active at a time)
-function updateViewCheckmarks() {
-    $('.view-option-item').removeClass('active');
+            if (window.viewState.expandState === 'expand') {
+                handleExpandAll();
+            } else {
+                handleCollapseAll();
+            }
+        }
 
-    $('.view-option-item[data-value="' + window.viewState.viewType + '"]').addClass('active');
-    $('.view-option-item[data-value="' + window.viewState.expandState + '"]').addClass('active');
-}
+        // update checkmarks (only 2 active at a time)
+        function updateViewCheckmarks() {
+            $('.view-option-item').removeClass('active');
 
-// init on load
-$(function () {
-    applyViewState();
-    updateViewCheckmarks();
-});
+            $('.view-option-item[data-value="' + window.viewState.viewType + '"]').addClass('active');
+            $('.view-option-item[data-value="' + window.viewState.expandState + '"]').addClass('active');
+        }
+
+        // init on load
+        $(function() {
+            applyViewState();
+            updateViewCheckmarks();
+        });
 
         // Filter Modal Handlers
         $('#filter-btn').on('click', function() {

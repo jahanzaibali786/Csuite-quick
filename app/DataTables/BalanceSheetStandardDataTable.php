@@ -12,6 +12,8 @@ use Illuminate\Support\Collection;
 class BalanceSheetStandardDataTable extends DataTable
 {
     protected $asOfDate;
+    protected $companyId;
+    protected $owner;
 
     public function __construct()
     {
@@ -20,6 +22,8 @@ class BalanceSheetStandardDataTable extends DataTable
         $this->asOfDate = request('asOfDate')
             ? Carbon::parse(request('asOfDate'))->endOfDay()
             : Carbon::now()->endOfDay();
+        $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
+        $this->owner = \Auth::user()->type === 'company' ? 'created_by' : 'owned_by';
     }
 
     public function dataTable($query)
@@ -127,31 +131,31 @@ class BalanceSheetStandardDataTable extends DataTable
     public function query()
     {
         // Get all accounts with balances
-        $accounts = ChartOfAccount::where('chart_of_accounts.company_id', company()->id)
-            ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.chart_of_account_sub_type_id', '=', 'chart_of_account_sub_types.id')
-            ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.chart_of_account_type_id', '=', 'chart_of_account_types.id')
-            ->leftJoin('journal_entry_lines', 'chart_of_accounts.id', '=', 'journal_entry_lines.chart_of_account_id')
+        $accounts = ChartOfAccount::where('chart_of_accounts.created_by', $this->companyId)
+            ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
+            ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.type', '=', 'chart_of_account_types.id')
+            ->leftJoin('journal_items', 'chart_of_accounts.id', '=', 'journal_items.account')
             ->leftJoin('journal_entries', function($join) {
-                $join->on('journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
-                    ->where('journal_entries.company_id', company()->id)
-                    ->where('journal_entries.date', '<=', $this->asOfDate)
-                    ->where('journal_entries.status', 'draft');
+                $join->on('journal_items.journal', '=', 'journal_entries.id')
+                    ->where("journal_entries.{$this->owner}", $this->companyId)
+                    ->where('journal_entries.date', '<=', $this->asOfDate);
+                    // ->where('journal_entries.status', 'draft');
             })
             ->select([
                 'chart_of_accounts.id',
                 'chart_of_accounts.name',
-                'chart_of_accounts.parent_id',
+                'chart_of_accounts.parent',
                 'chart_of_account_sub_types.id as sub_type_id',
                 'chart_of_account_sub_types.name as sub_type_name',
                 'chart_of_account_types.id as type_id',
                 'chart_of_account_types.name as type_name',
-                DB::raw('COALESCE(SUM(journal_entry_lines.debit), 0) as total_debit'),
-                DB::raw('COALESCE(SUM(journal_entry_lines.credit), 0) as total_credit'),
+                DB::raw('COALESCE(SUM(journal_items.debit), 0) as total_debit'),
+                DB::raw('COALESCE(SUM(journal_items.credit), 0) as total_credit'),
             ])
             ->groupBy(
                 'chart_of_accounts.id',
                 'chart_of_accounts.name',
-                'chart_of_accounts.parent_id',
+                'chart_of_accounts.parent',
                 'chart_of_account_sub_types.id',
                 'chart_of_account_sub_types.name',
                 'chart_of_account_types.id',
@@ -250,15 +254,14 @@ class BalanceSheetStandardDataTable extends DataTable
         }
 
         // Add Net Profit / Loss into Equity
-        $netProfit = DB::table('journal_entry_lines')
-            ->join('chart_of_accounts', 'journal_entry_lines.chart_of_account_id', '=', 'chart_of_accounts.id')
-            ->join('chart_of_account_types', 'chart_of_accounts.chart_of_account_type_id', '=', 'chart_of_account_types.id')
-            ->join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
-            ->where('journal_entries.company_id', company()->id)
+        $netProfit = DB::table('journal_items')
+            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+            ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->where("journal_entries.{$this->owner}", $this->companyId)
             ->where('journal_entries.date', '<=', $this->asOfDate)
-            ->where('journal_entries.status', 'draft')
             ->whereIn('chart_of_account_types.name', ['Income', 'Expense'])
-            ->selectRaw('SUM(journal_entry_lines.credit - journal_entry_lines.debit) as net_profit')
+            ->selectRaw('SUM(journal_items.credit - journal_items.debit) as net_profit')
             ->value('net_profit') ?? 0;
 
         $report->push((object)[
@@ -297,7 +300,7 @@ class BalanceSheetStandardDataTable extends DataTable
         ]);
 
         // Push children recursively
-        $children = $allAccounts->where('parent_id', $account->id);
+        $children = $allAccounts->where('parent', $account->id);
         foreach ($children as $child) {
             $rows = $rows->merge($this->buildAccountTree($child, $allAccounts, $depth + 1, $subtypeId));
         }
@@ -311,7 +314,7 @@ class BalanceSheetStandardDataTable extends DataTable
             ->setTableId('balance-sheet-standard-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->dom('Bfrtip')
+            // ->dom('Bfrtip')
             ->parameters([
                 'paging' => false,
                 'searching' => false,

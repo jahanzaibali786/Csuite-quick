@@ -208,6 +208,20 @@
 
                                         {{-- ================== Existing Reports ================== --}}
                                         <li
+                                            class="col-6 report-item {{ Request::route()->getName() == 'ledger.index' ? 'active' : '' }}">
+                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                href="{{ route('ledger.index') }}">
+                                                <span class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                                    {{ __('General Ledger') }}
+                                                </span>
+                                                <span class="report-actions">
+                                                    <i class="bi bi-star text-muted"></i>
+                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                </span>
+                                            </a>
+                                        </li>
+                                        <li
                                             class="col-6 report-item {{ Request::route()->getName() == 'report.balance.sheet' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
                                                 href="{{ route('report.balance.sheet') }}">
@@ -627,9 +641,9 @@
                                         </li>
 
                                         <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'trial.balance' ? 'active' : '' }}">
+                                            class="col-6 report-item {{ Request::route()->getName() == 'trial-balance.index' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('trial.balance') }}">
+                                                href="{{ route('trial-balance.index') }}">
                                                 <span class="d-flex align-items-center">
                                                     <i class="bi bi-file-earmark-text me-2"></i>
                                                     {{ __('Trial Balance') }}
