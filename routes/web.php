@@ -788,14 +788,45 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('profit-loss-detail', [VoucherController::class, 'profitLossDetail'])->name('profit-loss-detail.index');
     Route::get('profit-loss-detail/export', [VoucherController::class, 'exportProfitLossDetail'])->name('profit-loss-detail.export');
 
-    //Abdullah Reports
-    Route::get("/receivables/agingsummary", [VoucherController::class, 'AgingSummary'])->name("AgingSummary.index");
-    Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])->name("AgingDetails.index");
-    Route::get("/receivables/collectiondetails", [VoucherController::class, 'CollectionDetails'])->name("Collections.index");
-    Route::get("/receivables/customerbalancedetailreport", [VoucherController::class, 'CustomerBalanceDetailReport'])->name("Collections.index");
-    Route::get("/receivables/customerbalance", [VoucherController::class, 'CustomerBalance'])->name("Customer.index");
-    Route::get("/receivables/invoicelist", [VoucherController::class, 'InvoiceList'])->name("Collections.index");
-    Route::get("/receivables/openinvoicelist", [VoucherController::class, 'OpenInvoiceList'])->name("Collections.index");
+    // //Abdullah Reports (What owes you)
+    // Route::get("/receivables/agingsummary", [VoucherController::class, 'ARAgingSummary'])->name("AgingSummary.index");
+    // Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])->name("AgingDetails.index");
+    // Route::get("/receivables/collectiondetails", [VoucherController::class, 'CollectionDetails'])->name("Collections.index");
+    // Route::get("/receivables/customerbalancedetailreport", [VoucherController::class, 'CustomerBalanceDetailReport'])->name("Collections.index");
+    // Route::get("/receivables/customerbalance", [VoucherController::class, 'CustomerBalance'])->name("Customer.index");
+    // Route::get("/receivables/invoicelist", [VoucherController::class, 'InvoiceList'])->name("Collections.index");
+    // Route::get("/receivables/openinvoicelist", [VoucherController::class, 'OpenInvoiceList'])->name("Collections.index");
+    // Route::get("/receivables/invoicesandreceivedpayments", [VoucherController::class, 'InvoicesandReceivedPayments'])->name("Collections.index");
+
+    // //Abdullah Reports 2 (What you owe)
+    // Route::get("/payables/apagingsummary", [VoucherController::class, 'APAgingSummary'])->name("APAgingSummary.index");
+    // Route::get("/payables/agingdetails", [VoucherController::class, 'APAgingDetails'])->name("APAgingDetails.index");
+    // Route::get("/payables/billsandpayments", [VoucherController::class, 'billsandpayments'])->name("APAgingDetails.index");
+    // Route::get("/payables/vendorbalancesummary", [VoucherController::class, 'vendorbalancesummary'])->name("APAgingDetails.index");
+    // Route::get("/payables/vendorbalancedetail", [VoucherController::class, 'vendorbalancedetail'])->name("APAgingDetails.index");
+
+    // Abdullah Reports (What owes you) --- Receivables
+    Route::get("/receivables/agingsummary", [VoucherController::class, 'ARAgingSummary'])->name("receivables.aging_summary");
+    Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])->name("receivables.aging_details");
+    Route::get("/receivables/collectiondetails", [VoucherController::class, 'CollectionDetails'])->name("receivables.collection_details");
+    Route::get("/receivables/customerbalancedetailreport", [VoucherController::class, 'CustomerBalanceDetailReport'])->name("receivables.customer_balance_detail");
+    Route::get("/receivables/customerbalance", [VoucherController::class, 'CustomerBalance'])->name("receivables.customer_balance");
+    Route::get("/receivables/invoicelist", [VoucherController::class, 'InvoiceList'])->name("receivables.invoice_list");
+    Route::get("/receivables/openinvoicelist", [VoucherController::class, 'OpenInvoiceList'])->name("receivables.open_invoice_list");
+    Route::get("/receivables/invoicesandreceivedpayments", [VoucherController::class, 'InvoicesandReceivedPayments'])->name("receivables.invoices_received_payments");
+
+    // Abdullah Reports 2 (What you owe) --- Payables
+    Route::get("/payables/apagingsummary", [VoucherController::class, 'APAgingSummary'])->name("payables.aging_summary");
+    Route::get("/payables/agingdetails", [VoucherController::class, 'APAgingDetails'])->name("payables.aging_details");
+    Route::get("/payables/billsandpayments", [VoucherController::class, 'billsandpayments'])->name("payables.bills_payments");
+    Route::get("/payables/vendorbalancesummary", [VoucherController::class, 'vendorbalancesummary'])->name("payables.vendor_balance_summary");
+    Route::get("/payables/vendorbalancedetail", [VoucherController::class, 'vendorbalancedetail'])->name("payables.vendor_balance_detail");
+    Route::get("/payables/unpaidbillsreport", [VoucherController::class, 'unpaidbillsreport'])->name("payables.unpaid_bills_report");
+
+    // Abdullah Reports 3 Employees 
+    Route::get("/employees/employeescontactlist", [VoucherController::class, 'employeescontactlist'])->name("employees.employeecontactlist");
+    
+
 
     // cya routes
     Route::post('/ai/ask-assistant', [ciaController::class, 'performaction'])->name('askassistant');

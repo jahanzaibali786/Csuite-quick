@@ -16,6 +16,7 @@ class CollectionDetailsDataTable extends DataTable
 
         $grandTotalAmount = 0;
         $grandBalanceDue = 0;
+        $grandOpenBalance = 0;
 
         // ✅ Group by Customer Name
         $groupedData = $data->groupBy('name');
@@ -25,11 +26,12 @@ class CollectionDetailsDataTable extends DataTable
         foreach ($groupedData as $customer => $rows) {
             $subtotalAmount = 0;
             $subtotalDue = 0;
+            $subtotalOpen = 0;
 
             // Header row for this customer
             $finalData->push((object) [
-                // 'customer' => '<strong>' . $customer . '</strong>',
-                'transaction' => '<strong>' . $customer . '</strong>',
+                'customer' => $customer,
+                'transaction' => '<span class="" data-bucket="' . \Str::slug($customer) . '"> <span class="icon">▼</span> <strong>' . $customer . '</strong></span>',
                 'due_date' => '',
                 'past_due' => null,
                 'type' => null,
@@ -38,21 +40,25 @@ class CollectionDetailsDataTable extends DataTable
                 'total_amount' => null,
                 'balance_due' => null,
                 'isPlaceholder' => true,
-                'isSubtotal' => true
+                'isSubtotal' => true,
+                'isParent' => true
             ]);
 
             foreach ($rows as $row) {
                 $subtotalAmount += ($row->subtotal ?? 0) + ($row->total_tax ?? 0);
                 $subtotalDue += $row->balance_due;
+                $subtotalOpen += $row->open_balance;
                 $row->customer = $customer;
                 $row->past_due = $row->age > 0 ? $row->age . ' Days' : '-'; // 👈 Past Due column
+                $row->customer = $customer;
                 $finalData->push($row);
             }
 
             // Subtotal row for this customer
             $finalData->push((object) [
                 // 'customer' => '<strong>Subtotal</strong>',
-                'transaction' => '<strong>Subtotal for '. $customer .'</strong>',
+                'customer' => $customer,
+                'transaction' => '<strong>Subtotal for ' . $customer . '</strong>',
                 'due_date' => '',
                 'past_due' => '',
                 'type' => '',
@@ -60,6 +66,7 @@ class CollectionDetailsDataTable extends DataTable
                 // 'age' => '',
                 'total_amount' => $subtotalAmount,
                 'balance_due' => $subtotalDue,
+                'open_balance' => $subtotalOpen,
                 'isSubtotal' => true,
             ]);
 
@@ -73,12 +80,14 @@ class CollectionDetailsDataTable extends DataTable
                 // 'age' => '',
                 'total_amount' => 0,
                 'balance_due' => 0,
+                'open_balance' => 0,
                 'isPlaceholder' => true,
                 'isSubtotal' => true
             ]);
 
             $grandTotalAmount += $subtotalAmount;
             $grandBalanceDue += $subtotalDue;
+            $grandOpenBalance += $subtotalOpen;
         }
 
         // ✅ Add grand total row
@@ -92,6 +101,7 @@ class CollectionDetailsDataTable extends DataTable
             'age' => '',
             'total_amount' => $grandTotalAmount,
             'balance_due' => $grandBalanceDue,
+            'open_balance' => $grandOpenBalance,
             'isGrandTotal' => true,
         ]);
 
@@ -119,13 +129,13 @@ class CollectionDetailsDataTable extends DataTable
                 $status = $row->status ?? 0;
                 $labels = \App\Models\Invoice::$statues;
                 $classes = [
-                    0 => 'bg-secondary',
-                    1 => 'bg-warning',
-                    2 => 'bg-danger',
-                    3 => 'bg-info',
-                    4 => 'bg-primary',
+                    0 => 'nbg-secondary',
+                    1 => 'nbg-warning',
+                    2 => 'nbg-danger',
+                    3 => 'nbg-info',
+                    4 => 'nbg-primary',
                 ];
-                return '<span class="status_badge badge text-white ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
+                return '<span class="status_badger badger text-whit ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
                     . __($labels[$status] ?? '-') . '</span>';
             })
             ->addColumn('issue_date', fn($row) => $row->issue_date ?? '')
@@ -144,6 +154,37 @@ class CollectionDetailsDataTable extends DataTable
                 fn($row) =>
                 isset($row->isPlaceholder) ? '' : number_format($row->balance_due ?? 0)
             )
+            ->editColumn(
+                'open_balance',
+                fn($row) =>
+                isset($row->isHeader) || isset($row->isPlaceholder)
+                ? ''
+                : number_format($row->open_balance ?? 0)
+            )
+            ->setRowClass(function ($row) {
+                if (property_exists($row, 'isParent') && $row->isParent) {
+                    return 'parent-row toggle-bucket bucket-' . \Str::slug($row->customer ?? 'na');
+                }
+
+                if (property_exists($row, 'isSubtotal') && $row->isSubtotal && !property_exists($row, 'isGrandTotal')) {
+                    return 'subtotal-row bucket-' . \Str::slug($row->customer ?? 'na');
+                }
+
+                if (
+                    !property_exists($row, 'isParent') &&
+                    !property_exists($row, 'isSubtotal') &&
+                    !property_exists($row, 'isGrandTotal') &&
+                    !property_exists($row, 'isPlaceholder')
+                ) {
+                    return 'child-row bucket-' . \Str::slug($row->customer ?? 'na');
+                }
+
+                if (property_exists($row, 'isGrandTotal') && $row->isGrandTotal) {
+                    return 'grandtotal-row';
+                }
+
+                return '';
+            })
             ->rawColumns(['customer', 'transaction', 'status_label']);
     }
 
@@ -183,6 +224,17 @@ class CollectionDetailsDataTable extends DataTable
                     - (IFNULL(SUM(invoice_payments.amount),0)
                     + (SELECT IFNULL(SUM(credit_notes.amount),0) FROM credit_notes WHERE credit_notes.invoice = invoices.id))
                  ) as balance_due'),
+                DB::raw('(
+                    (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
+                    + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
+                       FROM invoice_products 
+                       LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
+                       WHERE invoice_products.invoice_id = invoices.id)
+                    - (IFNULL(SUM(invoice_payments.amount),0)
+                       + (SELECT IFNULL(SUM(credit_notes.amount),0) 
+                          FROM credit_notes 
+                          WHERE credit_notes.invoice = invoices.id))
+                ) as open_balance'),
                 DB::raw('GREATEST(DATEDIFF(CURDATE(), invoices.due_date), 0) as age')
             )
             ->leftJoin('customers', 'customers.id', '=', 'invoices.customer_id')
@@ -221,7 +273,8 @@ class CollectionDetailsDataTable extends DataTable
             Column::make('due_date')->title('Due Date'), // 👈 moved here
             Column::make('past_due')->title('Past Due'),
             Column::make('total_amount')->title('Amount'),
-            Column::make('balance_due')->title('Balance Due'),
+            // Column::make('balance_due')->title('Balance Due'),
+            Column::make('open_balance')->title('Open Balance'),
 
         ];
     }

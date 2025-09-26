@@ -83,7 +83,11 @@
                     </div>
 
                     <!-- Action buttons row -->
-                    <div class="col-md-4 d-flex align-items-end gap-2 " style="justify-content: end;">
+                    <div class="d-flex align-items-end gap-3 mt-3" style="justify-content: end;">
+
+                        <button class="btn btn-outline" id="columns-btn">
+                            <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
+                        </button>
 
                         <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
                             data-bs-target="#filterSidebar" aria-controls="filterSidebar">
@@ -362,6 +366,49 @@
         </div>
     </div>
 
+    <script>
+        function buildColumnsFromTable() {
+            const headers = document.querySelectorAll('#aging-details-table thead th');
+            const container = document.querySelector('#sortable-columns');
+
+            // Clear the old list
+            container.innerHTML = '';
+
+            headers.forEach((th, index) => {
+                const columnName = th.innerText.trim().toUpperCase();
+
+                // Skip BUCKET column
+                if (columnName === 'BUCKET') {
+                    return;
+                }
+
+                // Build draggable/checkbox item
+                const div = document.createElement('div');
+                div.classList.add('column-item');
+                div.setAttribute('data-column', index);
+                div.innerHTML = `
+            <i class="fa fa-grip-vertical handle"></i>
+            <label class="checkbox-label">
+                <input type="checkbox" checked> ${columnName}
+            </label>
+        `;
+
+                container.appendChild(div);
+            });
+        }
+
+        // Build once after DataTable is initialized
+        $(document).ready(function() {
+            buildColumnsFromTable();
+        });
+
+        // Or rebuild every redraw if needed:
+        $('#aging-details-table').on('draw.dt', function() {
+            buildColumnsFromTable();
+        });
+    </script>
+
+    
 
     <style>
         /* Base styling */
@@ -829,10 +876,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                        flex-direction: column;
-                                                                        width: 100%;
-                                                                        gap: 16px;
-                                                                    } */
+                                                                                        flex-direction: column;
+                                                                                        width: 100%;
+                                                                                        gap: 16px;
+                                                                                    } */
 
             .filter-item {
                 width: 100%;

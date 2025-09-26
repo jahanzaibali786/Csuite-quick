@@ -29,7 +29,9 @@ class OpenInvoiceList extends DataTable
             // Header row for this customer
             $finalData->push((object) [
                 // 'customer' => '<strong>' . $customer . '</strong>',
-                'transaction' => '<strong>' . $customer . '</strong>',
+                // 'transaction' => '<strong>' . $customer . '</strong>',
+                'customer' => $customer,
+                'transaction' => '<span class="" data-bucket="' . \Str::slug($customer) . '"> <span class="icon">▼</span> <strong>' . $customer . '</strong></span>',
                 'due_date' => '',
                 'past_due' => null,
                 'type' => null,
@@ -40,6 +42,7 @@ class OpenInvoiceList extends DataTable
                 'isPlaceholder' => true,
                 'open_balance' => null,
                 'isSubtotal' => true,
+                'isParent' => true
             ]);
 
             foreach ($rows as $row) {
@@ -47,12 +50,14 @@ class OpenInvoiceList extends DataTable
                 $subtotalDue += $row->balance_due;
                 $row->customer = $customer;
                 $row->past_due = $row->age > 0 ? $row->age . ' Days' : '-'; // 👈 Past Due column
+                // $row->customer = $customer;
                 $finalData->push($row);
             }
 
             // Subtotal row for this customer
             $finalData->push((object) [
                 // 'customer' => '<strong>Subtotal</strong>',
+                'customer' => $customer,
                 'transaction' => '<strong>Subtotal for ' . $customer . '</strong>',
                 'due_date' => '',
                 'past_due' => '',
@@ -64,19 +69,19 @@ class OpenInvoiceList extends DataTable
                 'isSubtotal' => true,
             ]);
 
-            $finalData->push((object) [
-                'customer' => '',
-                'transaction' => '',
-                'due_date' => '',
-                'past_due' => '',
-                'type' => '',
-                'status_label' => '',
-                // 'age' => '',
-                'total_amount' => 0,
-                'balance_due' => 0,
-                'isPlaceholder' => true,
-                'isSubtotal' => true
-            ]);
+            // $finalData->push((object) [
+            //     'customer' => '',
+            //     'transaction' => '',
+            //     'due_date' => '',
+            //     'past_due' => '',
+            //     'type' => '',
+            //     'status_label' => '',
+            //     // 'age' => '',
+            //     'total_amount' => 0,
+            //     'balance_due' => 0,
+            //     'isPlaceholder' => true,
+            //     'isSubtotal' => true
+            // ]);
 
             $grandTotalAmount += $subtotalAmount;
             $grandBalanceDue += $subtotalDue;
@@ -149,7 +154,30 @@ class OpenInvoiceList extends DataTable
                 }
                 return number_format($row->balance_due ?? 0);
             })
+            ->setRowClass(function ($row) {
+                if (property_exists($row, 'isParent') && $row->isParent) {
+                    return 'parent-row toggle-bucket bucket-' . \Str::slug($row->customer ?? 'na');
+                }
 
+                if (property_exists($row, 'isSubtotal') && $row->isSubtotal && !property_exists($row, 'isGrandTotal')) {
+                    return 'subtotal-row bucket-' . \Str::slug($row->customer ?? 'na');
+                }
+
+                if (
+                    !property_exists($row, 'isParent') &&
+                    !property_exists($row, 'isSubtotal') &&
+                    !property_exists($row, 'isGrandTotal') &&
+                    !property_exists($row, 'isPlaceholder')
+                ) {
+                    return 'child-row bucket-' . \Str::slug($row->customer ?? 'na');
+                }
+
+                if (property_exists($row, 'isGrandTotal') && $row->isGrandTotal) {
+                    return 'grandtotal-row';
+                }
+
+                return '';
+            })
             // ->editColumn(
             //     'balance_due',
             //     fn($row) =>
