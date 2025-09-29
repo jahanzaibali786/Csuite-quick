@@ -176,6 +176,11 @@
                         </script>
                         {{-- Filter Side Bar --}}
 
+                        <button onclick="exportDataTable('aging-summary-table', '{{ $pageTitle }}')" id="ExprotExcel"
+                            class="d-none">
+                            <i class="fa fa-file-excel"></i> Excel
+                        </button>
+
                         <button class="btn btn-outline" id="general-options-btn">
                             <i class="fa fa-cog"></i> General options
                         </button>
@@ -829,10 +834,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                        flex-direction: column;
-                                                                        width: 100%;
-                                                                        gap: 16px;
-                                                                    } */
+                                                                                            flex-direction: column;
+                                                                                            width: 100%;
+                                                                                            gap: 16px;
+                                                                                        } */
 
             .filter-item {
                 width: 100%;
@@ -873,6 +878,96 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <script>
+        let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        console.log([window.Header, window.footerAlignment])
+
+        function exportDataTable(tableId, pageTitle) {
+            let table = $('#' + tableId).DataTable();
+            console.log(tableId, table, pageTitle)
+
+            // Only get visible columns (skip auto-index)
+            let columns = [];
+            $('#' + tableId + ' thead th:visible').each(function() {
+                columns.push($(this).text().trim());
+            });
+
+            // Get visible data rows
+            let data = [];
+
+            const getRealtimeTableData = () => {
+
+                let data = [];
+
+
+                table.rows({
+                    search: 'applied'
+                }).every(function() {
+                    let rowData = this.data();
+
+                    if (typeof rowData === 'object') {
+                        // Only keep values for visible columns
+                        let rowArray = [];
+                        table.columns(':visible').every(function(colIdx) {
+                            let val = rowData[this.dataSrc()] ?? '-';
+                            rowArray.push(val);
+                        });
+                        rowData = rowArray;
+                    }
+                    data.push(rowData);
+                });
+
+                return data
+
+            }
+
+            // Get visible data rows (rendered DOM text, not raw data)
+            $('#' + tableId + ' tbody tr:visible').each(function() {
+                let rowArray = [];
+                $(this).find('td:visible').each(function() {
+                    rowArray.push($(this).text().trim());
+                });
+                data.push(rowArray);
+            });
+
+
+
+            // Send to universal export route
+            $.ajax({
+                url: '{{ route('export.datatable') }}',
+                method: 'POST',
+                data: {
+                    columns: columns,
+                    data: data,
+                    pageTitle: pageTitle,
+                    ReportPeriod: $(".report-title-section .date-range")[0].textContent,
+                    HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
+                        .footerAlignment
+                    ],
+                    _token: '{{ csrf_token() }}'
+                },
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                success: function(blob, status, xhr) {
+                    let filename = xhr.getResponseHeader('Content-Disposition')
+                        .split('filename=')[1]
+                        .replace(/"/g, '');
+                    let link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                },
+                error: function(xhr) {
+                    console.error('Export failed:', xhr.responseText);
+                    alert('Export failed! Check console.');
+                }
+            });
+        }
+    </script>
+
 
     <script>
         $(document).ready(function() {
@@ -1520,9 +1615,15 @@
                 const option = prompt(
                     'Choose export format:\n1. Excel\n2. PDF\n3. CSV\n\nEnter number (1-3):');
 
+
+                // Get table ID dynamically (assumes closest table in DOM)
+                const tableId = $(this).closest('div').find('table').attr('id');
+                const pageTitle = document.title || 'Report';
+
                 switch (option) {
                     case '1':
-                        alert('Excel export would be triggered');
+                        //alert('Excel export would be triggered');
+                        $("#ExprotExcel").click();
                         break;
                     case '2':
                         alert('PDF export would be triggered');

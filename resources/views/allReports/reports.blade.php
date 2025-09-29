@@ -99,14 +99,14 @@
         }
 
         /* .accordion-item:first-child .accordion-button {
-                                            border-top-left-radius: 0.375rem;
-                                            border-top-right-radius: 0.375rem;
-                                        }
+                                                    border-top-left-radius: 0.375rem;
+                                                    border-top-right-radius: 0.375rem;
+                                                }
 
-                                        .accordion-item:last-child .accordion-button.collapsed {
-                                            border-bottom-left-radius: 0.375rem;
-                                            border-bottom-right-radius: 0.375rem;
-                                        } */
+                                                .accordion-item:last-child .accordion-button.collapsed {
+                                                    border-bottom-left-radius: 0.375rem;
+                                                    border-bottom-right-radius: 0.375rem;
+                                                } */
 
         /* Responsive grid adjustments */
         @media (max-width: 767.98px) {
@@ -441,6 +441,59 @@
                     </div>
 
 
+                    @php
+                        $expenseReports = [
+                            ['route' => 'expenses.open_purchase_order_detail', 'label' => 'Open Purchase Order Detail'],
+                            ['route' => 'expenses.open_purchase_order_list', 'label' => 'Open Purchase Order List'],
+                            ['route' => 'expenses.purchase_list', 'label' => 'Purchase List'],
+                            ['route' => 'expenses.transaction_list_by_vendor', 'label' => 'Transaction List by Vendor'],
+                            ['route' => 'expenses.purchase_by_vendor', 'label' => 'Purchase by Vendor'],
+                            ['route' => 'expenses.vendors_contact_list', 'label' => 'Vendors Contact List'],
+                            ['route' => 'expenses.vendors_phone_list', 'label' => 'Vendors Phone List'],
+                            ['route' => 'expenses.expenses_by_vendor_summary', 'label' => 'Expenses by Vendor Summary'],
+                        ];
+                    @endphp
+
+                    <div class="accordion pb-2" id="reportsAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="expensesAndVendorsHeading">
+                                <button class="accordion-button {{ Request::segment(1) == 'report' ? '' : 'collapsed' }}"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#expensesAndVendors"
+                                    aria-expanded="{{ Request::segment(1) == 'report' ? 'true' : 'false' }}"
+                                    aria-controls="expensesAndVendors">
+                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                    {{ __('Expenses And Vendors') }}
+                                </button>
+                            </h2>
+                            <div id="expensesAndVendors"
+                                class="accordion-collapse collapse {{ Request::segment(1) == 'report' ? 'show' : '' }}"
+                                aria-labelledby="expensesAndVendors" data-bs-parent="#reportsAccordion">
+                                <div class="accordion-body p-0">
+                                    <ul class="list-unstyled mb-0 row g-0">
+                                        @foreach ($expenseReports as $report)
+                                            <li
+                                                class="col-6 report-item {{ Request::route()->getName() == $report['route'] ? 'active' : '' }}">
+                                                <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                    href="{{ route($report['route']) }}">
+                                                    <span class="d-flex align-items-center">
+                                                        <i class="bi bi-file-earmark-text me-2"></i>
+                                                        {{ __($report['label']) }}
+                                                    </span>
+                                                    <span class="report-actions">
+                                                        <i class="bi bi-star text-muted"></i>
+                                                        <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                    </span>
+                                                </a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
 
 
 
@@ -750,7 +803,8 @@
                                             </a>
                                         </li>
 
-                                        <li class="col-6 report-item {{ Request::segment(1) == 'goal' ? 'active' : '' }}">
+                                        <li
+                                            class="col-6 report-item {{ Request::segment(1) == 'goal' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
                                                 href="{{ route('goal.index') }}">
                                                 <span class="d-flex align-items-center">

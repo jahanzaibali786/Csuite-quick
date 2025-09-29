@@ -68,22 +68,32 @@
                     </div>
 
                     <div class="filter-item col-md-3">
-                        <label class="filter-label">as of</label>
+                        <label class="filter-label">From</label>
                         {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                        <input type="date" class="form-control d-none" name="start_date" id="filter-start-date"
+                        <input type="date" class="form-control" name="start_date" id="filter-start-date"
                             value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                    </div>
+                    <div class="filter-item col-md-3">
+                        <label class="filter-label">To</label>
                         <input type="date" class="form-control " name="end_date" id="filter-end-date"
                             value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
                     </div>
-                    <div class="filter-item col-md-2 mt-4">
+                    <div class="filter-item col-md-3">
+                        <label class="filter-label">Accounting method</label>
+                        <select id="accounting-method" class="form-control">
+                            <option value="accrual" selected>Accrual</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                    </div>
+                    {{-- <div class="filter-item col-md-2 mt-4">
                         <button class="btn btn-view-options" id="view-options-btn"
                             style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
                             <i class="fa fa-eye"></i> View options
                         </button>
-                    </div>
+                    </div> --}}
 
                     <!-- Action buttons row -->
-                    <div class="d-flex align-items-end gap-2 " style="justify-content: end;">
+                    <div class="d-flex align-items-end gap-2 mt-4" style="justify-content: end;">
 
                         <button class="btn btn-outline" id="columns-btn">
                             <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
@@ -154,13 +164,22 @@
                                 </div>
 
                                 <div class="filter-item mb-2">
-                                    <label class="filter-label">as of</label>
+                                    <label class="filter-label">from</label>
                                     {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                                    <input type="date" class="form-control d-none" name="start_date"
+                                    <input type="date" class="form-control mb-2" name="start_date"
                                         id="sidebar-filter-start-date"
                                         value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                                    <label class="filter-label">To</label>
                                     <input type="date" class="form-control " name="end_date"
                                         id="sidebar-filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                                </div>
+
+                                <div class="filter-item col-md-3">
+                                    <label class="filter-label">Accounting method</label>
+                                    <select id="accounting-method" class="form-control">
+                                        <option value="accrual" selected>Accrual</option>
+                                        <option value="cash">Cash</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -179,6 +198,11 @@
                             });
                         </script>
                         {{-- Filter Side Bar --}}
+
+                        <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
+                            id="ExprotExcel" class="d-none">
+                            <i class="fa fa-file-excel"></i> Excel
+                        </button>
 
                         <button class="btn btn-outline" id="general-options-btn">
                             <i class="fa fa-cog"></i> General options
@@ -201,11 +225,6 @@
                     </span>
                 </p>
             </div>
-
-            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')" id="ExprotExcel"
-                class="d-none">
-                <i class="fa fa-file-excel"></i> Excel
-            </button>
 
             <div class="table-container p-2">
                 {!! $dataTable->table(['class' => 'table customer-balance-table', 'id' => 'customer-balance-table']) !!}
@@ -893,10 +912,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                        flex-direction: column;
-                                                                                                                        width: 100%;
-                                                                                                                        gap: 16px;
-                                                                                                                    } */
+                                                                                                                            flex-direction: column;
+                                                                                                                            width: 100%;
+                                                                                                                            gap: 16px;
+                                                                                                                        } */
 
             .filter-item {
                 width: 100%;
@@ -946,7 +965,7 @@
     <script>
         let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        console.log([window.Header, window.footerAlignment])
+        {{-- console.log([window.Header, window.footerAlignment]) --}}
 
         function exportDataTable(tableId, pageTitle) {
             let table = $('#' + tableId).DataTable();
@@ -1352,7 +1371,7 @@
                 const formattedStart = startDate.format('MMMM D, YYYY');
                 const formattedEnd = endDate.format('MMMM D, YYYY');
 
-                $('#date-range-display').text(' As of  ' + formattedEnd);
+                $('#date-range-display').text(' From ' + formattedStart + ' To ' + formattedEnd);
             }
 
             // Refresh data function
@@ -1382,8 +1401,20 @@
                 refreshData();
             });
 
+            $('#filter-start-date').on('change', function() {
+                $('#sidebar-filter-end-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+
             $('#sidebar-filter-end-date').on('change', function() {
                 $('#filter-end-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+
+            $('#sidebar-filter-start-date').on('change', function() {
+                $('#filter-start-date').val($(this).val());
                 updateDateDisplay();
                 refreshData();
             });
@@ -1697,7 +1728,6 @@
                         alert('Invalid option');
                 }
             });
-
             // View options functionality
             $('#view-options-btn').on('click', function() {
                 alert('View options panel would open here with additional display settings');

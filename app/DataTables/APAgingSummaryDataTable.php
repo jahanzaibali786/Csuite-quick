@@ -99,8 +99,13 @@ class APAgingSummaryDataTable extends DataTable
 
     public function query(Bill $model)
     {
-        $start = request()->get('startDate') ?? Carbon::now()->startOfYear()->format('Y-m-d');
-        $end = request()->get('endDate') ?? Carbon::now()->endOfDay()->format('Y-m-d');
+        $start = request()->get('start_date')
+            ?? request()->get('startDate')
+            ?? Carbon::now()->startOfYear()->format('Y-m-d');
+
+        $end = request()->get('end_date')
+            ?? request()->get('endDate')
+            ?? Carbon::now()->endOfDay()->format('Y-m-d');
 
         return $model->newQuery()
             ->select('venders.name as vendor_name')

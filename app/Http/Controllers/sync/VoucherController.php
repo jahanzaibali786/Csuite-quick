@@ -13,6 +13,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Exports\UniversalDataTableExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class VoucherController extends Controller
 {
@@ -641,10 +643,9 @@ class VoucherController extends Controller
         ]);
     }
 
-
-    public function employeescontactlist (\App\DataTables\EmployeesContactList $dataTable, Request $request)
+    public function billpaymentlist(\App\DataTables\BillPaymentList $dataTable, Request $request)
     {
-        $this->pageTitle = 'Employees Contact List';
+        $this->pageTitle = 'Bill Payment List';
 
         if ($request->ajax()) {
             return $dataTable->ajax();
@@ -652,7 +653,182 @@ class VoucherController extends Controller
 
         return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
             'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
         ]);
+    }
+
+    public function openpurchaseorderdetail(\App\DataTables\OpenPurchaseOrderDetail $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Open Purchase Order Detail';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function openpurchaseorderlist(\App\DataTables\OpenPurchaseOrderList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Open Purchase Order List by Vendor';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function purchaselist(\App\DataTables\PurchaseList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Purchase List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function transactionlistbyvendor(\App\DataTables\TransactionListbyVendor $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Transaction List by Vendor';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function expensesbyvendorsummary(\App\DataTables\ExpensesByVendorSummary $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Expenses by Vendor Summary';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function purchasebyvendor(\App\DataTables\PurchasesbyVendorDetail $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Purchases by Vendor Detail';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function purchasesbyproductservicedetail(\App\DataTables\PurchasesbyProductServiceDetail $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Purchases by Product/Service Detail';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+
+    public function employeescontactlist(\App\DataTables\EmployeesContactList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Employees Contact List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
+
+    public function vendorscontactlist(\App\DataTables\VendorsContactList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Vendor Contact List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
+
+
+    public function vendorsphonelist(\App\DataTables\VendorsPhoneList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Vendor Phone List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
+
+    public function excelExport(Request $request)
+    {
+        // Validate required data
+        $request->validate([
+            'columns' => 'required|array',
+            'data' => 'required|array',
+            'pageTitle' => 'required|string',
+        ]);
+
+        $columns = $request->input('columns');
+        $data = collect($request->input('data'));
+        $pageTitle = $request->input('pageTitle');
+        $ReportPeriod = $request->input('ReportPeriod') ?? "";
+        $HeaderFooterAlignment = $request->input('HeaderFooterAlignment') ?? "";
+        // dd($HeaderFooterAlignment);
+
+        // sanitize pageTitle for filename
+        $sanitizedTitle = preg_replace('/[\/\\\\]+/', '_', $pageTitle);
+        $filename = str_replace(' ', '_', $sanitizedTitle) . '_' . now()->format('YmdHis') . '.xlsx';
+
+        return Excel::download(
+            new UniversalDataTableExport($data, $columns, $pageTitle, $ReportPeriod, $HeaderFooterAlignment),
+            $filename
+        );
+
     }
 
 

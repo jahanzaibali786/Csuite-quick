@@ -822,10 +822,40 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get("/payables/vendorbalancesummary", [VoucherController::class, 'vendorbalancesummary'])->name("payables.vendor_balance_summary");
     Route::get("/payables/vendorbalancedetail", [VoucherController::class, 'vendorbalancedetail'])->name("payables.vendor_balance_detail");
     Route::get("/payables/unpaidbillsreport", [VoucherController::class, 'unpaidbillsreport'])->name("payables.unpaid_bills_report");
+    Route::get("/payables/billpaymentlist", [VoucherController::class, 'billpaymentlist'])->name("payables.bill_payment_list");
 
     // Abdullah Reports 3 Employees 
     Route::get("/employees/employeescontactlist", [VoucherController::class, 'employeescontactlist'])->name("employees.employeecontactlist");
-    
+
+    // Abdullah Reports 4 Expenses And Vendors
+    // Route::get("/expensesandvendors/purchasesbyproductservicedetail", [VoucherController::class, 'purchasesbyproductservicedetail'])->name("payables.bill_payment_list");
+    Route::get("/expensesandvendors/openpurchaseorderdetail", [VoucherController::class, 'openpurchaseorderdetail'])
+        ->name("expenses.open_purchase_order_detail");
+
+    Route::get("/expensesandvendors/openpurchaseorderlist", [VoucherController::class, 'openpurchaseorderlist'])
+        ->name("expenses.open_purchase_order_list");
+
+    Route::get("/expensesandvendors/purchaselist", [VoucherController::class, 'purchaselist'])
+        ->name("expenses.purchase_list");
+
+    Route::get("/expensesandvendors/transactionlistbyvendor", [VoucherController::class, 'transactionlistbyvendor'])
+        ->name("expenses.transaction_list_by_vendor");
+
+    Route::get("/expensesandvendors/purchasebyvendor", [VoucherController::class, 'purchasebyvendor'])
+        ->name("expenses.purchase_by_vendor");
+
+    Route::get("/expensesandvendors/vendorscontactlist", [VoucherController::class, 'vendorscontactlist'])
+        ->name("expenses.vendors_contact_list");
+
+    Route::get("/expensesandvendors/vendorsphonelist", [VoucherController::class, 'vendorsphonelist'])
+        ->name("expenses.vendors_phone_list");
+
+    Route::get("/expensesandvendors/expensesbyvendorsummary", [VoucherController::class, 'expensesbyvendorsummary'])
+        ->name("expenses.expenses_by_vendor_summary");
+
+
+    // Abdullah Excel Export Route
+    Route::post('/export-datatable', [VoucherController::class, 'excelExport'])->name('export.datatable');
 
 
     // cya routes
