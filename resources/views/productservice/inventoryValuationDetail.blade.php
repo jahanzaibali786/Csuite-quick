@@ -30,6 +30,7 @@
         .ledger-table thead th{background:#f9fafb;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151;padding:12px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.025em}
         .ledger-table tbody td{padding:8px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
         .text-right{text-align:right}
+        .text-center{text-align:center}
         .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;overflow-y:auto}
         .drawer{position:fixed;top:0;right:0;bottom:0;width:360px;background:#fff;box-shadow:-2px 0 10px rgba(0,0,0,.1);overflow-y:auto}
         .modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e6e6e6;background:#f9fafb}
@@ -74,7 +75,7 @@
       .columns-btn,.filter-btn,.general-options,.view-options{background:#fff;border:1px solid #d1d5db;border-radius:4px;padding:6px 10px;color:#374151;font-size:12px;white-space:nowrap;display:flex;align-items:center;gap:4px;height:32px;transition:all .15s}
       .columns-btn:hover,.filter-btn:hover,.general-options:hover,.view-options:hover{background:#f9fafb;border-color:#9ca3af;text-decoration:none}
       .table-container{overflow-x:auto;max-width:100vw}
-      #inventory-table{width:100% !important;border-collapse:collapse;font-size:13px}
+      #inventory-valuation-detail-table{width:100% !important;border-collapse:collapse;font-size:13px}
       .ledger-table thead th{padding:12px 16px}
       .ledger-table tbody td{padding:12px 16px}
       .ledger-table tbody tr:hover{background:#f9fafb}
@@ -113,7 +114,7 @@
         {{-- Header --}}
         <div class="header-section">
             <div class="header-left">
-                <h4>{{ __('Inventory Valuation Summary') }}</h4>
+                <h4>{{ __('Inventory Valuation Detail') }}</h4>
             </div>
             <div class="header-right">
                 <button class="btn-icon" title="{{ __('Refresh') }}" onclick="refreshData()"><i class="fas fa-sync-alt"></i></button>
@@ -124,7 +125,7 @@
             </div>
         </div>
 
-        {{-- Filters row (as in your screenshot) --}}
+        {{-- Filters row --}}
         <div class="filter-section">
             <div class="filter-row">
                 <div class="filter-group">
@@ -147,8 +148,7 @@
                         </select>
                     </div>
 
-                    {{-- From is hidden (AS OF = To only) but kept for compatibility --}}
-                    <div class="filter-item" style="display:none">
+                    <div class="filter-item">
                         <label class="filter-label">{{ __('From') }}</label>
                         <input type="date" class="form-control" id="start-date"
                                value="{{ $filter['startDateRange'] ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}"
@@ -182,29 +182,32 @@
         {{-- Report --}}
         <div class="report-content">
             <div class="report-header report-title-section">
-                <h1 class="report-title">{{ __('Inventory Valuation Summary') }}</h1>
+                <h1 class="report-title">{{ __('Inventory Valuation Detail') }}</h1>
                 <p class="company-name">{{ \Auth::user()->name ?? config('app.name') }}</p>
                 <p class="date-range">
                     <span id="display-date-range">
-                        {{ __('As of') }}
+                        {{ __('From') }}
+                        {{ \Carbon\Carbon::parse($filter['startDateRange'] ?? now())->format('F j, Y') }}
+                        {{ __('to') }}
                         {{ \Carbon\Carbon::parse($filter['endDateRange'] ?? now())->format('F j, Y') }}
                     </span>
                 </p>
             </div>
 
             <div class="table-container" id="table-visual-wrapper">
-                <table class="table ledger-table" id="inventory-table">
+                <table class="table ledger-table" id="inventory-valuation-detail-table">
                     <thead>
                     <tr>
+                        <th>{{ __('Product/Service') }}</th>
+                        <th class="text-center">{{ __('Transaction Date') }}</th>
+                        <th>{{ __('Transaction Type') }}</th>
+                        <th>{{ __('Num') }}</th>
                         <th>{{ __('Name') }}</th>
-                        <th>{{ __('Sku') }}</th>
-                        <th class="text-right">{{ __('Sale Price') }}</th>
-                        <th class="text-right">{{ __('Purchase Price') }}</th>
-                        <th>{{ __('Tax') }}</th>
-                        <th>{{ __('Category') }}</th>
-                        <th>{{ __('Unit') }}</th>
-                        <th class="text-right">{{ __('Quantity') }}</th>
-                        <th>{{ __('Type') }}</th>
+                        <th class="text-right">{{ __('Qty') }}</th>
+                        <th class="text-right">{{ __('Rate') }}</th>
+                        <th class="text-right">{{ __('Inventory Cost') }}</th>
+                        <th class="text-right">{{ __('Qty on Hand') }}</th>
+                        <th class="text-right">{{ __('Asset Value') }}</th>
                     </tr>
                     </thead>
                     <tbody></tbody>
@@ -242,15 +245,16 @@
             </div>
             <div class="modal-content">
                 <div class="columns-list">
-                    <div class="column-item" data-column="0"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Name') }}</label></div>
-                    <div class="column-item" data-column="1"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Sku') }}</label></div>
-                    <div class="column-item" data-column="2"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Sale Price') }}</label></div>
-                    <div class="column-item" data-column="3"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Purchase Price') }}</label></div>
-                    <div class="column-item" data-column="4"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Tax') }}</label></div>
-                    <div class="column-item" data-column="5"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Category') }}</label></div>
-                    <div class="column-item" data-column="6"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Unit') }}</label></div>
-                    <div class="column-item" data-column="7"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Quantity') }}</label></div>
-                    <div class="column-item" data-column="8"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Type') }}</label></div>
+                    <div class="column-item" data-column="0"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Product/Service') }}</label></div>
+                    <div class="column-item" data-column="1"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Transaction Date') }}</label></div>
+                    <div class="column-item" data-column="2"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Transaction Type') }}</label></div>
+                    <div class="column-item" data-column="3"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Num') }}</label></div>
+                    <div class="column-item" data-column="4"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Name') }}</label></div>
+                    <div class="column-item" data-column="5"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Qty') }}</label></div>
+                    <div class="column-item" data-column="6"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Rate') }}</label></div>
+                    <div class="column-item" data-column="7"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Inventory Cost') }}</label></div>
+                    <div class="column-item" data-column="8"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Qty on Hand') }}</label></div>
+                    <div class="column-item" data-column="9"><label class="checkbox-label"><input type="checkbox" checked> {{ __('Asset Value') }}</label></div>
                 </div>
             </div>
         </div>
@@ -370,6 +374,8 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 
+    {!! $dataTable->scripts() !!}
+
     <script>
         $(function () {
             window.reportOptions = {
@@ -398,7 +404,7 @@
                 table.columns.adjust().draw(false);
             }
 
-            const table = $('#inventory-table').DataTable({
+            const table = $('#inventory-valuation-detail-table').DataTable({
                 processing: true,
                 serverSide: true,
                 colReorder: true,
@@ -408,7 +414,7 @@
                 scrollCollapse: true,
                 fixedHeader: true,
                 ajax: {
-                    url: "{{ route('productservice.inventoryValuationSummary') }}",
+                    url: "{{ route('productservice.inventoryValuationDetail') }}",
                     data: function(d){
                         d.report_period = $('#report-period').val() || '';
                         d.start_date    = $('#start-date').val() || '';
@@ -419,15 +425,16 @@
                     }
                 },
                 columns: [
+                    {data:'product_service', name:'product_service'},
+                    {data:'transaction_date', name:'transaction_date', className:'text-center'},
+                    {data:'transaction_type', name:'transaction_type'},
+                    {data:'num', name:'num'},
                     {data:'name', name:'name'},
-                    {data:'sku', name:'sku'},
-                    {data:'sale_price', name:'sale_price', className:'text-right'},
-                    {data:'purchase_price', name:'purchase_price', className:'text-right'},
-                    {data:'tax', name:'tax'},
-                    {data:'category', name:'category'},
-                    {data:'unit', name:'unit'},
-                    {data:'quantity', name:'qty_as_of', className:'text-right'}, // <- computed
-                    {data:'type', name:'type'}
+                    {data:'qty', name:'qty', className:'text-right'},
+                    {data:'rate', name:'rate', className:'text-right'},
+                    {data:'inventory_cost', name:'inventory_cost', className:'text-right'},
+                    {data:'qty_on_hand', name:'qty_on_hand', className:'text-right'},
+                    {data:'asset_value', name:'asset_value', className:'text-right'}
                 ],
                 dom: 't',
                 paging: false,
@@ -454,7 +461,6 @@
                     case 'all_dates':          s = moment('1900-01-01'); e = now.clone(); break;
                     default: return; // custom
                 }
-                // “AS OF” uses only end-date; we still set both to keep UI consistent
                 $('#start-date').val(s.format('YYYY-MM-DD'));
                 $('#end-date').val(e.format('YYYY-MM-DD'));
                 updateHeaderDate();
@@ -467,10 +473,14 @@
             });
 
             function updateHeaderDate(){
+                const s = new Date($('#start-date').val());
                 const e = new Date($('#end-date').val());
-                if (isNaN(e)) return;
+                if (isNaN(s) || isNaN(e)) return;
                 const opts = {year:'numeric', month:'long', day:'numeric'};
-                $('#display-date-range').text('As of ' + e.toLocaleDateString('en-US', opts));
+                $('#display-date-range').text(
+                    'From ' + s.toLocaleDateString('en-US', opts) + 
+                    ' to ' + e.toLocaleDateString('en-US', opts)
+                );
             }
 
             // Filter drawer
@@ -483,7 +493,7 @@
             // Columns drawer with colReorder awareness
             function getDT(cb){
                 const tryGet = function(n){
-                    const dt = $.fn.dataTable.isDataTable('#inventory-table') ? $('#inventory-table').DataTable() : null;
+                    const dt = $.fn.dataTable.isDataTable('#inventory-valuation-detail-table') ? $('#inventory-valuation-detail-table').DataTable() : null;
                     if (dt) cb(dt); else if (n>0) setTimeout(()=>tryGet(n-1), 100);
                 };
                 tryGet(30);
@@ -564,8 +574,8 @@
             });
 
             // Cell styling helpers
-            $('#inventory-table').on('draw.dt', function(){
-                $('#inventory-table tbody tr').each(function(){
+            $('#inventory-valuation-detail-table').on('draw.dt', function(){
+                $('#inventory-valuation-detail-table tbody tr').each(function(){
                     $(this).find('td').each(function(){
                         const txt = ($(this).text() || '').trim();
                         if (!txt) return;
@@ -598,6 +608,6 @@
             let _rsTimer; $(window).on('resize', function(){ clearTimeout(_rsTimer); _rsTimer = setTimeout(resizeInventoryDT, 120); });
         });
 
-        function refreshData(){ $('#inventory-table').DataTable().ajax.reload(null,false); }
+        function refreshData(){ $('#inventory-valuation-detail-table').DataTable().ajax.reload(null,false); }
     </script>
 @endpush

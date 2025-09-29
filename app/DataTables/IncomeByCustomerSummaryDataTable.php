@@ -8,30 +8,18 @@ use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 
-class InventoryValuationSummaryDataTable extends DataTable
+class IncomeByCustomerSummaryDataTable extends DataTable
 {
     public function dataTable($query)
     {
         return datatables()
             ->eloquent($query)
-            ->addColumn('sale_price', fn($r) => \Auth::user()->priceFormat($r->sale_price))
-            ->addColumn('purchase_price', fn($r) => \Auth::user()->priceFormat($r->purchase_price))
-            ->addColumn('category', fn($r) => $r->category->name ?? '-')
-            ->addColumn('unit', fn($r) => $r->unit->name ?? '-')
-            ->addColumn('tax', function ($r) {
-                if (empty($r->tax_id)) return '-';
-                $out = [];
-                $taxData = \App\Models\Utility::getTaxData();
-                foreach (explode(',', $r->tax_id) as $id) {
-                    if (!isset($taxData[$id])) continue;
-                    $out[] = $taxData[$id]['name'].' ('.$taxData[$id]['rate'].'%)';
-                }
-                return implode('<br>', $out);
-            })
-            // Show computed on-hand quantity AS OF end date (only for products)
-            ->addColumn('quantity', fn($r) => $r->type === 'product' ? (string) (float) $r->qty_as_of : '-')
+            ->addColumn('full_name', fn($r) => $r->name)
             ->addColumn('type', fn($r) => ucwords($r->type))
-            ->rawColumns(['tax']);
+            ->addColumn('memo_description', fn($r) => $r->description ?? '-')
+            ->addColumn('sales_price', fn($r) => \Auth::user()->priceFormat($r->sale_price))
+            ->addColumn('purchase_price', fn($r) => \Auth::user()->priceFormat($r->purchase_price))
+            ->addColumn('quantity_on_hand', fn($r) => $r->type === 'product' ? (string) (float) $r->total_quantity : '-');
     }
 
 public function query(ProductService $model)
@@ -39,35 +27,30 @@ public function query(ProductService $model)
     $user = Auth::user();
     $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
 
-    // ---- AS-OF quantity: use only "To" (end_date) ----
-    $end   = request('end_date') ?: now()->toDateString();
-    $endDT = $end . ' 23:59:59';
-
-    // Movement mapping (edit as your app uses)
+    // Movement mapping for calculating total quantity
     $incoming = ['bill','purchase','vendor_bill','stock_in','opening','adjustment_in','transfer_in','credit_note_in','manually'];
     $outgoing = ['invoice','sale','proposal','stock_out','adjustment_out','transfer_out','debit_note_out'];
 
-    // Sum movement <= end date
+    // Sum all stock movements to get total quantity on hand
     $stockAgg = DB::table('stock_reports as sr')
         ->select('sr.product_id', DB::raw("
             SUM(CASE WHEN sr.type IN ('" . implode("','", $incoming) . "') THEN sr.quantity ELSE 0 END)
           - SUM(CASE WHEN sr.type IN ('" . implode("','", $outgoing) . "') THEN sr.quantity ELSE 0 END)
-          AS qty_as_of
+          AS total_quantity
         "))
         ->where('sr.created_by', $ownerId)
-        ->where('sr.created_at', '<=', $endDT)
         ->groupBy('sr.product_id');
 
-    // Products list (NO date filter here)
+    // Get all products
     $q = $model->newQuery()
         ->with(['category','unit'])
-        ->where('product_services.created_by', $ownerId)->where('product_services.created_at', '<=', $endDT)
+        ->where('product_services.created_by', $ownerId)
         ->leftJoinSub($stockAgg, 'sr_agg', function ($join) {
             $join->on('product_services.id', '=', 'sr_agg.product_id');
         })
-        ->addSelect('product_services.*', DB::raw('COALESCE(sr_agg.qty_as_of, 0) as qty_as_of'));
+        ->addSelect('product_services.*', DB::raw('COALESCE(sr_agg.total_quantity, 0) as total_quantity'));
 
-    // Category / Type filters — independent of dates
+    // Apply category and type filters if provided
     if (request()->filled('category') && request('category') !== '') {
         $q->where('product_services.category_id', request('category'));
     }
@@ -104,16 +87,12 @@ public function query(ProductService $model)
     protected function getColumns()
     {
         return [
-            Column::make('name')->title(__('Name')),
-            Column::make('sku')->title(__('Sku')),
-            Column::make('sale_price')->title(__('Sale Price'))->addClass('text-right'),
-            Column::make('purchase_price')->title(__('Purchase Price'))->addClass('text-right'),
-            Column::make('tax')->title(__('Tax')),
-            Column::make('category')->title(__('Category')),
-            Column::make('unit')->title(__('Unit')),
-            // We keep the key as "quantity" to match your JS columns config
-            Column::make('quantity')->data('quantity')->name('qty_as_of')->title(__('Quantity'))->addClass('text-right'),
+            Column::make('full_name')->data('full_name')->name('name')->title(__('Product/Service Full Name')),
             Column::make('type')->title(__('Type')),
+            Column::make('memo_description')->data('memo_description')->name('description')->title(__('Memo/Description')),
+            Column::make('sales_price')->data('sales_price')->name('sale_price')->title(__('Sales Price'))->addClass('text-right'),
+            Column::make('purchase_price')->title(__('Purchase Price'))->addClass('text-right'),
+            Column::make('quantity_on_hand')->data('quantity_on_hand')->name('total_quantity')->title(__('Quantity On Hand'))->addClass('text-right'),
         ];
     }
 
