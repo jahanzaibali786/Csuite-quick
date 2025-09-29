@@ -78,13 +78,13 @@ class InvoiceListbyDate extends DataTable
                 $status = $row->status ?? 0;
                 $labels = \App\Models\Invoice::$statues;
                 $classes = [
-                    0 => 'bg-secondary',
-                    1 => 'bg-warning',
-                    2 => 'bg-danger',
-                    3 => 'bg-info',
-                    4 => 'bg-primary',
+                    0 => 'nbg-secondary',
+                    1 => 'nbg-warning',
+                    2 => 'nbg-danger',
+                    3 => 'nbg-info',
+                    4 => 'nbg-primary',
                 ];
-                return '<span class="status_badge badge text-white ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
+                return '<span class="status_badger badger text-whiter ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
                     . __($labels[$status] ?? '-') . '</span>';
             })
             ->addColumn('issue_date', fn($row) => $row->issue_date ?? '')

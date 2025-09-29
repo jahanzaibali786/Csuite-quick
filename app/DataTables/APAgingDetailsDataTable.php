@@ -2,14 +2,14 @@
 
 namespace App\DataTables;
 
-use App\Models\Invoice;
+use App\Models\Bill;
 use Carbon\Carbon;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 use Illuminate\Support\Facades\DB;
 
 
-class AgingDetailsDataTable extends DataTable
+class APAgingDetailsDataTable extends DataTable
 {
     public function dataTable($query)
     {
@@ -44,16 +44,21 @@ class AgingDetailsDataTable extends DataTable
                 return 'Current';
             }
 
-            $age = $end->diffInDays($due, false); // 👈 use $end instead of today
-            if ($age <= 0)
+            $age = $end->diffInDays($due, false);
+
+            if ($age <= 0) {
                 return 'Current';
-            if ($age <= 15)
-                return '1–15 Days';
-            if ($age <= 30)
-                return '16–30 Days';
-            if ($age <= 45)
-                return '31–45 Days';
-            return '>45 Days';
+            }
+            if ($age <= 30) {
+                return '1–30 Days';
+            }
+            if ($age <= 60) {
+                return '31–60 Days';
+            }
+            if ($age <= 90) {
+                return '61–90 Days';
+            }
+            return '91 and Over';
         });
 
 
@@ -70,6 +75,7 @@ class AgingDetailsDataTable extends DataTable
                 'id' => null,
                 'due_date' => '',
                 // 'transaction' => '<strong>Subtotal for ' . $bucket . '</strong>',
+                // 'transaction' => '<strong>' . $bucket . '</strong>',
                 'transaction' => '<span class="" data-bucket="' . \Str::slug($bucket) . '"> <span class="icon">▼</span> <strong>' . $bucket . '</strong></span>',
                 'type' => '',
                 'status_label' => '',
@@ -146,74 +152,61 @@ class AgingDetailsDataTable extends DataTable
 
         return datatables()
             ->collection($finalData)
-
             ->addColumn('bucket', fn($row) => $row->bucket ?? '')
             ->addColumn(
                 'transaction',
                 fn($row) =>
                 isset($row->isSubtotal) || isset($row->isGrandTotal)
                 ? $row->transaction
-
-                : \Auth::user()->invoiceNumberFormat($row->invoice ?? $row->id)
+                : \Auth::user()->billNumberFormat($row->bill ?? $row->id) // 👈 use billNumberFormat
             )
-            ->addColumn('type', fn($row) => isset($row->isSubtotal) || isset($row->isGrandTotal) ? '' : 'Invoice')
-            ->addColumn('status_label', function ($row) {
-                if (isset($row->isSubtotal) || isset($row->isGrandTotal)) {
-                    return '';
-                }
-                $status = $row->status ?? 0;
-                $labels = \App\Models\Invoice::$statues;
-                $classes = [
-                    0 => 'nbg-secondary',
-                    1 => 'nbg-warning',
-                    2 => 'nbg-danger',
-                    3 => 'nbg-info',
-                    4 => 'nbg-primary',
-                ];
-                return '<span class="status_badger badger text-whit ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
-                    . __($labels[$status] ?? '-') . '</span>';
-            })
+            ->addColumn('type', fn($row) => isset($row->isSubtotal) || isset($row->isGrandTotal) ? '' : 'Bill') // 👈 show Bill
+            // ->addColumn('status_label', function ($row) {
+            //     if (isset($row->isSubtotal) || isset($row->isGrandTotal)) {
+            //         return '';
+            //     }
+            //     $status = $row->status ?? 0;
+            //     $labels = \App\Models\Bill::$statuses; // 👈 Bill statuses
+            //     $classes = [
+            //         0 => 'nbg-secondary',
+            //         1 => 'nbg-warning',
+            //         2 => 'nbg-danger',
+            //         3 => 'nbg-info',
+            //         4 => 'nbg-primary',
+            //     ];
+            //     return '<span class="status_badger badger text-white ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
+            //         . __($labels[$status] ?? '-') . '</span>';
+            // })
             ->addColumn(
                 'customer',
                 fn($row) =>
-                isset($row->isSubtotal) || isset($row->isGrandTotal) ? '' : ($row->name ?? '-')
+                isset($row->isSubtotal) || isset($row->isGrandTotal) ? '' : ($row->name ?? '-') // 👈 still named 'customer', could rename to 'vendor'
+            )
+            ->addColumn(
+                'issue_date',
+                fn($row) => $row->bill_date ?? '' // 👈 use bill_date
+            )
+            ->addColumn(
+                'past_due',
+                fn($row) => (!isset($row->isSubtotal) && !isset($row->isGrandTotal) && $row->balance_due > 0 && $row->age > 0)
+                ? number_format($row->balance_due)
+                : ''
             )
             ->addColumn(
                 'age',
-                fn($row) =>
-                isset($row->isSubtotal) || isset($row->isGrandTotal)
+                fn($row) => isset($row->isSubtotal) || isset($row->isGrandTotal)
                 ? ''
                 : ($row->age > 0 ? $row->age . ' Days' : '-')
             )
-            ->addColumn('issue_date', fn($row) => $row->issue_date ?? '')
             ->editColumn('total_amount', function ($row) {
                 if (isset($row->isHeader) || isset($row->isPlaceholder)) {
                     return '';
                 }
-
-                // Use pre-calculated value for subtotal & grand total rows
                 if (isset($row->isSubtotal) || isset($row->isGrandTotal)) {
                     return number_format($row->total_amount ?? 0);
                 }
-
-                // Normal invoice row
-                $total = ($row->subtotal ?? 0) + ($row->total_tax ?? 0);
-                return number_format($total);
+                return number_format(($row->subtotal ?? 0) + ($row->total_tax ?? 0));
             })
-            ->editColumn(
-                'balance_due',
-                fn($row) =>
-                isset($row->isHeader) || isset($row->isPlaceholder)
-                ? ''
-                : number_format($row->balance_due ?? 0)
-            )
-            ->editColumn(
-                'open_balance',
-                fn($row) =>
-                isset($row->isHeader) || isset($row->isPlaceholder)
-                ? ''
-                : number_format($row->open_balance ?? 0)
-            )
             ->setRowClass(function ($row) {
                 if (property_exists($row, 'isParent') && $row->isParent) {
                     return 'parent-row toggle-bucket bucket-' . \Str::slug($row->bucket ?? 'na');
@@ -238,13 +231,14 @@ class AgingDetailsDataTable extends DataTable
 
                 return '';
             })
-
-
+            ->editColumn('balance_due', fn($row) => isset($row->isHeader) || isset($row->isPlaceholder) ? '' : number_format($row->balance_due ?? 0))
+            ->editColumn('open_balance', fn($row) => isset($row->isHeader) || isset($row->isPlaceholder) ? '' : number_format($row->open_balance ?? 0))
             ->rawColumns(['transaction', 'status_label']);
+
     }
 
 
-    public function query(Invoice $model)
+    public function query(Bill $model)
     {
         // Accept both formats without breaking anything
         $start = request()->get('start_date')
@@ -257,52 +251,52 @@ class AgingDetailsDataTable extends DataTable
 
         return $model->newQuery()
             ->select(
-                'invoices.id',
-                'invoices.invoice_id as invoice',
-                'invoices.issue_date',
-                'invoices.due_date',
-                'invoices.status',
-                'customers.name',
-                DB::raw('SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount) as subtotal'),
-                DB::raw('IFNULL(SUM(invoice_payments.amount), 0) as pay_price'),
+                'bills.id',
+                'bills.bill_id as bill',
+                'bills.bill_date',
+                'bills.due_date',
+                'bills.status',
+                'venders.name',
+                DB::raw('SUM((bill_products.price * bill_products.quantity) - bill_products.discount) as subtotal'),
+                DB::raw('IFNULL(SUM(bill_payments.amount), 0) as pay_price'),
                 DB::raw('(SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
-                  FROM invoice_products 
-                  LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                  WHERE invoice_products.invoice_id = invoices.id) as total_tax'),
-                DB::raw('(SELECT IFNULL(SUM(credit_notes.amount),0) 
-                  FROM credit_notes 
-                  WHERE credit_notes.invoice = invoices.id) as credit_price'),
+                FROM bill_products 
+                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bill_products.tax) > 0
+                WHERE bill_products.bill_id = bills.id) as total_tax'),
+                DB::raw('(SELECT IFNULL(SUM(debit_notes.amount),0) 
+                FROM debit_notes 
+                WHERE debit_notes.bill = bills.id) as debit_price'),
                 DB::raw('(
-                    (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
-                    + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
-                       FROM invoice_products 
-                       LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                       WHERE invoice_products.invoice_id = invoices.id)
-                    - (IFNULL(SUM(invoice_payments.amount),0)
-                    + (SELECT IFNULL(SUM(credit_notes.amount),0) FROM credit_notes WHERE credit_notes.invoice = invoices.id))
-                 ) as balance_due'),
+                (SUM((bill_products.price * bill_products.quantity) - bill_products.discount))
+                + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
+                   FROM bill_products 
+                   LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bill_products.tax) > 0
+                   WHERE bill_products.bill_id = bills.id)
+                - (IFNULL(SUM(bill_payments.amount),0)
+                   + (SELECT IFNULL(SUM(debit_notes.amount),0) FROM debit_notes WHERE debit_notes.bill = bills.id))
+             ) as balance_due'),
                 DB::raw('(
-                    (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
-                    + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
-                       FROM invoice_products 
-                       LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                       WHERE invoice_products.invoice_id = invoices.id)
-                    - (IFNULL(SUM(invoice_payments.amount),0)
-                       + (SELECT IFNULL(SUM(credit_notes.amount),0) 
-                          FROM credit_notes 
-                          WHERE credit_notes.invoice = invoices.id))
-                ) as open_balance'),
+                (SUM((bill_products.price * bill_products.quantity) - bill_products.discount))
+                + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
+                   FROM bill_products 
+                   LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bill_products.tax) > 0
+                   WHERE bill_products.bill_id = bills.id)
+                - (IFNULL(SUM(bill_payments.amount),0)
+                   + (SELECT IFNULL(SUM(debit_notes.amount),0) 
+                      FROM debit_notes 
+                      WHERE debit_notes.bill = bills.id))
+            ) as open_balance'),
 
-
-                DB::raw('GREATEST(DATEDIFF(CURDATE(), invoices.due_date), 0) as age')
+                DB::raw('GREATEST(DATEDIFF(CURDATE(), bills.due_date), 0) as age')
             )
-            ->leftJoin('customers', 'customers.id', '=', 'invoices.customer_id')
-            ->leftJoin('invoice_products', 'invoice_products.invoice_id', '=', 'invoices.id')
-            ->leftJoin('invoice_payments', 'invoice_payments.invoice_id', '=', 'invoices.id')
-            ->where('invoices.created_by', \Auth::user()->creatorId())
-            ->whereBetween('invoices.issue_date', [$start, $end]) // ✅ keep existing behavior
-            ->groupBy('invoices.id');
+            ->leftJoin('venders', 'venders.id', '=', 'bills.vender_id')
+            ->leftJoin('bill_products', 'bill_products.bill_id', '=', 'bills.id')
+            ->leftJoin('bill_payments', 'bill_payments.bill_id', '=', 'bills.id')
+            ->where('bills.created_by', \Auth::user()->creatorId())
+            ->whereBetween('bills.bill_date', [$start, $end])
+            ->groupBy('bills.id');
     }
+
 
 
 
@@ -358,10 +352,11 @@ JS
             Column::make('issue_date')->title('Date'),   // 👈 added
             Column::make('transaction')->title('Transaction'),
             Column::make('type')->title('Type'),
-            Column::make('status_label')->title('Status'),
-            Column::make('customer')->title('Customer Name'),
+            // Column::make('status_label')->title('Status'),
+            Column::make('customer')->title('Vendor Display Name'),
             // Column::make('age')->title('Age'),
             Column::make('due_date')->title('Due Date'),
+            Column::make('age')->title("Past Due"),
             Column::make('total_amount')->title('Amount'),
             // Column::make('balance_due')->title('Balance Due'),
             Column::make('open_balance')->title('Open Balance'),
