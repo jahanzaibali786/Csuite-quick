@@ -270,7 +270,7 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('accounting.profit_loss.index', $this->data);
+        return $dataTable->render('sync.profit_loss.index', $this->data);
     }
 
     public function profitLossDetail(\App\DataTables\ProfitLossDetailDataTable $dataTable, Request $request)
@@ -281,7 +281,7 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('accounting.profit-loss-detail.index', $this->data);
+        return $dataTable->render('sync.profit-loss-detail.index', $this->data);
     }
 
     public function balanceSheet(\App\DataTables\BalanceSheetDataTable $dataTable, Request $request)
@@ -292,7 +292,7 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('accounting.balance-sheet.index', $this->data);
+        return $dataTable->render('sync.balance-sheet.index', $this->data);
     }
 
     public function balanceSheetStandard(\App\DataTables\BalanceSheetStandardDataTable $dataTable, Request $request)
@@ -303,7 +303,7 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('accounting.balance-sheet-standard.index', $this->data);
+        return $dataTable->render('sync.balance-sheet-standard.index', $this->data);
     }
 
     public function balanceSheetDetail(\App\DataTables\BalanceSheetDetailDataTable $dataTable, Request $request)
@@ -314,7 +314,7 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('accounting.balance-sheet-detail.index', $this->data);
+        return $dataTable->render('sync.balance-sheet-detail.index', $this->data);
     }
 
     public function cashFlow(\App\DataTables\CashFlowDataTable $dataTable, Request $request)
@@ -325,7 +325,7 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('accounting.cash-flow.index', $this->data);
+        return $dataTable->render('sync.cash-flow.index', $this->data);
     }
 
     public function generalJournal(\App\DataTables\GeneralJournalDataTable $dataTable, Request $request)

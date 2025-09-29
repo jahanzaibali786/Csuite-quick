@@ -194,7 +194,7 @@ class LedgerDataTable extends DataTable
 
     public function query()
     {
-        // Changed from JournalEntryLine to JournalItem
+        // dd(request()->all());
         $query = JournalItem::query()
             ->with([
                 'accounts:id,name,type,sub_type',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\DataTables\InventoryValuationSummaryDataTable;
 use App\Models\ChartOfAccount;
 use App\Models\ChartOfAccountType;
 use App\Models\CustomField;
@@ -58,6 +59,85 @@ class ProductServiceController extends Controller
         $productServices = $productServicesQuery->get();
         return view('productservice.index', compact('productServices', 'category', 'types'));
     }
+
+public function inventoryValuationSummary(
+    \App\DataTables\InventoryValuationSummaryDataTable $dataTable,
+    \Illuminate\Http\Request $request
+) {
+    if (!\Auth::user()->can('manage product & service')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+
+    // Dropdowns
+    $category = \App\Models\ProductServiceCategory::where('created_by', $ownerId)
+        ->where('type', 'product & service')
+        ->pluck('name', 'id')
+        ->prepend(__('Select Category'), '');
+
+    $types = array_merge(['' => __('Select Type')], \App\Models\ProductService::$types);
+
+    // Defaults for dates (current month, like ledger)
+    $start = $request->get('start_date') ?: \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d');
+    $end   = $request->get('end_date')   ?: \Carbon\Carbon::now()->format('Y-m-d');
+    $reportPeriod = $request->get('report_period', 'this_month');
+
+    $filter = [
+        'startDateRange'   => $start,
+        'endDateRange'     => $end,
+        'reportPeriod'     => $reportPeriod,
+        'selectedCategory' => $request->get('category', ''),
+        'selectedType'     => $request->get('type', ''),
+    ];
+
+    return $dataTable->render(
+        'productservice.inventoryValuationSummary',
+        compact('category', 'types', 'user', 'filter', 'reportPeriod')
+    );
+}
+
+/**
+ * Same date logic as ledger. If you already have getReportPeriodDates(),
+ * call that instead. Otherwise this inline helper covers common periods.
+ */
+private function computePeriod(?string $reportPeriod, ?string $start, ?string $end): array
+{
+    if (!empty($reportPeriod)) {
+        // Map a few common keys; extend as needed.
+        $today = \Carbon\Carbon::today();
+        switch ($reportPeriod) {
+            case 'today':
+                return [$today->copy()->format('Y-m-d'), $today->copy()->format('Y-m-d')];
+            case 'this_month':
+                return [$today->copy()->startOfMonth()->format('Y-m-d'), $today->copy()->endOfMonth()->format('Y-m-d')];
+            case 'last_month':
+                $s = $today->copy()->subMonthNoOverflow()->startOfMonth();
+                $e = $today->copy()->subMonthNoOverflow()->endOfMonth();
+                return [$s->format('Y-m-d'), $e->format('Y-m-d')];
+            case 'this_quarter':
+                return [$today->copy()->startOfQuarter()->format('Y-m-d'), $today->copy()->endOfQuarter()->format('Y-m-d')];
+            case 'this_year':
+                return [$today->copy()->startOfYear()->format('Y-m-d'), $today->copy()->endOfYear()->format('Y-m-d')];
+            case 'all_dates':
+                return ['1900-01-01', $today->copy()->format('Y-m-d')];
+            default:
+                // For other options coming from the ledger select, fall back to custom if provided
+                break;
+        }
+    }
+
+    if (!empty($start) && !empty($end)) {
+        return [$start, $end];
+    }
+
+    // Default: current month (like ledger)
+    return [
+        \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d'),
+        \Carbon\Carbon::now()->format('Y-m-d'),
+    ];
+}
 
 
 

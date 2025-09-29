@@ -442,6 +442,7 @@ Route::group(['middleware' => ['verified']], function () {
     );
 
     Route::get('productservice/index', [ProductServiceController::class, 'index'])->name('productservice.index');
+    Route::get('productservice/inventory-valuation-summary', [ProductServiceController::class, 'inventoryValuationSummary'])->name('productservice.inventoryValuationSummary');
     Route::get('productservice/{id}/detail', [ProductServiceController::class, 'warehouseDetail'])->name('productservice.detail');
     Route::post('empty-cart', [ProductServiceController::class, 'emptyCart'])->middleware(['auth', 'XSS']);
     Route::post('warehouse-empty-cart', [ProductServiceController::class, 'warehouseemptyCart'])->name('warehouse-empty-cart')->middleware(['auth', 'XSS']);
@@ -684,6 +685,8 @@ Route::group(['middleware' => ['verified']], function () {
             Route::post('export/balance-sheet', [ReportController::class, 'balanceSheetExport'])->name('balance.sheet.export');
             Route::post('export/profit-loss', [ReportController::class, 'profitLossExport'])->name('profit.loss.export');
             Route::get('report/sales', [ReportController::class, 'salesReport'])->name('report.sales');
+            Route::get('report/sales/salesbyCustomerTypeDetail', [ReportController::class, 'SalesbyCustomerTypeDetailReport'])->name('report.salesbyCustomerTypeDetail');
+            // Route::get('report/sales/salesbyCustomerTypeDetail/data', [ReportController::class, 'SalesbyCustomerTypeDetailReportData'])->name('report.salesbyCustomerTypeDetail.data');
             Route::post('export/sales', [ReportController::class, 'salesReportExport'])->name('sales.export');
             Route::get('report/receivables', [ReportController::class, 'ReceivablesReport'])->name('report.receivables');
             Route::post('export/receivables', [ReportController::class, 'ReceivablesExport'])->name('receivables.export');
