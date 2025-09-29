@@ -259,14 +259,14 @@
                                                     $total = 0;
                                                     $totalAmount = 0;
 
-                                                    if (!function_exists('compare')) {
-                                                        function compare($a, $b)
-                                                        {
-                                                            return strtotime($b['issue_date']) -
-                                                                strtotime($a['issue_date']);
-                                                        }
-                                                    }
-                                                    usort($payableSummaries, 'compare');
+                                                    // if (!function_exists('compare')) {
+                                                    //     function compare($a, $b)
+                                                    //     {
+                                                    //         return strtotime($b['issue_date']) -
+                                                    //             strtotime($a['issue_date']);
+                                                    //     }
+                                                    // }
+                                                    // usort($payableSummaries, 'compare');
                                                 @endphp
                                                 @foreach ($payableSummaries as $payableSummary)
                                                     <tr>
@@ -370,10 +370,12 @@
                                                 @php
                                                     $total = 0;
                                                     $totalQuantity = 0;
-
-                                                    function compares($a, $b)
-                                                    {
-                                                        return strtotime($b['bill_date']) - strtotime($a['bill_date']);
+                                                    if (!function_exists('compares')) {
+                                                        function compares($a, $b)
+                                                        {
+                                                            return strtotime($b['bill_date']) -
+                                                                strtotime($a['bill_date']);
+                                                        }
                                                     }
                                                     usort($payableDetails, 'compares');
                                                 @endphp
