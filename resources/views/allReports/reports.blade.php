@@ -207,21 +207,7 @@
                                     <ul class="list-unstyled mb-0 row g-0">
 
                                         {{-- ================== Existing Reports ================== --}}
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'ledger.index' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('ledger.index') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('General Ledger') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-                                        <li
+                                         <li
                                             class="col-6 report-item {{ Request::route()->getName() == 'report.balance.sheet' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
                                                 href="{{ route('report.balance.sheet') }}">
@@ -235,7 +221,21 @@
                                                 </span>
                                             </a>
                                         </li>
-                                        <li
+                                         <li
+                                            class="col-6 report-item {{ Request::route()->getName() == 'reports.profit_loss' ? 'active' : '' }}">
+                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                href="{{ route('reports.profit_loss') }}">
+                                                <span class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                                    {{ __('Profit and Loss') }}
+                                                </span>
+                                                <span class="report-actions">
+                                                    <i class="bi bi-star text-muted"></i>
+                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                </span>
+                                            </a>
+                                        </li>
+                                         <li
                                             class="col-6 report-item {{ Request::route()->getName() == 'balance-sheet-detail.index' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
                                                 href="{{ route('balance-sheet-detail.index') }}">
@@ -249,7 +249,21 @@
                                                 </span>
                                             </a>
                                         </li>
-                                        <li
+                                         <li
+                                            class="col-6 report-item {{ Request::route()->getName() == 'profit-loss-detail.index' ? 'active' : '' }}">
+                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                href="{{ route('profit-loss-detail.index') }}">
+                                                <span class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                                    {{ __('Profit and Loss Detail') }}
+                                                </span>
+                                                <span class="report-actions">
+                                                    <i class="bi bi-star text-muted"></i>
+                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                </span>
+                                            </a>
+                                        </li>
+                                         <li
                                             class="col-6 report-item {{ Request::route()->getName() == 'balance-sheet-standard.index' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
                                                 href="{{ route('balance-sheet-standard.index') }}">
@@ -264,6 +278,21 @@
                                             </a>
                                         </li>
                                         <li
+                                            class="col-6 report-item {{ Request::route()->getName() == 'ledger.index' ? 'active' : '' }}">
+                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                href="{{ route('ledger.index') }}">
+                                                <span class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                                    {{ __('General Ledger') }}
+                                                </span>
+                                                <span class="report-actions">
+                                                    <i class="bi bi-star text-muted"></i>
+                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                </span>
+                                            </a>
+                                        </li>
+                                       
+                                        <li
                                             class="col-6 report-item {{ Request::route()->getName() == 'cash-flow.index' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
                                                 href="{{ route('cash-flow.index') }}">
@@ -277,34 +306,8 @@
                                                 </span>
                                             </a>
                                         </li>
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'reports.profit_loss' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('reports.profit_loss') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Profit and Loss') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'profit-loss-detail.index' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('profit-loss-detail.index') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Profit and Loss Detail') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
+                                       
+                                       
                                     </ul>
                                 </div>
                             </div>
@@ -336,13 +339,25 @@
                                                     'route' => 'receivables.aging_summary',
                                                     'label' => 'Accounts receivable aging summary',
                                                 ],
+                                                 [
+                                                    'route' => 'receivables.invoices_received_payments',
+                                                    'label' => 'Invoices and received payments',
+                                                ],
                                                 [
                                                     'route' => 'receivables.aging_details',
                                                     'label' => 'Accounts receivable aging details',
                                                 ],
+                                                 [
+                                                    'route' => 'receivables.open_invoice_list',
+                                                    'label' => 'Open Invoice',
+                                                ],
                                                 [
                                                     'route' => 'receivables.collection_details',
-                                                    'label' => 'Collection details',
+                                                    'label' => 'Collection Report',
+                                                ],
+                                                [
+                                                    'route' => 'receivables.invoice_list',
+                                                    'label' => 'Invoice list'
                                                 ],
                                                 [
                                                     'route' => 'receivables.customer_balance_detail',
@@ -352,15 +367,9 @@
                                                     'route' => 'receivables.customer_balance',
                                                     'label' => 'Customer balance',
                                                 ],
-                                                ['route' => 'receivables.invoice_list', 'label' => 'Invoice list'],
-                                                [
-                                                    'route' => 'receivables.open_invoice_list',
-                                                    'label' => 'Open invoice list',
-                                                ],
-                                                [
-                                                    'route' => 'receivables.invoices_received_payments',
-                                                    'label' => 'Invoices and received payments',
-                                                ],
+                                                
+                                               
+                                               
                                             ];
                                         @endphp
 
@@ -415,7 +424,8 @@
                                                     'route' => 'payables.aging_details',
                                                     'label' => 'Accounts payable aging details',
                                                 ],
-                                                ['route' => 'payables.bills_payments', 'label' => 'Bills and payments'],
+                                                [   'route' => 'payables.bills_payments',
+                                                    'label' => 'Bills and payments'],
                                                 [
                                                     'route' => 'payables.vendor_balance_summary',
                                                     'label' => 'Vendor balance summary',
