@@ -17,194 +17,35 @@
             </div>
         </div>
 
-        <!-- Filter Controls -->
-        <div class="filter-controls">
-            <div class="filter-row">
-                <div class="filter-group row mb-2 align-items-end">
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Report period</label>
-                        <select id="header-filter-period" class="form-control filter-period">
-                            <option value="all_dates">All Dates</option>
-                            <option value="custom_date">Custom dates</option>
-                            <option value="today">Today</option>
-                            <option value="this_week">This week</option>
-                            <option value="this_week_to_date">This week to date</option>
-                            <option value="this_month">This month</option>
-                            <option value="this_month_to_date" selected>This month to date</option>
-                            <option value="this_quarter">This quarter</option>
-                            <option value="this_quarter_to_date">This quarter to date</option>
-                            <option value="this_year">This year</option>
-                            <option value="this_year_to_date">This year to date</option>
-                            <option value="this_year_to_last_month">This year to last month</option>
-                            <option value="yesterday">Yesterday</option>
-                            <option value="recent">Recent</option>
-                            <option value="last_week">Last week</option>
-                            <option value="last_week_to_date">Last week to date</option>
-                            <option value="last_week_to_today">Last week to today</option>
-                            <option value="last_month">Last month</option>
-                            <option value="last_month_to_date">Last month to date</option>
-                            <option value="last_month_to_today">Last month to today</option>
-                            <option value="last_quarter">Last quarter</option>
-                            <option value="last_quarter_to_date">Last quarter to date</option>
-                            <option value="last_quarter_to_today">Last quarter to today</option>
-                            <option value="last_year">Last year</option>
-                            <option value="last_year_to_date">Last year to date</option>
-                            <option value="last_year_to_today">Last year to today</option>
-                            <option value="last_7_days">Last 7 days</option>
-                            <option value="last_30_days">Last 30 days</option>
-                            <option value="last_90_days">Last 90 days</option>
-                            <option value="last_12_months">Last 12 months</option>
-                            <option value="since_30_days_ago">Since 30 days ago</option>
-                            <option value="since_60_days_ago">Since 60 days ago</option>
-                            <option value="since_90_days_ago">Since 90 days ago</option>
-                            <option value="since_365_days_ago">Since 365 days ago</option>
-                            <option value="next_week">Next week</option>
-                            <option value="next_4_weeks">Next 4 weeks</option>
-                            <option value="next_month">Next month</option>
-                            <option value="next_quarter">Next quarter</option>
-                            <option value="next_year">Next year</option>
-                        </select>
-
-                    </div>
-
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">as of</label>
-                        {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                        <input type="date" class="form-control d-none" name="start_date" id="filter-start-date"
-                            value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                        <input type="date" class="form-control " name="end_date" id="filter-end-date"
-                            value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                    </div>
-                    <div class="filter-item col-md-2 mt-4">
-                        <button class="btn btn-view-options" id="view-options-btn"
-                            style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
-                            <i class="fa fa-eye"></i> View options
-                        </button>
-                    </div>
-
-                    <!-- Action buttons row -->
-                    <div class="d-flex align-items-end gap-3 mt-3" style="justify-content: end;">
-
-                        <button class="btn btn-outline" id="columns-btn">
-                            <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
-                        </button>
-
-                        <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
-                            data-bs-target="#filterSidebar" aria-controls="filterSidebar">
-                            <i class="fa fa-filter"></i> Filter
-                        </button>
-
-                        {{-- Filter Side Bar --}}
-                        <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="filterSidebar"
-                            aria-labelledby="filterSidebarLabel">
-                            <div class="offcanvas-header " style="background: #f9fafb; border-bottom: 1px solid #e6e6e6;">
-                                <h5 class="offcanvas-title" id="filterSidebarLabel">
-                                    Filters
-                                </h5>
-                                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                                    aria-label="Close">
-                                    <i class="fa fa-close"></i>
-                                </button>
-                            </div>
-                            <div class="offcanvas-body">
-                                <div class="filter-item mb-2">
-                                    <label class="filter-label">Report period</label>
-                                    <select id="sidebar-filter-period" class="form-control filter-period">
-                                        <option value="all_dates">All Dates</option>
-                                        <option value="custom_date">Custom dates</option>
-                                        <option value="today">Today</option>
-                                        <option value="this_week">This week</option>
-                                        <option value="this_week_to_date">This week to date</option>
-                                        <option value="this_month">This month</option>
-                                        <option value="this_month_to_date" selected>This month to date</option>
-                                        <option value="this_quarter">This quarter</option>
-                                        <option value="this_quarter_to_date">This quarter to date</option>
-                                        <option value="this_year">This year</option>
-                                        <option value="this_year_to_date">This year to date</option>
-                                        <option value="this_year_to_last_month">This year to last month</option>
-                                        <option value="yesterday">Yesterday</option>
-                                        <option value="recent">Recent</option>
-                                        <option value="last_week">Last week</option>
-                                        <option value="last_week_to_date">Last week to date</option>
-                                        <option value="last_week_to_today">Last week to today</option>
-                                        <option value="last_month">Last month</option>
-                                        <option value="last_month_to_date">Last month to date</option>
-                                        <option value="last_month_to_today">Last month to today</option>
-                                        <option value="last_quarter">Last quarter</option>
-                                        <option value="last_quarter_to_date">Last quarter to date</option>
-                                        <option value="last_quarter_to_today">Last quarter to today</option>
-                                        <option value="last_year">Last year</option>
-                                        <option value="last_year_to_date">Last year to date</option>
-                                        <option value="last_year_to_today">Last year to today</option>
-                                        <option value="last_7_days">Last 7 days</option>
-                                        <option value="last_30_days">Last 30 days</option>
-                                        <option value="last_90_days">Last 90 days</option>
-                                        <option value="last_12_months">Last 12 months</option>
-                                        <option value="since_30_days_ago">Since 30 days ago</option>
-                                        <option value="since_60_days_ago">Since 60 days ago</option>
-                                        <option value="since_90_days_ago">Since 90 days ago</option>
-                                        <option value="since_365_days_ago">Since 365 days ago</option>
-                                        <option value="next_week">Next week</option>
-                                        <option value="next_4_weeks">Next 4 weeks</option>
-                                        <option value="next_month">Next month</option>
-                                        <option value="next_quarter">Next quarter</option>
-                                        <option value="next_year">Next year</option>
-                                    </select>
-
-                                </div>
-
-                                <div class="filter-item mb-2">
-                                    <label class="filter-label">as of</label>
-                                    {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                                    <input type="date" class="form-control d-none" name="start_date"
-                                        id="sidebar-filter-start-date"
-                                        value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                                    <input type="date" class="form-control " name="end_date"
-                                        id="sidebar-filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                                </div>
-                            </div>
-                        </div>
-
-
-                        {{-- JS to sync filters --}}
-                        <script>
-                            $(document).ready(function() {
-                                // Sync Report Period
-                                $('#sidebar-filter-period').on('change', function() {
-                                    $('#header-filter-period').val($(this).val());
-                                });
-                                $('#header-filter-period').on('change', function() {
-                                    $('#sidebar-filter-period').val($(this).val());
-                                });
-                            });
-                        </script>
-                        {{-- Filter Side Bar --}}
-
-                        <button class="btn btn-outline" id="general-options-btn">
-                            <i class="fa fa-cog"></i> General options
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
         <!-- Report Content -->
         <div class="report-content">
             <div class="report-title-section">
                 <h2 class="report-title">{{ $pageTitle }}</h2>
                 {{-- <p class="company-name">{{ config('app.name', 'Craig\'s Design and Landscaping Services') }}</p> --}}
-                <p class="date-range">
+                {{-- <p class="date-range">
                     <span id="date-range-display">
                         {{ Carbon\Carbon::now()->startOfMonth()->format('F j, Y') }} -
                         {{ Carbon\Carbon::now()->format('F j, Y') }}
                     </span>
-                </p>
+                </p> --}}
             </div>
 
+            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')" id="ExprotExcel"
+                class="d-none">
+                <i class="fa fa-file-excel"></i> Excel
+            </button>
+
+            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')" id="ExprotPDF"
+                class="d-none">
+                <i class="fa fa-file-excel"></i> Excel
+            </button>
+
+
             <div class="table-container p-2">
-                {!! $dataTable->table(['class' => 'table aging-details-table', 'id' => 'aging-details-table']) !!}
+                {!! $dataTable->table(['class' => 'table customer-balance-table', 'id' => 'customer-balance-table']) !!}
             </div>
+
+
         </div>
     </div>
 
@@ -368,7 +209,7 @@
 
     <script>
         function buildColumnsFromTable() {
-            const headers = document.querySelectorAll('#aging-details-table thead th');
+            const headers = document.querySelectorAll('#customer-balance-table thead th');
             const container = document.querySelector('#sortable-columns');
 
             // Clear the old list
@@ -403,12 +244,24 @@
         });
 
         // Or rebuild every redraw if needed:
-        $('#aging-details-table').on('draw.dt', function() {
+        $('#customer-balance-table').on('draw.dt', function() {
             buildColumnsFromTable();
         });
     </script>
 
-    
+    <script>
+        $('#customer-balance-table').on('click', '.toggle-bucket', function() {
+            let $row = $(this);
+            let bucket = $row.attr('class').match(/bucket-([^\s]+)/)[1]; // "current"
+            let $icon = $row.find('.icon');
+
+            // toggle
+            $('.bucket-' + bucket).not($row).toggle(); // don’t hide the parent itself
+
+            // swap icon
+            $icon.text($icon.text() === '▶' ? '▼' : '▶');
+        });
+    </script>
 
     <style>
         /* Base styling */
@@ -625,13 +478,13 @@
             overflow-x: auto;
         }
 
-        .aging-details-table {
+        .customer-balance-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
         }
 
-        .aging-details-table th {
+        .customer-balance-table th {
             background: #f9fafb;
             border-bottom: 2px solid #e5e7eb;
             padding: 12px 16px;
@@ -643,13 +496,13 @@
             letter-spacing: 0.025em;
         }
 
-        .aging-details-table td {
+        .customer-balance-table td {
             padding: 12px 16px;
             border-bottom: 1px solid #f3f4f6;
             color: #262626;
         }
 
-        .aging-details-table tbody tr:hover {
+        .customer-balance-table tbody tr:hover {
             background: #f9fafb;
         }
 
@@ -876,10 +729,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                        flex-direction: column;
-                                                                                        width: 100%;
-                                                                                        gap: 16px;
-                                                                                    } */
+                                                                                                                                                        flex-direction: column;
+                                                                                                                                                        width: 100%;
+                                                                                                                                                        gap: 16px;
+                                                                                                                                                    } */
 
             .filter-item {
                 width: 100%;
@@ -902,9 +755,11 @@
                 flex-wrap: wrap;
             }
         }
-    </style>
 
-    {!! $dataTable->scripts() !!}
+        .parent-row {
+            cursor: pointer;
+        }
+    </style>
 @endsection
 
 @push('script-page')
@@ -915,11 +770,152 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+
+    <script>
+        /*$(function() {
+                                    $.extend(true, $.fn.dataTable.defaults, {
+                                        dom: 'Bfrtip',
+                                        buttons: [{
+                                                extend: 'excel',
+                                                text: '<i class="fa fa-file-excel"></i> Excel',
+                                                action: function(e, dt, button, config) {
+                                                    window.location = dt.ajax.url().replace('/ajax', '/excel');
+                                                }
+                                            },
+                                            {
+                                                extend: 'print',
+                                                text: '<i class="fa fa-print"></i> Print',
+                                                title: '{{ $pageTitle ?? 'Report' }}',
+                                                messageTop: `
+                        <div style="text-align:center; font-size:16px; font-weight:bold;">
+                            {{ $pageTitle }}
+                        </div>
+                        <div style="text-align:center;">
+                            {{ config('app.name') }}
+                        </div>
+                        <div style="text-align:center; font-size:12px;">
+                            Prepared at: {{ now()->format('F j, Y g:i A') }}
+                        </div>
+                    `
+                                            }
+                                        ]
+                                    });
+                                });*/
+
+        let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        function exportDataTable(tableId, pageTitle, format = "excel") {
+            let table = $('#' + tableId).DataTable();
+
+            // Only get visible columns (skip auto-index)
+            let columns = [];
+            $('#' + tableId + ' thead th:visible').each(function() {
+                columns.push($(this).text().trim());
+            });
+
+            // Get visible data rows
+            let data = [];
+            table.rows({
+                search: 'applied'
+            }).every(function() {
+                let rowData = this.data();
+
+                if (typeof rowData === 'object') {
+                    // Only keep values for visible columns
+                    let rowArray = [];
+                    table.columns(':visible').every(function(colIdx) {
+                        let val = rowData[this.dataSrc()] ?? '-';
+                        rowArray.push(val);
+                    });
+                    rowData = rowArray;
+                }
+                data.push(rowData);
+            });
+
+            // Send to universal export route
+            $.ajax({
+                url: '{{ route('export.datatable') }}',
+                method: 'POST',
+                data: {
+                    columns: columns,
+                    data: data,
+                    pageTitle: pageTitle,
+                    format: format,
+                    _token: '{{ csrf_token() }}'
+                },
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                success: function(blob, status, xhr) {
+                    let filename = xhr.getResponseHeader('Content-Disposition')
+                        .split('filename=')[1]
+                        .replace(/"/g, '');
+                    let link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                },
+                error: function(xhr) {
+                    console.error('Export failed:', xhr.responseText);
+                    alert('Export failed! Check console.');
+                }
+            });
+        }
+
+        /*function exportDataTable(tableId, pageTitle) {
+            // Get table columns dynamically
+            let columns = [];
+            $('#' + tableId + ' thead th').each(function() {
+                columns.push($(this).text().trim());
+            });
+
+            // Get table data
+            let data = [];
+            let table = $('#' + tableId).DataTable();
+            table.rows({
+                search: 'applied'
+            }).every(function() {
+                let rowData = this.data();
+                data.push(rowData);
+            });
+
+            // Send AJAX POST to universal export route
+            $.ajax({
+                url: '{{ route('export.datatable') }}',
+                method: 'POST',
+                data: {
+                    columns: columns,
+                    data: data,
+                    pageTitle: pageTitle,
+                    _token: '{{ csrf_token() }}'
+                },
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                success: function(blob, status, xhr) {
+                    // Create link to download
+                    let filename = xhr.getResponseHeader('Content-Disposition')
+                        .split('filename=')[1]
+                        .replace(/"/g, '');
+                    let link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                }
+            });
+        } */
+    </script>
+
+
+
+    {!! $dataTable->scripts() !!}
 
     <script>
         $(document).ready(function() {
@@ -939,6 +935,19 @@
                 reportBasis: true,
                 footerAlignment: 'center'
             };
+
+            $.extend(true, $.fn.dataTable.defaults, {
+                dom: 'Bfrtip',
+                buttons: [{
+                        extend: 'excel',
+                        text: '<i class="fa fa-file-excel"></i> Excel'
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fa fa-print"></i> Print'
+                    }
+                ]
+            });
 
             // Initialize date range picker
             $('#daterange').daterangepicker({
@@ -1247,8 +1256,8 @@
 
             // Refresh data function
             function refreshData() {
-                if (window.LaravelDataTables && window.LaravelDataTables["aging-details-table"]) {
-                    window.LaravelDataTables["aging-details-table"].draw();
+                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
+                    window.LaravelDataTables["customer-balance-table"].draw();
                     // {{-- console.log("HI") --}}
                 } else {
                     console.log('DataTable not yet initialized');
@@ -1284,7 +1293,7 @@
             });
 
             // Setup DataTable ajax parameters
-            $('#aging-details-table').on('preXhr.dt', function(e, settings, data) {
+            $('#customer-balance-table').on('preXhr.dt', function(e, settings, data) {
                 data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.account_id = $('#filter-account').val();
@@ -1426,7 +1435,7 @@
                 console.log('Column order updated:', order);
 
                 // Apply column order if DataTable supports it
-                if (window.LaravelDataTables && window.LaravelDataTables["aging-details-table"]) {
+                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
                     // Note: Column reordering requires ColReorder extension
                     console.log('Column order would be applied:', order);
                 }
@@ -1438,9 +1447,9 @@
                 const isVisible = $(this).prop('checked');
 
                 if (columnIndex !== undefined && window.LaravelDataTables && window.LaravelDataTables[
-                        "aging-details-table"]) {
+                        "customer-balance-table"]) {
                     try {
-                        window.LaravelDataTables["aging-details-table"].column(columnIndex).visible(
+                        window.LaravelDataTables["customer-balance-table"].column(columnIndex).visible(
                             isVisible);
                     } catch (error) {
                         console.log('Column visibility change:', columnIndex, isVisible);
@@ -1513,7 +1522,7 @@
                         <div class="company-name">${$('.company-name').text()}</div>
                         <div class="date-range">${$('.date-range').text()}</div>
                         <table>
-                            ${$('.aging-details-table').html()}
+                            ${$('.customer-balance-table').html()}
                         </table>
                     </body>
                     </html>
@@ -1567,12 +1576,19 @@
                 const option = prompt(
                     'Choose export format:\n1. Excel\n2. PDF\n3. CSV\n\nEnter number (1-3):');
 
+
+                // Get table ID dynamically (assumes closest table in DOM)
+                const tableId = $(this).closest('div').find('table').attr('id');
+                const pageTitle = document.title || 'Report';
+
                 switch (option) {
                     case '1':
-                        alert('Excel export would be triggered');
+                        //alert('Excel export would be triggered');
+                        $("#ExprotExcel").click();
                         break;
                     case '2':
-                        alert('PDF export would be triggered');
+                        $("#ExprotPDF").click();
+                        //alert('PDF export would be triggered');
                         break;
                     case '3':
                         alert('CSV export would be triggered');
@@ -1608,9 +1624,9 @@
             }, 100);
 
             // Format numbers in table based on options
-            $(document).on('draw.dt', '#aging-details-table', function() {
+            $(document).on('draw.dt', '#customer-balance-table', function() {
                 if (window.reportOptions) {
-                    $('.aging-details-table tbody tr').each(function() {
+                    $('.customer-balance-table tbody tr').each(function() {
                         const $row = $(this);
 
                         // Apply number formatting to amount columns

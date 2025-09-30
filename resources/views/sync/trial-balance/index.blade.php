@@ -1,551 +1,1181 @@
 @extends('layouts.admin')
-
-@push('datatable-styles')
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
-@endpush
-
-@section('filter-section')
+@section('content')
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css" />
     <style>
-        /* Enhanced Trial Balance Styling */
-        .trial-balance-container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            margin-bottom: 30px;
+        :root {
+            --qb-primary: #2ca01c;
+            --qb-primary-hover: #248f17;
+            --qb-muted: #f5f6f8;
+            --qb-border: #e6e8eb;
+            --qb-text: #333333;
+            --qb-accent: #003366;
         }
 
-        .trial-balance-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        body {
+            background: var(--qb-muted);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Report Container */
+        .report-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .report-header {
+            text-align: center;
+        }
+
+        /* Filter Card */
+        .filter-card {
+            background: #fff;
+            border-radius: 6px;
+            border: 1px solid var(--qb-border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        /* Form Controls */
+        .form-select,
+        .form-control {
+            border: 1px solid #dde2e7;
+            border-radius: 4px;
+            padding: 8px 12px;
+            height: 38px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-select:focus,
+        .form-control:focus {
+            border-color: var(--qb-primary);
+            box-shadow: 0 0 0 2px rgba(44, 160, 28, 0.25);
+            outline: none;
+        }
+
+        .muted-label {
+            display: block;
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        /* Radio buttons styling */
+        .form-check-input {
+            margin-right: 6px;
+        }
+
+        .form-check-label {
+            font-size: 14px;
+            color: var(--qb-text);
+            margin-bottom: 0;
+        }
+
+        .form-check-inline {
+            margin-right: 15px;
+        }
+
+        /* Buttons */
+        .btn {
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--qb-primary);
+            border-color: var(--qb-primary);
             color: white;
-            padding: 20px;
-            border-bottom: none;
         }
 
-        .trial-balance-header h4 {
-            margin: 0;
+        .btn-primary:hover:not(:disabled) {
+            background: var(--qb-primary-hover);
+            border-color: var(--qb-primary-hover);
+        }
+
+        .btn-outline-secondary {
+            background: white;
+            border-color: #dde2e7;
+            color: #444;
+        }
+
+        .btn-outline-secondary:hover:not(:disabled) {
+            background: #f8f9fa;
+            border-color: #bbb;
+        }
+
+        .btn-success {
+            background: var(--qb-primary);
+            border-color: var(--qb-primary);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: var(--qb-primary-hover);
+            border-color: var(--qb-primary-hover);
+        }
+
+        .btn-white {
+            background: white;
+            border: 1px solid #dde2e7;
+            padding: 6px 10px;
+            font-size: 14px;
+        }
+
+        .btn-white:hover:not(:disabled) {
+            background: #f8f9fa;
+            border-color: #bbb;
+        }
+
+        .btn-short {
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+
+        /* Report Header */
+        .report-card {
+            background: #fff;
+            border-radius: 6px;
+            border: 1px solid var(--qb-border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .report-toolbar {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f1f3;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            text-align: center !important;
+        }
+
+        .toolbar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .report-title {
+            text-align: center;
+            padding: 12px 8px;
+        }
+
+        .report-title h4 {
+            margin-bottom: 4px;
             font-weight: 600;
-            font-size: 1.5rem;
+            color: var(--qb-text);
         }
 
-        .date-range-display {
-            font-size: 0.9rem;
-            opacity: 0.9;
-            margin-top: 5px;
+        .report-divider {
+            height: 1px;
+            background: var(--qb-border);
         }
 
-        .table-container {
+        /* Table */
+        .table-card {
             padding: 0;
-            overflow: hidden;
+            background: #fff;
+            border-radius: 0 0 6px 6px;
         }
 
-        .table-scroll {
-            max-height: 600px;
-            overflow: auto;
-            position: relative;
-        }
-
-        .trial-balance-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
+        .table {
+            font-size: 13.5px;
             margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 100%;
         }
 
-        .trial-balance-table thead th {
+        .table thead th {
+            padding: 10px 12px;
+            font-weight: 700;
             position: sticky;
             top: 0;
-            z-index: 10;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-bottom: 2px solid #dee2e6;
-            font-weight: 700;
-            color: #495057;
-            padding: 15px 12px;
-            text-align: center;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: #fff;
+            z-index: 3;
+            border-bottom: 1px solid #eceff2;
+            color: var(--qb-text);
         }
 
-        /* Row styling */
-        .trial-balance-table tbody tr {
-            transition: all 0.2s ease;
-            border-bottom: 1px solid #f1f3f4;
+        .table tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f5f6f8;
+            vertical-align: middle;
+            color: var(--qb-text);
         }
 
-        .trial-balance-table tbody tr:hover {
-            background-color: #f8f9fa !important;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        .table tbody tr:hover {
+            background: #fbfcfe;
         }
 
-        /* Account Header Rows */
-        .account-header {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
-            font-weight: 700;
-            border-top: 3px solid #2196f3;
-            cursor: pointer;
-        }
-
-        .account-header td {
-            padding: 15px 12px !important;
-            font-size: 0.95rem;
-        }
-
-        .account-header-text {
-            color: #1976d2;
-            font-size: 1rem;
-            letter-spacing: 1px;
-        }
-
-        /* Detail Account Rows */
-        .account-detail {
-            background-color: #ffffff;
-        }
-
-        .account-detail td {
-            padding: 12px 12px 12px 40px !important;
-            border-bottom: 1px solid #f8f9fa;
-        }
-
-        /* Subtotal Rows */
-        .account-subtotal {
-            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%) !important;
-            border-top: 2px solid #ff9800;
-            border-bottom: 2px solid #ff9800;
-        }
-
-        .account-subtotal td {
-            padding: 14px 12px 14px 40px !important;
-            font-weight: 700;
-        }
-
-        .account-subtotal-text {
-            color: #f57c00;
-            font-size: 0.95rem;
-        }
-
-        /* Grand Total Row */
-        .grand-total {
-            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%) !important;
-            border-top: 3px solid #e91e63;
-            border-bottom: 3px solid #e91e63;
-        }
-
-        .grand-total td {
-            padding: 18px 12px !important;
-            font-weight: 800;
-        }
-
-        .grand-total-text {
-            color: #c2185b;
-            font-size: 1.1rem;
-            font-weight: 800;
-        }
-
-        /* Net Income Row */
-        .net-income {
-            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%) !important;
-            border-top: 2px solid #4caf50;
-        }
-
-        .net-income td {
-            padding: 15px 12px !important;
-        }
-
-        .net-income-text {
-            color: #388e3c;
-            font-weight: 700;
-        }
-
-        /* Toggle Button Styling */
+        /* Toggle Button */
         .toggle-btn {
-            cursor: pointer;
-            margin-right: 10px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             width: 24px;
             height: 24px;
-            border-radius: 50%;
-            background: rgba(33, 150, 243, 0.1);
-            transition: all 0.3s ease;
+            border-radius: 3px;
+            background: #f1f3f5;
+            border: 0;
+            margin-right: 8px;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
         .toggle-btn:hover {
-            background: rgba(33, 150, 243, 0.2);
-            transform: scale(1.1);
+            background: #e9ecef;
         }
 
-        .toggle-icon {
-            font-size: 12px;
-            color: #2196f3;
-            transition: all 0.3s ease;
+        .toggle-btn .toggle-icon {
+            transition: transform 0.2s;
         }
 
         .toggle-btn.expanded .toggle-icon {
             transform: rotate(90deg);
         }
 
-        /* Hidden Row Styling - CRITICAL for toggle functionality */
+        /* Account Rows */
         .hidden-row {
             display: none !important;
         }
 
-        /* Animation for row expansion */
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
+        .account-detail td:first-child {
+            padding-left: 36px !important;
+        }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .col-amount {
+            text-align: right;
+            white-space: nowrap;
         }
 
         /* Indentation */
         .indent-spacer {
             display: inline-block;
-            width: 25px;
+            width: 20px;
         }
 
-        /* Amount Styling */
-        .text-right {
-            text-align: right !important;
-        }
-
-        .text-center {
-            text-align: center !important;
-        }
-
-        .text-success {
-            color: #2e7d32 !important;
+        /* Group Headers */
+        .account-header {
+            background: #f8f9fa;
             font-weight: 600;
+        }
+
+        .account-header:hover {
+            background: #f1f3f5 !important;
+        }
+
+        .account-header .account-header-text {
+            color: #333;
+            font-weight: 700;
+        }
+
+        /* Subtotals */
+        .account-subtotal {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        /* Grand Total */
+        .grand-total {
+            font-weight: 800;
+            background: #f8f9fa;
+            border-top: 2px solid var(--qb-border);
+        }
+
+        /* Net Income */
+        .net-income {
+            background: #f0f8ff;
+            font-weight: 600;
+        }
+
+        /* Amount Formatting */
+        .text-success {
+            color: #28a745 !important;
         }
 
         .text-danger {
-            color: #c62828 !important;
-            font-weight: 600;
+            color: #dc3545 !important;
         }
 
-        /* Hover styles for header rows */
-        .account-header:hover {
-            background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%) !important;
+        /* Loading State */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Error States */
+        .is-invalid {
+            border-color: #dc3545;
+        }
+
+        .invalid-feedback {
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            color: #dc3545;
+        }
+
+        /* Time Period Columns */
+        .month-debit,
+        .month-credit,
+        .quarter-debit,
+        .quarter-credit,
+        .year-debit,
+        .year-credit {
+            font-size: 13px;
+            text-align: right;
+            min-width: 100px;
+        }
+
+        /* Alternating column coloring */
+        .month-debit,
+        .quarter-debit,
+        .year-debit {
+            background-color: rgba(240, 248, 255, 0.3);
+        }
+
+        .month-credit,
+        .quarter-credit,
+        .year-credit {
+            background-color: rgba(255, 240, 245, 0.3);
+        }
+         #switch-view-btn:hover , #customize-btn:hover {
+        background-color: #206029 !important; /* Bootstrap primary */
+        color: #fff !important;
+        border-color: #206029 !important;
+    }
+        /* Responsive */
+        @media (max-width: 992px) {
+            .toolbar-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .report-container {
+                padding: 0 10px;
+            }
+
+            .table-responsive {
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .form-check-inline {
+                display: block;
+                margin-right: 0;
+                margin-bottom: 5px;
+            }
         }
     </style>
 
-    <div class="filter-section">
-        <div class="filter-box">
-            <div class="d-flex flex-wrap align-items-end">
-                <div class="filter-item">
-                    <label for="datatableRange">
-                        <i class="fa fa-calendar-alt"></i> Date Range
-                    </label>
-                    <input type="text" class="form-control" id="datatableRange" placeholder="Select date range" readonly>
+    <div class="container-fluid py-3">
+        <div class="report-container">
+            <!-- FILTER CARD -->
+            <div class="filter-card card mb-3">
+                <form id="filter-form" class="p-3">
+                    @csrf
+                    <div class="row gy-3 gx-3 align-items-end justify-content-end">
+                        <!-- Row 1 -->
+                        <div class="col-md-3">
+                            <label class="muted-label" for="report-period">Report period</label>
+                            <select id="report-period" name="reportPeriod" class="form-select filter-control">
+                                <option value="today" {{ request('reportPeriod') == 'today' ? 'selected' : '' }}>Today
+                                </option>
+                                <option value="yesterday" {{ request('reportPeriod') == 'yesterday' ? 'selected' : '' }}>
+                                    Yesterday</option>
+                                <option value="this-week" {{ request('reportPeriod') == 'this-week' ? 'selected' : '' }}>
+                                    This week</option>
+                                <option value="last-week" {{ request('reportPeriod') == 'last-week' ? 'selected' : '' }}>
+                                    Last week</option>
+                                <option value="this-month"
+                                    {{ request('reportPeriod', 'this-month') == 'this-month' ? 'selected' : '' }}>This
+                                    month-to-date</option>
+                                <option value="last-month" {{ request('reportPeriod') == 'last-month' ? 'selected' : '' }}>
+                                    Last month</option>
+                                <option value="this-quarter"
+                                    {{ request('reportPeriod') == 'this-quarter' ? 'selected' : '' }}>This quarter</option>
+                                <option value="last-quarter"
+                                    {{ request('reportPeriod') == 'last-quarter' ? 'selected' : '' }}>Last quarter</option>
+                                <option value="this-year" {{ request('reportPeriod') == 'this-year' ? 'selected' : '' }}>
+                                    This year</option>
+                                <option value="last-year" {{ request('reportPeriod') == 'last-year' ? 'selected' : '' }}>
+                                    Last year</option>
+                                <option value="custom" {{ request('reportPeriod') == 'custom' ? 'selected' : '' }}>Custom
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="muted-label" for="date-from">From</label>
+                            <input id="date-from" name="dateFrom" type="date" class="form-control filter-control"
+                                value="{{ request('dateFrom', \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d')) }}">
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="muted-label" for="date-to">To</label>
+                            <input id="date-to" name="dateTo" type="date" class="form-control filter-control"
+                                value="{{ request('dateTo', \Carbon\Carbon::now()->format('Y-m-d')) }}">
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="muted-label">Accounting method</label>
+                            <div class="d-flex align-items-center mt-1">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input filter-control" type="radio" name="accountingMethod"
+                                        id="method-cash" value="cash"
+                                        {{ request('accountingMethod') == 'cash' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="method-cash">Cash</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input filter-control" type="radio" name="accountingMethod"
+                                        id="method-accrual" value="accrual"
+                                        {{ request('accountingMethod', 'accrual') == 'accrual' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="method-accrual">Accrual</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row gy-3 gx-3 align-items-end justify-content-end mt-3">
+                        <!-- Row 2 -->
+                        <div class="col-md-3">
+                            <label class="muted-label" for="display-columns">Display columns by</label>
+                            <select id="display-columns" name="displayColumns" class="form-select filter-control">
+                                <option value="total-only"
+                                    {{ request('displayColumns', 'total-only') == 'total-only' ? 'selected' : '' }}>Total
+                                    Only</option>
+                                <option value="months" {{ request('displayColumns') == 'months' ? 'selected' : '' }}>Months
+                                </option>   
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="muted-label">Show Options</label>
+                            <div class="mt-1">
+                                <select class="form-control filter-control" id="showOptions" name="showOptions">
+                                    <optgroup label="Show Rows">
+                                        <option value="rows-active"
+                                            {{ request('showRows', 'active') == 'active' ? 'selected' : '' }}>Active
+                                        </option>
+                                        <option value="rows-all" {{ request('showRows') == 'all' ? 'selected' : '' }}>All
+                                        </option>
+                                        <option value="rows-nonzero"
+                                            {{ request('showRows') == 'non-zero' ? 'selected' : '' }}>Non-zero</option>
+                                    </optgroup>
+                                    <optgroup label="Show Columns">
+                                        <option value="cols-active"
+                                            {{ request('showColumns', 'active') == 'active' ? 'selected' : '' }}>Active
+                                        </option>
+                                        <option value="cols-all" {{ request('showColumns') == 'all' ? 'selected' : '' }}>
+                                            All</option>
+                                        <option value="cols-nonzero"
+                                            {{ request('showColumns') == 'non-zero' ? 'selected' : '' }}>Non-zero</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </div>
+
+
+
+                        <div class="col-md-3">
+                            <label class="muted-label" for="account-filter">Account</label>
+                            <select id="account-filter" name="accountType" class="form-select filter-control">
+                                <option value="all" {{ request('accountType', 'all') == 'all' ? 'selected' : '' }}>All
+                                </option>
+                                <option value="Asset" {{ request('accountType') == 'Asset' ? 'selected' : '' }}>Assets
+                                </option>
+                                <option value="Liability" {{ request('accountType') == 'Liability' ? 'selected' : '' }}>
+                                    Liabilities</option>
+                                <option value="Equity" {{ request('accountType') == 'Equity' ? 'selected' : '' }}>Equity
+                                </option>
+                                <option value="Income" {{ request('accountType') == 'Income' ? 'selected' : '' }}>Income
+                                </option>
+                                <option value="Expense" {{ request('accountType') == 'Expense' ? 'selected' : '' }}>
+                                    Expense</option>
+                            </select>
+                        </div>
+                         <div class="col-md-3">
+                            <button type="button" id="run-report" class="btn btn-primary">
+                                Run report
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row gy-3 gx-3 align-items-end justify-content-end mt-3">
+                        <!-- Row 3 - Buttons -->
+                       
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-outline-secondary btn-short" id="customize-btn">
+                                Customize
+                            </button>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-outline-secondary hover:btn-primary btn-short" id="switch-view-btn">
+                                Modern view
+                            </button>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-success btn-short " id="save-btn">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- REPORT CARD -->
+            <div class="report-card card">
+                <div class="report-toolbar">
+                    <div class="toolbar-row">
+                        <div class="small text-muted">Add notes</div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <!-- Icon buttons -->
+                            <button type="button" class="btn btn-white" id="email-btn" title="Email">
+                                <i class="fa fa-envelope"></i>
+                            </button>
+                            <button type="button" class="btn btn-white" id="print-btn" title="Print">
+                                <i class="fa fa-print"></i>
+                            </button>
+                            <button type="button" class="btn btn-white" id="export-btn" title="Export">
+                                <i class="fa fa-file-export"></i>
+                            </button>
+                            <button type="button" class="btn btn-white" id="settings-btn" title="Settings">
+                                <i class="fa-solid fa-gear"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="report-header">
+                        <div class="report-title">
+                            <h4 id="company-name">{{ $companyName ?? "Craig's Design and Landscaping Services" }}</h4>
+                            <div class="small text-muted">Trial Balance</div>
+                            <div class="small text-muted">As of <span
+                                    id="report-asof">{{ request('dateTo') ? \Carbon\Carbon::parse(request('dateTo'))->format('F d, Y') : \Carbon\Carbon::now()->format('F d, Y') }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="filter-item">
-                    <label for="filter-type">
-                        <i class="fa fa-tags"></i> Account Type
-                    </label>
-                    <select id="filter-type" class="form-control">
-                        <option value="">All Types</option>
-                        <option value="Asset">Asset</option>
-                        <option value="Liability">Liability</option>
-                        <option value="Equity">Equity</option>
-                        <option value="Income">Income</option>
-                        <option value="Expense">Expense</option>
-                    </select>
-                </div>
+                <div class="report-divider"></div>
 
-                <div class="filter-item">
-                    <label for="filter-subtype">
-                        <i class="fa fa-layer-group"></i> Sub Type
-                    </label>
-                    <select id="filter-subtype" class="form-control">
-                        <option value="">All Sub Types</option>
-                        <option value="Cash">Cash</option>
-                        <option value="Bank">Bank</option>
-                        <option value="Receivable">Receivable</option>
-                        <option value="Payable">Payable</option>
-                        <option value="Inventory">Inventory</option>
-                        <option value="Fixed Asset">Fixed Asset</option>
-                    </select>
-                </div>
-
-                <div class="filter-item">
-                    <button type="button" class="btn btn-filter btn-secondary" id="reset-filters">
-                        <i class="fa fa-times-circle"></i> Clear Filters
-                    </button>
+                <!-- TABLE CARD -->
+                <div class="table-card p-3">
+                    <div class="table-responsive p-3" style="max-height:560px; overflow:auto;">
+                        {!! $dataTable->table(['class' => 'table table-hover', 'id' => 'trial-balance-table']) !!}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-@endsection
-
-@section('content')
-    <div class="content-wrapper">
-        <div class="trial-balance-container">
-            <div class="trial-balance-header">
-                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                    <div>
-                        <h4 class="mb-1">
-                            <i class="fa fa-balance-scale"></i> Trial Balance
-                        </h4>
-                        <div class="date-range-display" id="date-range-display"></div>
-                    </div>
-
-                    <div class="header-controls">
-                        <button type="button" title="Expand All" class="btn btn-header" id="expand-all">
-                            <i class="fa fa-expand"></i> Expand All
-                        </button>
-                        <button type="button" title="Collapse All" class="btn btn-header" id="collapse-all">
-                            <i class="fa fa-compress"></i> Collapse All
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="table-container">
-                <div class="table-scroll">
-                    {!! $dataTable->table(['class' => 'table trial-balance-table', 'id' => 'trial-balance-table']) !!}
-                </div>
-            </div>
-        </div>
-    </div>
-    {!! $dataTable->scripts() !!}
 @endsection
 
 @push('script-page')
-    <!-- Include jQuery and required libraries -->
+    <!-- Required scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+    <!-- Enhanced Trial Balance JavaScript -->
     <script>
-        // Trial Balance Toggle Functionality
-        $(document).ready(function() {
-            console.log('Document ready, initializing trial balance components...');
+        // Fixed Trial Balance JavaScript
+        (function($) {
+            "use strict";
 
-            // Initialize date range picker
-            initializeDateRangePicker();
+            let dataTable = null;
 
-            // Wait for table to be fully loaded
-            const checkTableLoaded = setInterval(function() {
-                if ($('#trial-balance-table').length && window.LaravelDataTables) {
-                    clearInterval(checkTableLoaded);
-                    console.log('Table found, initializing toggle functionality');
-                    initializeToggleControls();
-                }
-            }, 200);
+            // Initialize toggle controls for hierarchical display
+            function initializeToggleControls() {
+                // Remove existing event listeners to prevent duplicates
+                $(document).off('click.toggle', '.toggle-btn');
 
-            // Handle toggle buttons on rows
-            $(document).on('click', '.toggle-btn', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
+                // Add new event listener
+                $(document).on('click.toggle', '.toggle-btn', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
 
-                const groupId = $(this).data('target');
-                console.log('Toggle clicked for group:', groupId);
+                    const $btn = $(this);
+                    const targetGroup = $btn.data('target');
+                    const $icon = $btn.find('.toggle-icon');
+                    const isCollapsed = $btn.hasClass('collapsed');
 
-                if ($(this).hasClass('expanded')) {
-                    collapseGroup(groupId);
-                } else {
-                    expandGroup(groupId);
-                }
-            });
+                    if (isCollapsed) {
+                        // Expand: show child rows
+                        $btn.removeClass('collapsed').addClass('expanded');
+                        $icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+                        $(`.child-of-${targetGroup}`).removeClass('hidden-row').show();
 
-            // Handle expand/collapse all buttons
-            $('#expand-all').on('click', function() {
-                console.log('Expanding all groups');
-                $('.toggle-btn.collapsed').each(function() {
-                    const groupId = $(this).data('target');
-                    expandGroup(groupId);
-                });
-            });
+                        // Show header amounts when expanded
+                        $btn.closest('tr').find('.header-amount').show();
+                    } else {
+                        // Collapse: hide child rows
+                        $btn.removeClass('expanded').addClass('collapsed');
+                        $icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+                        $(`.child-of-${targetGroup}`).addClass('hidden-row').hide();
 
-            $('#collapse-all').on('click', function() {
-                console.log('Collapsing all groups');
-                $('.toggle-btn.expanded').each(function() {
-                    const groupId = $(this).data('target');
-                    collapseGroup(groupId);
-                });
-            });
-
-            // Redraw event handler
-            $('#trial-balance-table').on('draw.dt', function() {
-                console.log('Table redrawn, reinitializing toggle states');
-                initializeToggleControls();
-            });
-        });
-
-        // Initialize toggle controls
-        function initializeToggleControls() {
-            // Set initial states for all toggle buttons (collapsed by default)
-            $('.toggle-btn').addClass('collapsed').removeClass('expanded');
-            $('.toggle-btn .toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-
-            // Hide all child rows initially
-            $('.child-row').addClass('hidden-row');
-
-            // Show headers
-            $('.parent-row').removeClass('hidden-row');
-
-            // Make sure the total rows are visible
-            $('.grand-total, .net-income').removeClass('hidden-row');
-
-            // Ensure totals are visible for collapsed groups
-            $('.account-header .debit-cell, .account-header .credit-cell').show();
-        }
-
-        // Expand a group
-        function expandGroup(groupId) {
-            console.log('Expanding group:', groupId);
-
-            // Update toggle button state
-            const $toggleBtn = $(`.toggle-btn[data-target="${groupId}"]`);
-            $toggleBtn.removeClass('collapsed').addClass('expanded');
-            $toggleBtn.find('.toggle-icon').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-
-            // Hide debit/credit cells in the header row when expanded
-            $toggleBtn.closest('tr').find('.debit-cell, .credit-cell').hide();
-
-            // Show all child rows for this group
-            $(`.parent-${groupId}`).removeClass('hidden-row');
-
-            // Add nice animation
-            $(`.parent-${groupId}`).css({
-                'animation': 'slideDown 0.3s ease-out'
-            });
-        }
-
-        // Collapse a group
-        function collapseGroup(groupId) {
-            console.log('Collapsing group:', groupId);
-
-            // Update toggle button state
-            const $toggleBtn = $(`.toggle-btn[data-target="${groupId}"]`);
-            $toggleBtn.removeClass('expanded').addClass('collapsed');
-            $toggleBtn.find('.toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-
-            // Show debit/credit cells in the header row when collapsed
-            $toggleBtn.closest('tr').find('.debit-cell, .credit-cell').show();
-
-            // Hide all child rows for this group
-            $(`.parent-${groupId}`).addClass('hidden-row');
-        }
-
-        // Initialize date range picker
-        function initializeDateRangePicker() {
-            $('#datatableRange').daterangepicker({
-                locale: {
-                    format: 'MM/DD/YYYY',
-                    separator: ' - ',
-                    applyLabel: 'Apply',
-                    cancelLabel: 'Cancel',
-                },
-                startDate: moment().startOf('year'),
-                endDate: moment(),
-                ranges: {
-                    'Today': [moment(), moment()],
-                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
-                    'This Month': [moment().startOf('month'), moment().endOf('month')],
-                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month')
-                        .endOf('month')
-                    ],
-                    'This Year': [moment().startOf('year'), moment().endOf('year')]
-                }
-            });
-
-            // Update date display and refresh table on date change
-            $('#datatableRange').on('apply.daterangepicker', function(ev, picker) {
-                const dateDisplay = picker.startDate.format('MMM DD, YYYY') + ' - ' + picker.endDate.format(
-                    'MMM DD, YYYY');
-                $('#date-range-display').text(dateDisplay);
-                refreshTable();
-            });
-
-            // Set initial date display
-            const defaultDisplay = moment().startOf('year').format('MMM DD, YYYY') + ' - ' + moment().format(
-                'MMM DD, YYYY');
-            $('#date-range-display').text(defaultDisplay);
-        }
-
-        // Refresh the table with filters
-        function refreshTable() {
-            // Get filter values
-            const dateRangePicker = $('#datatableRange').data('daterangepicker');
-            const startDate = dateRangePicker ? dateRangePicker.startDate.format('YYYY-MM-DD') : null;
-            const endDate = dateRangePicker ? dateRangePicker.endDate.format('YYYY-MM-DD') : null;
-            const subtype = $('#filter-subtype').val();
-            const type = $('#filter-type').val();
-
-            // Check if we have the DataTable object
-            if (window.LaravelDataTables && window.LaravelDataTables["trial-balance-table"]) {
-                const table = window.LaravelDataTables["trial-balance-table"];
-
-                // Set the filter values for the AJAX request
-                table.on('preXhr.dt', function(e, settings, data) {
-                    data.startDate = startDate;
-                    data.endDate = endDate;
-                    data.subtype = subtype;
-                    data.type = type;
+                        // Hide header amounts when collapsed
+                        $btn.closest('tr').find('.header-amount').hide();
+                    }
                 });
 
-                // Reload the table
-                table.draw();
-            } else {
-                console.error('DataTable not available');
+                // Initialize all toggle buttons as collapsed by default
+                $('.toggle-btn').addClass('collapsed');
+                $('.toggle-btn .toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-right');
 
-                // Fallback: reload the page with parameters
-                window.location.href = window.location.pathname +
-                    '?startDate=' + encodeURIComponent(startDate) +
-                    '&endDate=' + encodeURIComponent(endDate) +
-                    '&subtype=' + encodeURIComponent(subtype) +
-                    '&type=' + encodeURIComponent(type);
+                // Hide all child rows initially
+                $('.child-row').addClass('hidden-row').hide();
+
+                // Hide header amounts initially
+                $('.header-amount').hide();
             }
-        }
 
-        // Filter change handlers
-        $(document).ready(function() {
-            $('#filter-subtype, #filter-type').on('change', function() {
-                refreshTable();
-            });
+            // Make function globally available
+            window.initializeToggleControls = initializeToggleControls;
 
-            $('#reset-filters').on('click', function() {
-                // Reset date range
-                const dateRangePicker = $('#datatableRange').data('daterangepicker');
-                if (dateRangePicker) {
-                    dateRangePicker.setStartDate(moment().startOf('year'));
-                    dateRangePicker.setEndDate(moment());
-                    $('#date-range-display').text(
-                        moment().startOf('year').format('MMM DD, YYYY') + ' - ' + moment().format(
-                            'MMM DD, YYYY')
-                    );
+            // Get unified filter value based on row and column settings
+            function getShowFilterValue() {
+                const showRows = $('input[name="showRows"]:checked').val();
+                const showCols = $('input[name="showColumns"]:checked').val();
+
+                // Map the radio button values to a unified parameter
+                if (showRows === 'non-zero' || showCols === 'non-zero') {
+                    return 'non-zero';
+                } else if (showRows === 'all' && showCols === 'all') {
+                    return 'all';
+                } else {
+                    return 'active';
+                }
+            }
+
+            // Enhanced refresh table function
+            function refreshTable() {
+                // Show loading state
+                const $runBtn = $('#run-report');
+                const originalText = $runBtn.html();
+                $runBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Loading...');
+
+                try {
+                    // Collect all filter values
+                    const filters = {
+                        reportPeriod: $('#report-period').val(),
+                        dateFrom: $('#date-from').val(),
+                        dateTo: $('#date-to').val(),
+                        accountType: $('#account-filter').val(),
+                        accountingMethod: $('input[name="accountingMethod"]:checked').val(),
+                        displayColumns: $('#display-columns').val(),
+                        showRows: $('input[name="showRows"]:checked').val(),
+                        showColumns: $('input[name="showColumns"]:checked').val(),
+                        showNonZero: getShowFilterValue(),
+                        _token: $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val()
+                    };
+
+                    // Validate required filters
+                    if (!filters.dateFrom || !filters.dateTo) {
+                        alert('Please select valid date range');
+                        return;
+                    }
+
+                    if (new Date(filters.dateFrom) > new Date(filters.dateTo)) {
+                        alert('Start date cannot be after end date');
+                        return;
+                    }
+
+                    // Update date display
+                    const displayDate = moment(filters.dateTo).format('MMMM D, YYYY');
+                    $('#report-asof').text(displayDate);
+
+                    // Update last updated timestamp
+                    const currentTime = moment().format('h:mm A, MMM D, YYYY');
+                    if ($('#last-updated').length) {
+                        $('#last-updated').text('Last updated — ' + currentTime);
+                    } else {
+                        $('.report-title').append('<div class="small text-muted" id="last-updated">Last updated — ' +
+                            currentTime + '</div>');
+                    }
+
+                    // Get DataTable instance
+                    const table = getDataTableInstance();
+
+                    if (table && table.ajax) {
+                        // Update DataTable with new parameters
+                        table.off('preXhr.dt');
+                        table.on('preXhr.dt', function(e, settings, data) {
+                            // Add all filters to the ajax request
+                            Object.assign(data, filters);
+                        });
+
+                        // Redraw table with new data
+                        table.ajax.reload(function() {
+                            // Reinitialize toggle controls after table refresh
+                            setTimeout(() => {
+                                initializeToggleControls();
+                                applyRowVisibilityFilters();
+                            }, 100);
+                        }, false);
+                    } else {
+                        // Fallback: reload page with query parameters
+                        const queryString = new URLSearchParams(filters).toString();
+                        const newUrl = window.location.pathname + '?' + queryString;
+                        window.location.href = newUrl;
+                    }
+
+                } catch (error) {
+                    console.error('Error refreshing table:', error);
+                    alert('Error refreshing report. Please try again.');
+                } finally {
+                    // Restore button state
+                    setTimeout(() => {
+                        $runBtn.prop('disabled', false).html(originalText);
+                    }, 500);
+                }
+            }
+
+            // Apply row visibility filters
+            function applyRowVisibilityFilters() {
+                const showRows = $('input[name="showRows"]:checked').val();
+
+                if (showRows === 'non-zero') {
+                    // Hide rows with zero debit and credit
+                    $('#trial-balance-table tbody tr').each(function() {
+                        const $row = $(this);
+                        const debitText = $row.find('td:nth-child(4)').text().replace(/[^\d.-]/g, '');
+                        const creditText = $row.find('td:nth-child(5)').text().replace(/[^\d.-]/g, '');
+                        const debit = parseFloat(debitText) || 0;
+                        const credit = parseFloat(creditText) || 0;
+
+                        if (debit === 0 && credit === 0 && !$row.hasClass('account-header') && !$row.hasClass(
+                                'grand-total')) {
+                            $row.hide();
+                        } else {
+                            $row.show();
+                        }
+                    });
+                } else {
+                    // Show all rows (except those hidden by toggle)
+                    $('#trial-balance-table tbody tr').each(function() {
+                        const $row = $(this);
+                        if (!$row.hasClass('hidden-row')) {
+                            $row.show();
+                        }
+                    });
+                }
+            }
+
+            // Get DataTable instance
+            function getDataTableInstance() {
+                // Try Laravel DataTables global first
+                if (window.LaravelDataTables && window.LaravelDataTables["trial-balance-table"]) {
+                    return window.LaravelDataTables["trial-balance-table"];
                 }
 
-                // Reset dropdowns
-                $('#filter-subtype, #filter-type').val('');
+                // Try jQuery DataTables
+                if ($.fn.dataTable.isDataTable('#trial-balance-table')) {
+                    return $('#trial-balance-table').DataTable();
+                }
 
-                // Refresh table
+                return null;
+            }
+
+            // Update date inputs based on period selection
+            function updateDateInputs() {
+                const period = $('#report-period').val();
+                let startDate, endDate;
+
+                const now = moment();
+
+                switch (period) {
+                    case 'today':
+                        startDate = endDate = now.format('YYYY-MM-DD');
+                        break;
+                    case 'yesterday':
+                        startDate = endDate = now.subtract(1, 'day').format('YYYY-MM-DD');
+                        break;
+                    case 'this-week':
+                        startDate = now.startOf('week').format('YYYY-MM-DD');
+                        endDate = moment().format('YYYY-MM-DD');
+                        break;
+                    case 'last-week':
+                        startDate = now.subtract(1, 'week').startOf('week').format('YYYY-MM-DD');
+                        endDate = now.endOf('week').format('YYYY-MM-DD');
+                        break;
+                    case 'this-month':
+                        startDate = now.startOf('month').format('YYYY-MM-DD');
+                        endDate = moment().format('YYYY-MM-DD');
+                        break;
+                    case 'last-month':
+                        startDate = now.subtract(1, 'month').startOf('month').format('YYYY-MM-DD');
+                        endDate = now.endOf('month').format('YYYY-MM-DD');
+                        break;
+                    case 'this-quarter':
+                        startDate = now.startOf('quarter').format('YYYY-MM-DD');
+                        endDate = moment().format('YYYY-MM-DD');
+                        break;
+                    case 'last-quarter':
+                        startDate = now.subtract(1, 'quarter').startOf('quarter').format('YYYY-MM-DD');
+                        endDate = now.endOf('quarter').format('YYYY-MM-DD');
+                        break;
+                    case 'this-year':
+                        startDate = now.startOf('year').format('YYYY-MM-DD');
+                        endDate = moment().format('YYYY-MM-DD');
+                        break;
+                    case 'last-year':
+                        startDate = now.subtract(1, 'year').startOf('year').format('YYYY-MM-DD');
+                        endDate = now.endOf('year').format('YYYY-MM-DD');
+                        break;
+                    case 'custom':
+                        // Don't change date inputs for custom selection
+                        refreshTable();
+                        return;
+                    default:
+                        return;
+                }
+
+                // Update the date input fields
+                $('#date-from').val(startDate);
+                $('#date-to').val(endDate);
+
+                // Trigger table refresh after updating dates
                 refreshTable();
+            }
+
+            // Export functionality
+            function exportToExcel() {
+                try {
+                    const table = document.getElementById('trial-balance-table');
+                    if (!table) {
+                        alert('Table not found');
+                        return;
+                    }
+
+                    // Clone table to avoid modifying original
+                    const clonedTable = table.cloneNode(true);
+
+                    // Remove any hidden rows or columns
+                    $(clonedTable).find('.hidden-row').remove();
+                    $(clonedTable).find('th, td').filter(':hidden').remove();
+
+                    // Clean up HTML formatting for Excel
+                    $(clonedTable).find('td, th').each(function() {
+                        const $cell = $(this);
+                        const text = $cell.text().trim();
+                        $cell.html(text);
+                    });
+
+                    const workbook = XLSX.utils.table_to_book(clonedTable, {
+                        sheet: "Trial Balance"
+                    });
+
+                    const filename = 'Trial_Balance_' + moment().format('YYYY-MM-DD') + '.xlsx';
+                    XLSX.writeFile(workbook, filename);
+
+                } catch (error) {
+                    console.error('Export error:', error);
+                    alert('Error exporting file. Please try again.');
+                }
+            }
+
+            // Print functionality
+            function printReport() {
+                try {
+                    const table = document.getElementById('trial-balance-table');
+                    if (!table) {
+                        alert('Table not found');
+                        return;
+                    }
+
+                    const printWindow = window.open('', '_blank');
+                    const companyName = $('#company-name').text() || "Company Name";
+                    const reportDate = $('#report-asof').text() || moment().format('MMMM D, YYYY');
+
+                    const printStyles = `
+                body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+                .report-header { text-align: center; margin-bottom: 30px; }
+                .report-header h2 { margin-bottom: 5px; font-size: 18px; }
+                .report-header p { margin: 2px 0; color: #666; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { padding: 8px 12px; border-bottom: 1px solid #ddd; text-align: left; }
+                th { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #333; }
+                .text-end { text-align: right; }
+                .account-header { background-color: #f0f0f0; font-weight: bold; }
+                .account-subtotal { background-color: #f5f5f5; font-weight: bold; }
+                .grand-total { font-weight: bold; border-top: 2px solid #333; background-color: #e9e9e9; }
+                .hidden-row { display: none; }
+                .text-success { color: #28a745; }
+                .text-danger { color: #dc3545; }
+                .toggle-btn { display: none; }
+                @media print {
+                    body { margin: 0; }
+                    .no-print { display: none; }
+                }
+            `;
+
+                    const printHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>Trial Balance Report</title>
+                    <style>${printStyles}</style>
+                </head>
+                <body>
+                    <div class="report-header">
+                        <h2>${companyName}</h2>
+                        <p>Trial Balance</p>
+                        <p>As of ${reportDate}</p>
+                    </div>
+                    ${table.outerHTML}
+                </body>
+                </html>
+            `;
+
+                    printWindow.document.write(printHTML);
+                    printWindow.document.close();
+
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => printWindow.close(), 1000);
+                    }, 500);
+
+                } catch (error) {
+                    console.error('Print error:', error);
+                    alert('Error printing report. Please try again.');
+                }
+            }
+
+            // Email functionality
+            function emailReport() {
+                const subject = encodeURIComponent('Trial Balance Report');
+                const reportDate = $('#report-asof').text();
+                const body = encodeURIComponent('Please find the Trial Balance report as of ' + reportDate + '.');
+                const mailto = 'mailto:?subject=' + subject + '&body=' + body;
+
+                if (confirm('This will open your default email client. Do you want to continue?')) {
+                    window.location.href = mailto;
+                }
+            }
+
+            // Date validation
+            function validateDateInputs() {
+                const fromDate = $('#date-from').val();
+                const toDate = $('#date-to').val();
+
+                $('#date-from, #date-to').removeClass('is-invalid');
+                $('.invalid-feedback').text('');
+
+                if (!fromDate || !toDate) {
+                    if (!fromDate) {
+                        $('#date-from').addClass('is-invalid');
+                        $('#date-from').siblings('.invalid-feedback').text('Please select a start date');
+                    }
+                    if (!toDate) {
+                        $('#date-to').addClass('is-invalid');
+                        $('#date-to').siblings('.invalid-feedback').text('Please select an end date');
+                    }
+                    return false;
+                }
+
+                if (new Date(fromDate) > new Date(toDate)) {
+                    $('#date-from').addClass('is-invalid');
+                    $('#date-from').siblings('.invalid-feedback').text('Start date cannot be after end date');
+                    return false;
+                }
+
+                return true;
+            }
+
+            // Initialize everything when document is ready
+            $(document).ready(function() {
+                // Initialize DataTable reference
+                setTimeout(() => {
+                    dataTable = getDataTableInstance();
+                }, 1000);
+
+                // Run report button
+                $('#run-report').on('click', function(e) {
+                    e.preventDefault();
+                    if (validateDateInputs()) {
+                        refreshTable();
+                    }
+                });
+
+                // Auto-refresh on filter changes (with debouncing)
+                let filterTimeout;
+                $(document).on('change', '.filter-control', function() {
+                    clearTimeout(filterTimeout);
+
+                    const $element = $(this);
+
+                    // If period dropdown changes, update dates first
+                    if ($element.attr('id') === 'report-period') {
+                        updateDateInputs();
+                        return;
+                    }
+
+                    // Debounce other filter changes
+                    filterTimeout = setTimeout(() => {
+                        if (validateDateInputs()) {
+                            refreshTable();
+                        }
+                    }, 300);
+                });
+
+                // Period dropdown change handler
+                $('#report-period').on('change', updateDateInputs);
+
+                // Date input validation
+                $('#date-from, #date-to').on('change', function() {
+                    // Auto-update period to custom when dates are manually changed
+                    $('#report-period').val('custom');
+
+                    // Clear any existing validation errors
+                    $(this).removeClass('is-invalid');
+                    $(this).siblings('.invalid-feedback').text('');
+                });
+
+                // Export button
+                $('#export-btn').on('click', function(e) {
+                    e.preventDefault();
+                    exportToExcel();
+                });
+
+                // Print button
+                $('#print-btn').on('click', function(e) {
+                    e.preventDefault();
+                    printReport();
+                });
+
+                // Email button
+                $('#email-btn').on('click', function(e) {
+                    e.preventDefault();
+                    emailReport();
+                });
+
+                // Settings button (placeholder)
+                $('#settings-btn').on('click', function(e) {
+                    e.preventDefault();
+                    alert('Settings feature will be implemented here');
+                });
+
+                // Customize button (placeholder)
+                $('#customize-btn').on('click', function(e) {
+                    e.preventDefault();
+                    alert('Customize report feature will be implemented here');
+                });
+
+                // Save customization button (placeholder)
+                $('#save-btn').on('click', function(e) {
+                    e.preventDefault();
+                    alert('Save customization feature will be implemented here');
+                });
+
+                // Switch view button (placeholder)
+                $('#switch-view-btn').on('click', function(e) {
+                    e.preventDefault();
+                    const $btn = $(this);
+                    const currentText = $btn.html();
+                    const isModern = currentText.includes('modern');
+                    const newText = isModern ?
+                        '<i class="fa fa-exchange-alt me-1"></i>Switch to classic view' :
+                        '<i class="fa fa-exchange-alt me-1"></i>Switch to modern view';
+                    $btn.html(newText);
+                    alert('View switching feature will be implemented here');
+                });
+
+                // Handle DataTable draw events
+                $(document).on('draw.dt', '#trial-balance-table', function() {
+                    setTimeout(() => {
+                        initializeToggleControls();
+                        applyRowVisibilityFilters();
+                    }, 100);
+                });
+
+                // Initialize toggle controls on page load
+                setTimeout(() => {
+                    initializeToggleControls();
+                    applyRowVisibilityFilters();
+                }, 1500);
+
+                // Handle window resize for responsive table
+                $(window).on('resize', function() {
+                    const table = getDataTableInstance();
+                    if (table && table.columns) {
+                        table.columns.adjust();
+                    }
+                });
+
+                // Add keyboard shortcuts
+                $(document).on('keydown', function(e) {
+                    // Ctrl+R or F5 to refresh report
+                    if ((e.ctrlKey && e.keyCode === 82) || e.keyCode === 116) {
+                        e.preventDefault();
+                        if (validateDateInputs()) {
+                            refreshTable();
+                        }
+                    }
+
+                    // Ctrl+P to print
+                    if (e.ctrlKey && e.keyCode === 80) {
+                        e.preventDefault();
+                        printReport();
+                    }
+
+                    // Ctrl+E to export
+                    if (e.ctrlKey && e.keyCode === 69) {
+                        e.preventDefault();
+                        exportToExcel();
+                    }
+                });
+
+                // Form submission handling
+                $('#filter-form').on('submit', function(e) {
+                    e.preventDefault();
+                    if (validateDateInputs()) {
+                        refreshTable();
+                    }
+                });
             });
+
+            // Make functions globally available
+            window.refreshTrialBalance = refreshTable;
+            window.exportTrialBalance = exportToExcel;
+            window.printTrialBalance = printReport;
+
+        })(jQuery);
+    </script>
+    <!-- Yajra DataTables scripts -->
+    {!! $dataTable->scripts() !!}
+
+    <!-- Custom initialization script for DataTables -->
+    <script>
+        $(document).ready(function() {
+            // Wait for DataTables to initialize, then setup toggle controls
+            setTimeout(function() {
+               /// expand all items               
+               $('.toggle-btn').click();
+               //toggle icon rotate 360 deg
+               $('.toggle-icon').css('transform', 'rotate(360deg)');
+            }, 5000);
         });
     </script>
 @endpush

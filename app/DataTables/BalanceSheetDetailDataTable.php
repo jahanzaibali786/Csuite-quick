@@ -10,14 +10,18 @@ use Yajra\DataTables\Services\DataTable;
 class BalanceSheetDetailDataTable extends DataTable
 {
     protected $asOfDate;
+    protected $companyId;
+    protected $owner;
 
     public function __construct()
     {
-        parent::__construct();
+        // parent::__construct();
 
         $this->asOfDate = request('asOfDate')
             ? Carbon::parse(request('asOfDate'))->endOfDay()
             : Carbon::now()->endOfDay();
+        $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
+        $this->owner = \Auth::user()->type === 'company' ? 'created_by' : 'owned_by';
     }
 
     public function dataTable($query)
@@ -146,35 +150,35 @@ class BalanceSheetDetailDataTable extends DataTable
 
     public function query()
     {
-        $entries = DB::table('journal_entry_lines')
-            ->join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
-            ->join('chart_of_accounts', 'journal_entry_lines.chart_of_account_id', '=', 'chart_of_accounts.id')
-            ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.chart_of_account_sub_type_id', '=', 'chart_of_account_sub_types.id')
-            ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.chart_of_account_type_id', '=', 'chart_of_account_types.id')
-            ->where('journal_entries.company_id', company()->id)
+        $entries = DB::table('journal_items')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+            ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
+            ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.type', '=', 'chart_of_account_types.id')
+            ->where("journal_entries.{$this->owner}", $this->companyId)
             ->where('journal_entries.date', '<=', $this->asOfDate)
-            ->where('journal_entries.status', 'draft')
+            // ->where('journal_entries.status', 'draft')
             ->whereIn('chart_of_account_types.name', ['Asset', 'Liability', 'Equity'])
             ->select([
                 'journal_entries.id as journal_id',
                 'journal_entries.date',
                 'journal_entries.voucher_type as transaction_type',
-                'journal_entries.number as num',
-                'journal_entries.memo as memo',
-                'journal_entry_lines.debit',
-                'journal_entry_lines.credit',
+                'journal_entries.reference as num',
+                'journal_entries.description as memo',
+                'journal_items.debit',
+                'journal_items.credit',
                 DB::raw('0 as amount'),
                 'chart_of_accounts.id as account_id',
                 'chart_of_accounts.name as account_name',
                 'chart_of_accounts.code as account_code',
-                'chart_of_accounts.parent_id as parent_id',
+                'chart_of_accounts.parent as parent_id',
                 'chart_of_account_sub_types.id as subtype_db_id',
                 'chart_of_account_sub_types.name as subtype_name',
                 'chart_of_account_types.name as type_name',
             ])
             ->orderBy('chart_of_account_types.name')
             ->orderBy('chart_of_account_sub_types.name')
-            ->orderBy('chart_of_accounts.parent_id')
+            ->orderBy('chart_of_accounts.parent')
             ->orderBy('chart_of_accounts.name')
             ->orderBy('journal_entries.date')
             ->get();
@@ -252,35 +256,35 @@ class BalanceSheetDetailDataTable extends DataTable
                 $totalEquity = $typeTotal;
 
                 // === Profit/Loss Section ===
-                $plEntries = DB::table('journal_entry_lines')
-                    ->join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
-                    ->join('chart_of_accounts', 'journal_entry_lines.chart_of_account_id', '=', 'chart_of_accounts.id')
-                    ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.chart_of_account_sub_type_id', '=', 'chart_of_account_sub_types.id')
-                    ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.chart_of_account_type_id', '=', 'chart_of_account_types.id')
-                    ->where('journal_entries.company_id', company()->id)
+                $plEntries = DB::table('journal_items')
+                    ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+                    ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+                    ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
+                    ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.type', '=', 'chart_of_account_types.id')
+                    ->where("journal_entries.{$this->owner}", $this->companyId)
                     ->where('journal_entries.date', '<=', $this->asOfDate)
-                    ->where('journal_entries.status', 'draft')
+                    // ->where('journal_entries.status', 'draft')
                     ->whereIn('chart_of_account_types.name', ['Income', 'Expense'])
                     ->select([
                         'journal_entries.id as journal_id',
                         'journal_entries.date',
                         'journal_entries.voucher_type as transaction_type',
-                        'journal_entries.number as num',
-                        'journal_entries.memo as memo',
-                        'journal_entry_lines.debit',
-                        'journal_entry_lines.credit',
+                        'journal_entries.reference as num',
+                        'journal_entries.description as memo',
+                        'journal_items.debit',
+                        'journal_items.credit',
                         DB::raw('0 as amount'),
                         'chart_of_accounts.id as account_id',
                         'chart_of_accounts.name as account_name',
                         'chart_of_accounts.code as account_code',
-                        'chart_of_accounts.parent_id as parent_id',
+                        'chart_of_accounts.parent as parent_id',
                         'chart_of_account_sub_types.id as subtype_db_id',
                         'chart_of_account_sub_types.name as subtype_name',
                         'chart_of_account_types.name as type_name',
                     ])
                     ->orderBy('chart_of_account_types.name')
                     ->orderBy('chart_of_account_sub_types.name')
-                    ->orderBy('chart_of_accounts.parent_id')
+                    ->orderBy('chart_of_accounts.parent')
                     ->orderBy('chart_of_accounts.name')
                     ->orderBy('journal_entries.date')
                     ->get();
@@ -375,10 +379,10 @@ class BalanceSheetDetailDataTable extends DataTable
                 }
 
                 // Find opposite (split) accounts
-                $splitAccounts = DB::table('journal_entry_lines')
-                    ->join('chart_of_accounts', 'journal_entry_lines.chart_of_account_id', '=', 'chart_of_accounts.id')
-                    ->where('journal_entry_lines.journal_entry_id', $line->journal_id)
-                    ->where('journal_entry_lines.chart_of_account_id', '!=', $line->account_id)
+                $splitAccounts = DB::table('journal_items')
+                    ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+                    ->where('journal_items.journal', $line->journal_id)
+                    ->where('journal_items.account', '!=', $line->account_id)
                     ->pluck('chart_of_accounts.name')
                     ->implode(', ');
 
@@ -426,7 +430,7 @@ class BalanceSheetDetailDataTable extends DataTable
             ->setTableId('balance-sheet-detail-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->dom('Bfrtip')
+            // ->dom('Bfrtip')
             ->parameters([
                 'paging' => false,
                 'searching' => false,

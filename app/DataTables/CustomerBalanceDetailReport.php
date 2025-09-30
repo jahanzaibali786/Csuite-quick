@@ -8,155 +8,123 @@ use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 use Illuminate\Support\Facades\DB;
 
-
-class AgingDetailsDataTable extends DataTable
+class CustomerBalanceDetailReport extends DataTable
 {
     public function dataTable($query)
     {
-        $end = request()->get('end_date')
-            ? Carbon::parse(request()->get('end_date'))->endOfDay()
-            : (request()->get('endDate')
-                ? Carbon::parse(request()->get('endDate'))->endOfDay()
-                : Carbon::today());
-
-        $start = request()->get('start_date')
-            ? Carbon::parse(request()->get('start_date'))->startOfDay()
-            : (request()->get('startDate')
-                ? Carbon::parse(request()->get('startDate'))->startOfDay()
-                : Carbon::now()->startOfYear());
-
         $data = collect($query->get());
 
         $grandTotalAmount = 0;
         $grandBalanceDue = 0;
-        $grandOpenBalance = 0;
+        $grandBalance = 0;
 
-
-        // Group invoices into buckets
-        $groupedData = $data->groupBy(function ($row) use ($end) {
-            $dueDate = $row->due_date ?? $row->issue_date;
-            if (!$dueDate)
-                return 'Current';
-
-            try {
-                $due = Carbon::parse($dueDate);
-            } catch (\Exception $e) {
-                return 'Current';
-            }
-
-            $age = $end->diffInDays($due, false); // 👈 use $end instead of today
-            if ($age <= 0)
-                return 'Current';
-            if ($age <= 15)
-                return '1–15 Days';
-            if ($age <= 30)
-                return '16–30 Days';
-            if ($age <= 45)
-                return '31–45 Days';
-            return '>45 Days';
-        });
-
+        // ✅ Group by Customer Name
+        $groupedData = $data->groupBy('name');
 
         $finalData = collect();
 
-        foreach ($groupedData as $bucket => $rows) {
+        foreach ($groupedData as $customer => $rows) {
             $subtotalAmount = 0;
             $subtotalDue = 0;
-            $subtotalOpen = 0;
+            $subtotalBalance = 0;
+            $runningBalance = 0; // 👈 cumulative balance for this customer
 
-            // Add subtotal row
+            // Header row
             $finalData->push((object) [
-                'bucket' => $bucket,
-                'id' => null,
+                // 'transaction' => '<strong>' . $customer . '</strong>',
+                'customer' => $customer,
+                'transaction' => '<span class="" data-bucket="' . \Str::slug($customer) . '"> <span class="icon">▼</span> <strong>' . $customer . '</strong></span>',
                 'due_date' => '',
-                // 'transaction' => '<strong>Subtotal for ' . $bucket . '</strong>',
-                'transaction' => '<span class="" data-bucket="' . \Str::slug($bucket) . '"> <span class="icon">▼</span> <strong>' . $bucket . '</strong></span>',
-                'type' => '',
+                'type' => null,
                 'status_label' => '',
-                'customer' => '',
-                'age' => '',
                 'total_amount' => null,
+                'balance' => 0,
+                'open_balance' => 0,
                 'balance_due' => null,
                 'isPlaceholder' => true,
-                'isSubtotal' => false,
+                'isSubtotal' => true,
                 'isParent' => true
             ]);
 
             foreach ($rows as $row) {
                 $subtotalAmount += ($row->subtotal ?? 0) + ($row->total_tax ?? 0);
                 $subtotalDue += $row->balance_due;
-                $row->bucket = $bucket; // keep bucket info in each row
-                $subtotalOpen += $row->open_balance;
+                $runningBalance += $row->balance_due;   // 👈 add running balance logic here
+                $row->balance = $runningBalance;        // 👈 overwrite balance with cumulative value
+
+                $row->customer = $customer;
+                $row->past_due = $row->age > 0 ? $row->age . ' Days' : '-';
+
                 $finalData->push($row);
             }
 
-            // Add subtotal row
+            // Subtotal row
             $finalData->push((object) [
-                'bucket' => $bucket,
-                'id' => null,
+                'customer' => $customer,
+                'transaction' => '<strong>Subtotal For ' . $customer . '</strong>',
                 'due_date' => '',
-                // 'transaction' => '<strong>Subtotal for ' . $bucket . '</strong>',
-                'transaction' => '<strong>Subtotal </strong>',
+                'past_due' => '',
                 'type' => '',
                 'status_label' => '',
-                'customer' => '',
-                'age' => '',
                 'total_amount' => $subtotalAmount,
                 'balance_due' => $subtotalDue,
-                'open_balance' => $subtotalOpen,
+                'balance' => $runningBalance,   // 👈 show last running balance for this customer
                 'isSubtotal' => true,
             ]);
 
             $finalData->push((object) [
-                'bucket' => $bucket,
-                'id' => null,
-                'due_date' => '',
+
                 'transaction' => '',
+                'due_date' => '',
                 'type' => '',
                 'status_label' => '',
-                'customer' => '',
-                'age' => '',
                 'total_amount' => 0,
-                'balance_due' => 0,
+                'balance' => 0,
                 'open_balance' => 0,
+                'balance_due' => 0,
                 'isPlaceholder' => true,
-                "isSubtotal" => true,
+                'isSubtotal' => true,
             ]);
 
             $grandTotalAmount += $subtotalAmount;
             $grandBalanceDue += $subtotalDue;
-            $grandOpenBalance += $subtotalOpen;
+            $grandBalance += $runningBalance;  // 👈 careful: depends if grand total should also be cumulative or just sum
         }
 
-        // Add grand total row
+
+        // ✅ Add grand total row
         $finalData->push((object) [
-            'bucket' => '',
-            'id' => null,
-            'due_date' => '',
             'transaction' => '<strong>Grand Total</strong>',
+            'due_date' => '',
+            'past_due' => '',
             'type' => '',
             'status_label' => '',
-            'customer' => '',
             'age' => '',
             'total_amount' => $grandTotalAmount,
+            'balance' => $grandBalance,      // 👈 SHOWS TOTAL BALANCE
+            'open_balance' => $grandBalanceDue,   // 👈 SHOWS TOTAL OPEN BALANCE
             'balance_due' => $grandBalanceDue,
-            'open_balance' => $grandOpenBalance,
             'isGrandTotal' => true,
         ]);
 
+
         return datatables()
             ->collection($finalData)
+            ->addColumn('transaction', function ($row) {
+                if (isset($row->isSubtotal) || isset($row->isGrandTotal) || isset($row->isPlaceholder)) {
+                    return $row->transaction ?? '';
+                }
 
-            ->addColumn('bucket', fn($row) => $row->bucket ?? '')
+                return \Auth::user()->invoiceNumberFormat($row->invoice ?? ($row->id ?? ''));
+            })
+
+            ->addColumn('due_date', fn($row) => $row->due_date ?? '')
+            ->addColumn('past_due', fn($row) => $row->past_due ?? '')
             ->addColumn(
-                'transaction',
+                'type',
                 fn($row) =>
-                isset($row->isSubtotal) || isset($row->isGrandTotal)
-                ? $row->transaction
-
-                : \Auth::user()->invoiceNumberFormat($row->invoice ?? $row->id)
+                isset($row->isSubtotal) || isset($row->isGrandTotal) ? '' : 'Invoice'
             )
-            ->addColumn('type', fn($row) => isset($row->isSubtotal) || isset($row->isGrandTotal) ? '' : 'Invoice')
             ->addColumn('status_label', function ($row) {
                 if (isset($row->isSubtotal) || isset($row->isGrandTotal)) {
                     return '';
@@ -173,54 +141,44 @@ class AgingDetailsDataTable extends DataTable
                 return '<span class="status_badger badger text-whit ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
                     . __($labels[$status] ?? '-') . '</span>';
             })
-            ->addColumn(
-                'customer',
-                fn($row) =>
-                isset($row->isSubtotal) || isset($row->isGrandTotal) ? '' : ($row->name ?? '-')
-            )
-            ->addColumn(
-                'age',
-                fn($row) =>
-                isset($row->isSubtotal) || isset($row->isGrandTotal)
-                ? ''
-                : ($row->age > 0 ? $row->age . ' Days' : '-')
-            )
             ->addColumn('issue_date', fn($row) => $row->issue_date ?? '')
             ->editColumn('total_amount', function ($row) {
-                if (isset($row->isHeader) || isset($row->isPlaceholder)) {
+                if (isset($row->isPlaceholder)) {
                     return '';
                 }
-
-                // Use pre-calculated value for subtotal & grand total rows
                 if (isset($row->isSubtotal) || isset($row->isGrandTotal)) {
                     return number_format($row->total_amount ?? 0);
                 }
-
-                // Normal invoice row
                 $total = ($row->subtotal ?? 0) + ($row->total_tax ?? 0);
                 return number_format($total);
             })
             ->editColumn(
                 'balance_due',
                 fn($row) =>
-                isset($row->isHeader) || isset($row->isPlaceholder)
-                ? ''
-                : number_format($row->balance_due ?? 0)
+                isset($row->isPlaceholder) ? '' : number_format($row->balance_due ?? 0)
             )
-            ->editColumn(
+            ->editColumn('balance', function ($row) {
+                if (isset($row->isPlaceholder)) {
+                    return '';
+                }
+                if (isset($row->isSubtotal) || isset($row->isGrandTotal)) {
+                    return number_format($row->balance ?? 0);
+                }
+                return number_format($row->balance ?? 0);
+            })
+
+            ->addColumn(
                 'open_balance',
                 fn($row) =>
-                isset($row->isHeader) || isset($row->isPlaceholder)
-                ? ''
-                : number_format($row->open_balance ?? 0)
+                isset($row->isPlaceholder) ? '' : number_format($row->balance_due ?? 0)
             )
             ->setRowClass(function ($row) {
                 if (property_exists($row, 'isParent') && $row->isParent) {
-                    return 'parent-row toggle-bucket bucket-' . \Str::slug($row->bucket ?? 'na');
+                    return 'parent-row toggle-bucket bucket-' . \Str::slug($row->customer ?? 'na');
                 }
 
                 if (property_exists($row, 'isSubtotal') && $row->isSubtotal && !property_exists($row, 'isGrandTotal')) {
-                    return 'subtotal-row bucket-' . \Str::slug($row->bucket ?? 'na');
+                    return 'subtotal-row bucket-' . \Str::slug($row->customer ?? 'na');
                 }
 
                 if (
@@ -229,7 +187,7 @@ class AgingDetailsDataTable extends DataTable
                     !property_exists($row, 'isGrandTotal') &&
                     !property_exists($row, 'isPlaceholder')
                 ) {
-                    return 'child-row bucket-' . \Str::slug($row->bucket ?? 'na');
+                    return 'child-row bucket-' . \Str::slug($row->customer ?? 'na');
                 }
 
                 if (property_exists($row, 'isGrandTotal') && $row->isGrandTotal) {
@@ -238,15 +196,11 @@ class AgingDetailsDataTable extends DataTable
 
                 return '';
             })
-
-
-            ->rawColumns(['transaction', 'status_label']);
+            ->rawColumns(['customer', 'transaction', 'status_label']);
     }
-
 
     public function query(Invoice $model)
     {
-        // Accept both formats without breaking anything
         $start = request()->get('start_date')
             ?? request()->get('startDate')
             ?? Carbon::now()->startOfYear()->format('Y-m-d');
@@ -272,6 +226,16 @@ class AgingDetailsDataTable extends DataTable
                 DB::raw('(SELECT IFNULL(SUM(credit_notes.amount),0) 
                   FROM credit_notes 
                   WHERE credit_notes.invoice = invoices.id) as credit_price'),
+                DB::raw('
+    (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount)
+     + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
+        FROM invoice_products 
+        LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
+        WHERE invoice_products.invoice_id = invoices.id)
+    ) as balance
+'),
+
+
                 DB::raw('(
                     (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
                     + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
@@ -281,31 +245,16 @@ class AgingDetailsDataTable extends DataTable
                     - (IFNULL(SUM(invoice_payments.amount),0)
                     + (SELECT IFNULL(SUM(credit_notes.amount),0) FROM credit_notes WHERE credit_notes.invoice = invoices.id))
                  ) as balance_due'),
-                DB::raw('(
-                    (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
-                    + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
-                       FROM invoice_products 
-                       LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                       WHERE invoice_products.invoice_id = invoices.id)
-                    - (IFNULL(SUM(invoice_payments.amount),0)
-                       + (SELECT IFNULL(SUM(credit_notes.amount),0) 
-                          FROM credit_notes 
-                          WHERE credit_notes.invoice = invoices.id))
-                ) as open_balance'),
+                DB::raw('GREATEST(DATEDIFF(CURDATE(), invoices.due_date), 0) as age'),
 
-
-                DB::raw('GREATEST(DATEDIFF(CURDATE(), invoices.due_date), 0) as age')
             )
             ->leftJoin('customers', 'customers.id', '=', 'invoices.customer_id')
             ->leftJoin('invoice_products', 'invoice_products.invoice_id', '=', 'invoices.id')
             ->leftJoin('invoice_payments', 'invoice_payments.invoice_id', '=', 'invoices.id')
             ->where('invoices.created_by', \Auth::user()->creatorId())
-            ->whereBetween('invoices.issue_date', [$start, $end]) // ✅ keep existing behavior
+            ->whereBetween('invoices.issue_date', [$start, $end])
             ->groupBy('invoices.id');
     }
-
-
-
 
     public function html()
     {
@@ -320,52 +269,23 @@ class AgingDetailsDataTable extends DataTable
                 'info' => false,
                 'ordering' => false,
                 'rowGroup' => [
-                    'dataSrc' => 'bucket',
+                    'dataSrc' => 'customer',
                 ],
-                'footerCallback' => <<<JS
-function (row, data, start, end, display) {
-    var api = this.api();
-
-    // Helper function to parse number
-    var parseVal = function (i) {
-        return typeof i === 'string'
-            ? parseFloat(i.replace(/[^0-9.-]+/g, '')) || 0
-            : typeof i === 'number'
-                ? i
-                : 0;
-    };
-
-    // Total over all pages
-var totalAmount = api.column(6, { page: 'all'}).data()
-    .reduce((a, b) => parseVal(a) + parseVal(b), 0);
-
-var totalDue = api.column(7, { page: 'all'}).data()
-    .reduce((a, b) => parseVal(a) + parseVal(b), 0);
-
-// Update footer
-$(api.column(6).footer()).html(totalAmount.toLocaleString());
-$(api.column(7).footer()).html(totalDue.toLocaleString());
-
-}
-JS
             ]);
     }
 
     protected function getColumns()
     {
         return [
-            Column::make('bucket')->title('Bucket')->visible(false),
-            Column::make('issue_date')->title('Date'),   // 👈 added
+            Column::make('issue_date')->title('Date'),
             Column::make('transaction')->title('Transaction'),
             Column::make('type')->title('Type'),
             Column::make('status_label')->title('Status'),
-            Column::make('customer')->title('Customer Name'),
-            // Column::make('age')->title('Age'),
             Column::make('due_date')->title('Due Date'),
-            Column::make('total_amount')->title('Amount'),
-            // Column::make('balance_due')->title('Balance Due'),
-            Column::make('open_balance')->title('Open Balance'),
-
+            Column::make('total_amount')->title('Amount'),      // optional: original invoice calc
+            Column::make('open_balance')->title('Open Balance'), // 👈 from balance_due
+            Column::make('balance')->title('Balance'),          // 👈 new
         ];
     }
+
 }

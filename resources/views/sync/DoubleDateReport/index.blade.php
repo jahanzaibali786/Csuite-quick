@@ -68,22 +68,32 @@
                     </div>
 
                     <div class="filter-item col-md-3">
-                        <label class="filter-label">as of</label>
+                        <label class="filter-label">From</label>
                         {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                        <input type="date" class="form-control d-none" name="start_date" id="filter-start-date"
+                        <input type="date" class="form-control" name="start_date" id="filter-start-date"
                             value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                    </div>
+                    <div class="filter-item col-md-3">
+                        <label class="filter-label">To</label>
                         <input type="date" class="form-control " name="end_date" id="filter-end-date"
                             value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
                     </div>
-                    <div class="filter-item col-md-2 mt-4">
+                    <div class="filter-item col-md-3">
+                        <label class="filter-label">Accounting method</label>
+                        <select id="accounting-method" class="form-control">
+                            <option value="accrual" selected>Accrual</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                    </div>
+                    {{-- <div class="filter-item col-md-2 mt-4">
                         <button class="btn btn-view-options" id="view-options-btn"
                             style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
                             <i class="fa fa-eye"></i> View options
                         </button>
-                    </div>
+                    </div> --}}
 
                     <!-- Action buttons row -->
-                    <div class="d-flex align-items-end gap-3 mt-3" style="justify-content: end;">
+                    <div class="d-flex align-items-end gap-2 mt-4" style="justify-content: end;">
 
                         <button class="btn btn-outline" id="columns-btn">
                             <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
@@ -154,13 +164,22 @@
                                 </div>
 
                                 <div class="filter-item mb-2">
-                                    <label class="filter-label">as of</label>
+                                    <label class="filter-label">from</label>
                                     {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                                    <input type="date" class="form-control d-none" name="start_date"
+                                    <input type="date" class="form-control mb-2" name="start_date"
                                         id="sidebar-filter-start-date"
                                         value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                                    <label class="filter-label">To</label>
                                     <input type="date" class="form-control " name="end_date"
                                         id="sidebar-filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                                </div>
+
+                                <div class="filter-item col-md-3">
+                                    <label class="filter-label">Accounting method</label>
+                                    <select id="accounting-method" class="form-control">
+                                        <option value="accrual" selected>Accrual</option>
+                                        <option value="cash">Cash</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -179,6 +198,11 @@
                             });
                         </script>
                         {{-- Filter Side Bar --}}
+
+                        <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
+                            id="ExprotExcel" class="d-none">
+                            <i class="fa fa-file-excel"></i> Excel
+                        </button>
 
                         <button class="btn btn-outline" id="general-options-btn">
                             <i class="fa fa-cog"></i> General options
@@ -203,7 +227,7 @@
             </div>
 
             <div class="table-container p-2">
-                {!! $dataTable->table(['class' => 'table aging-details-table', 'id' => 'aging-details-table']) !!}
+                {!! $dataTable->table(['class' => 'table customer-balance-table', 'id' => 'customer-balance-table']) !!}
             </div>
         </div>
     </div>
@@ -368,7 +392,7 @@
 
     <script>
         function buildColumnsFromTable() {
-            const headers = document.querySelectorAll('#aging-details-table thead th');
+            const headers = document.querySelectorAll('#customer-balance-table thead th');
             const container = document.querySelector('#sortable-columns');
 
             // Clear the old list
@@ -403,12 +427,24 @@
         });
 
         // Or rebuild every redraw if needed:
-        $('#aging-details-table').on('draw.dt', function() {
+        $('#customer-balance-table').on('draw.dt', function() {
             buildColumnsFromTable();
         });
     </script>
 
-    
+    <script>
+        $('#customer-balance-table').on('click', '.toggle-bucket', function() {
+            let $row = $(this);
+            let bucket = $row.attr('class').match(/bucket-([^\s]+)/)[1]; // "current"
+            let $icon = $row.find('.icon');
+
+            // toggle
+            $('.bucket-' + bucket).not($row).toggle(); // don’t hide the parent itself
+
+            // swap icon
+            $icon.text($icon.text() === '▶' ? '▼' : '▶');
+        });
+    </script>
 
     <style>
         /* Base styling */
@@ -625,13 +661,13 @@
             overflow-x: auto;
         }
 
-        .aging-details-table {
+        .customer-balance-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
         }
 
-        .aging-details-table th {
+        .customer-balance-table th {
             background: #f9fafb;
             border-bottom: 2px solid #e5e7eb;
             padding: 12px 16px;
@@ -643,13 +679,13 @@
             letter-spacing: 0.025em;
         }
 
-        .aging-details-table td {
+        .customer-balance-table td {
             padding: 12px 16px;
             border-bottom: 1px solid #f3f4f6;
             color: #262626;
         }
 
-        .aging-details-table tbody tr:hover {
+        .customer-balance-table tbody tr:hover {
             background: #f9fafb;
         }
 
@@ -876,10 +912,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                        flex-direction: column;
-                                                                                        width: 100%;
-                                                                                        gap: 16px;
-                                                                                    } */
+                                                                                                                                flex-direction: column;
+                                                                                                                                width: 100%;
+                                                                                                                                gap: 16px;
+                                                                                                                            } */
 
             .filter-item {
                 width: 100%;
@@ -902,6 +938,10 @@
                 flex-wrap: wrap;
             }
         }
+
+        .parent-row {
+            cursor: pointer;
+        }
     </style>
 
     {!! $dataTable->scripts() !!}
@@ -920,6 +960,96 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+
+    <script>
+        let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        {{-- console.log([window.Header, window.footerAlignment]) --}}
+
+        function exportDataTable(tableId, pageTitle) {
+            let table = $('#' + tableId).DataTable();
+
+            // Only get visible columns (skip auto-index)
+            let columns = [];
+            $('#' + tableId + ' thead th:visible').each(function() {
+                columns.push($(this).text().trim());
+            });
+
+            // Get visible data rows
+            let data = [];
+
+            const getRealtimeTableData = () => {
+
+                let data = [];
+
+
+                table.rows({
+                    search: 'applied'
+                }).every(function() {
+                    let rowData = this.data();
+
+                    if (typeof rowData === 'object') {
+                        // Only keep values for visible columns
+                        let rowArray = [];
+                        table.columns(':visible').every(function(colIdx) {
+                            let val = rowData[this.dataSrc()] ?? '-';
+                            rowArray.push(val);
+                        });
+                        rowData = rowArray;
+                    }
+                    data.push(rowData);
+                });
+
+                return data
+
+            }
+
+            // Get visible data rows (rendered DOM text, not raw data)
+            $('#' + tableId + ' tbody tr:visible').each(function() {
+                let rowArray = [];
+                $(this).find('td:visible').each(function() {
+                    rowArray.push($(this).text().trim());
+                });
+                data.push(rowArray);
+            });
+
+
+
+            // Send to universal export route
+            $.ajax({
+                url: '{{ route('export.datatable') }}',
+                method: 'POST',
+                data: {
+                    columns: columns,
+                    data: data,
+                    pageTitle: pageTitle,
+                    ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
+                        .textContent : "",
+                    HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
+                        .footerAlignment
+                    ],
+                    _token: '{{ csrf_token() }}'
+                },
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                success: function(blob, status, xhr) {
+                    let filename = xhr.getResponseHeader('Content-Disposition')
+                        .split('filename=')[1]
+                        .replace(/"/g, '');
+                    let link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                },
+                error: function(xhr) {
+                    console.error('Export failed:', xhr.responseText);
+                    alert('Export failed! Check console.');
+                }
+            });
+        }
+    </script>
 
     <script>
         $(document).ready(function() {
@@ -1242,13 +1372,13 @@
                 const formattedStart = startDate.format('MMMM D, YYYY');
                 const formattedEnd = endDate.format('MMMM D, YYYY');
 
-                $('#date-range-display').text(' As of  ' + formattedEnd);
+                $('#date-range-display').text(' From ' + formattedStart + ' To ' + formattedEnd);
             }
 
             // Refresh data function
             function refreshData() {
-                if (window.LaravelDataTables && window.LaravelDataTables["aging-details-table"]) {
-                    window.LaravelDataTables["aging-details-table"].draw();
+                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
+                    window.LaravelDataTables["customer-balance-table"].draw();
                     // {{-- console.log("HI") --}}
                 } else {
                     console.log('DataTable not yet initialized');
@@ -1272,8 +1402,20 @@
                 refreshData();
             });
 
+            $('#filter-start-date').on('change', function() {
+                $('#sidebar-filter-end-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+
             $('#sidebar-filter-end-date').on('change', function() {
                 $('#filter-end-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+
+            $('#sidebar-filter-start-date').on('change', function() {
+                $('#filter-start-date').val($(this).val());
                 updateDateDisplay();
                 refreshData();
             });
@@ -1284,7 +1426,7 @@
             });
 
             // Setup DataTable ajax parameters
-            $('#aging-details-table').on('preXhr.dt', function(e, settings, data) {
+            $('#customer-balance-table').on('preXhr.dt', function(e, settings, data) {
                 data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.account_id = $('#filter-account').val();
@@ -1426,7 +1568,7 @@
                 console.log('Column order updated:', order);
 
                 // Apply column order if DataTable supports it
-                if (window.LaravelDataTables && window.LaravelDataTables["aging-details-table"]) {
+                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
                     // Note: Column reordering requires ColReorder extension
                     console.log('Column order would be applied:', order);
                 }
@@ -1438,9 +1580,9 @@
                 const isVisible = $(this).prop('checked');
 
                 if (columnIndex !== undefined && window.LaravelDataTables && window.LaravelDataTables[
-                        "aging-details-table"]) {
+                        "customer-balance-table"]) {
                     try {
-                        window.LaravelDataTables["aging-details-table"].column(columnIndex).visible(
+                        window.LaravelDataTables["customer-balance-table"].column(columnIndex).visible(
                             isVisible);
                     } catch (error) {
                         console.log('Column visibility change:', columnIndex, isVisible);
@@ -1513,7 +1655,7 @@
                         <div class="company-name">${$('.company-name').text()}</div>
                         <div class="date-range">${$('.date-range').text()}</div>
                         <table>
-                            ${$('.aging-details-table').html()}
+                            ${$('.customer-balance-table').html()}
                         </table>
                     </body>
                     </html>
@@ -1567,9 +1709,15 @@
                 const option = prompt(
                     'Choose export format:\n1. Excel\n2. PDF\n3. CSV\n\nEnter number (1-3):');
 
+
+                // Get table ID dynamically (assumes closest table in DOM)
+                const tableId = $(this).closest('div').find('table').attr('id');
+                const pageTitle = document.title || 'Report';
+
                 switch (option) {
                     case '1':
-                        alert('Excel export would be triggered');
+                        //alert('Excel export would be triggered');
+                        $("#ExprotExcel").click();
                         break;
                     case '2':
                         alert('PDF export would be triggered');
@@ -1581,7 +1729,6 @@
                         alert('Invalid option');
                 }
             });
-
             // View options functionality
             $('#view-options-btn').on('click', function() {
                 alert('View options panel would open here with additional display settings');
@@ -1608,9 +1755,9 @@
             }, 100);
 
             // Format numbers in table based on options
-            $(document).on('draw.dt', '#aging-details-table', function() {
+            $(document).on('draw.dt', '#customer-balance-table', function() {
                 if (window.reportOptions) {
-                    $('.aging-details-table tbody tr').each(function() {
+                    $('.customer-balance-table tbody tr').each(function() {
                         const $row = $(this);
 
                         // Apply number formatting to amount columns
