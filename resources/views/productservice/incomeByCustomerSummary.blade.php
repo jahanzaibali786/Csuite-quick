@@ -21,195 +21,25 @@
         <div class="filter-controls">
             <div class="filter-row">
                 <div class="filter-group row mb-2 align-items-end">
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Report period</label>
-                        <select id="header-filter-period" class="form-control filter-period">
-                            <option value="all_dates">All Dates</option>
-                            <option value="custom_date">Custom dates</option>
-                            <option value="today">Today</option>
-                            <option value="this_week">This week</option>
-                            <option value="this_week_to_date">This week to date</option>
-                            <option value="this_month">This month</option>
-                            <option value="this_month_to_date" selected>This month to date</option>
-                            <option value="this_quarter">This quarter</option>
-                            <option value="this_quarter_to_date">This quarter to date</option>
-                            <option value="this_year">This year</option>
-                            <option value="this_year_to_date">This year to date</option>
-                            <option value="this_year_to_last_month">This year to last month</option>
-                            <option value="yesterday">Yesterday</option>
-                            <option value="recent">Recent</option>
-                            <option value="last_week">Last week</option>
-                            <option value="last_week_to_date">Last week to date</option>
-                            <option value="last_week_to_today">Last week to today</option>
-                            <option value="last_month">Last month</option>
-                            <option value="last_month_to_date">Last month to date</option>
-                            <option value="last_month_to_today">Last month to today</option>
-                            <option value="last_quarter">Last quarter</option>
-                            <option value="last_quarter_to_date">Last quarter to date</option>
-                            <option value="last_quarter_to_today">Last quarter to today</option>
-                            <option value="last_year">Last year</option>
-                            <option value="last_year_to_date">Last year to date</option>
-                            <option value="last_year_to_today">Last year to today</option>
-                            <option value="last_7_days">Last 7 days</option>
-                            <option value="last_30_days">Last 30 days</option>
-                            <option value="last_90_days">Last 90 days</option>
-                            <option value="last_12_months">Last 12 months</option>
-                            <option value="since_30_days_ago">Since 30 days ago</option>
-                            <option value="since_60_days_ago">Since 60 days ago</option>
-                            <option value="since_90_days_ago">Since 90 days ago</option>
-                            <option value="since_365_days_ago">Since 365 days ago</option>
-                            <option value="next_week">Next week</option>
-                            <option value="next_4_weeks">Next 4 weeks</option>
-                            <option value="next_month">Next month</option>
-                            <option value="next_quarter">Next quarter</option>
-                            <option value="next_year">Next year</option>
-                        </select>
 
-                    </div>
-
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">From</label>
-                        {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                        <input type="date" class="form-control" name="start_date" id="filter-start-date"
-                            value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                    </div>
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">To</label>
-                        <input type="date" class="form-control " name="end_date" id="filter-end-date"
-                            value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                    </div>
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Accounting method</label>
-                        <select id="accounting-method" class="form-control">
-                            <option value="accrual" selected>Accrual</option>
-                            <option value="cash">Cash</option>
-                        </select>
-                    </div>
-                    {{-- <div class="filter-item col-md-2 mt-4">
+                    
+                    <div class="filter-item col-lg-8 col-md-8 mt-4">
                         <button class="btn btn-view-options" id="view-options-btn"
-                            style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
+                            style="border: none !important; width: 20% !important; border-radius: 0px !important; ">
                             <i class="fa fa-eye"></i> View options
                         </button>
-                    </div> --}}
+                    </div>
 
                     <!-- Action buttons row -->
-                    <div class="d-flex align-items-end gap-2 mt-4" style="justify-content: end;">
-
-                        <button class="btn btn-outline" id="columns-btn">
-                            <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
-                        </button>
-
-                        <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
-                            data-bs-target="#filterSidebar" aria-controls="filterSidebar">
+                    <div class="col-md-4 d-flex align-items-end gap-2 " style="justify-content: end;">
+                        <button class="btn btn-outline" id="filter-btn">
                             <i class="fa fa-filter"></i> Filter
                         </button>
-
-                        {{-- Filter Side Bar --}}
-                        <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="filterSidebar"
-                            aria-labelledby="filterSidebarLabel">
-                            <div class="offcanvas-header " style="background: #f9fafb; border-bottom: 1px solid #e6e6e6;">
-                                <h5 class="offcanvas-title" id="filterSidebarLabel">
-                                    Filters
-                                </h5>
-                                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                                    aria-label="Close">
-                                    <i class="fa fa-close"></i>
-                                </button>
-                            </div>
-                            <div class="offcanvas-body">
-                                <div class="filter-item mb-2">
-                                    <label class="filter-label">Report period</label>
-                                    <select id="sidebar-filter-period" class="form-control filter-period">
-                                        <option value="all_dates">All Dates</option>
-                                        <option value="custom_date">Custom dates</option>
-                                        <option value="today">Today</option>
-                                        <option value="this_week">This week</option>
-                                        <option value="this_week_to_date">This week to date</option>
-                                        <option value="this_month">This month</option>
-                                        <option value="this_month_to_date" selected>This month to date</option>
-                                        <option value="this_quarter">This quarter</option>
-                                        <option value="this_quarter_to_date">This quarter to date</option>
-                                        <option value="this_year">This year</option>
-                                        <option value="this_year_to_date">This year to date</option>
-                                        <option value="this_year_to_last_month">This year to last month</option>
-                                        <option value="yesterday">Yesterday</option>
-                                        <option value="recent">Recent</option>
-                                        <option value="last_week">Last week</option>
-                                        <option value="last_week_to_date">Last week to date</option>
-                                        <option value="last_week_to_today">Last week to today</option>
-                                        <option value="last_month">Last month</option>
-                                        <option value="last_month_to_date">Last month to date</option>
-                                        <option value="last_month_to_today">Last month to today</option>
-                                        <option value="last_quarter">Last quarter</option>
-                                        <option value="last_quarter_to_date">Last quarter to date</option>
-                                        <option value="last_quarter_to_today">Last quarter to today</option>
-                                        <option value="last_year">Last year</option>
-                                        <option value="last_year_to_date">Last year to date</option>
-                                        <option value="last_year_to_today">Last year to today</option>
-                                        <option value="last_7_days">Last 7 days</option>
-                                        <option value="last_30_days">Last 30 days</option>
-                                        <option value="last_90_days">Last 90 days</option>
-                                        <option value="last_12_months">Last 12 months</option>
-                                        <option value="since_30_days_ago">Since 30 days ago</option>
-                                        <option value="since_60_days_ago">Since 60 days ago</option>
-                                        <option value="since_90_days_ago">Since 90 days ago</option>
-                                        <option value="since_365_days_ago">Since 365 days ago</option>
-                                        <option value="next_week">Next week</option>
-                                        <option value="next_4_weeks">Next 4 weeks</option>
-                                        <option value="next_month">Next month</option>
-                                        <option value="next_quarter">Next quarter</option>
-                                        <option value="next_year">Next year</option>
-                                    </select>
-
-                                </div>
-
-                                <div class="filter-item mb-2">
-                                    <label class="filter-label">from</label>
-                                    {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                                    <input type="date" class="form-control mb-2" name="start_date"
-                                        id="sidebar-filter-start-date"
-                                        value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                                    <label class="filter-label">To</label>
-                                    <input type="date" class="form-control " name="end_date"
-                                        id="sidebar-filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                                </div>
-
-                                <div class="filter-item col-md-3">
-                                    <label class="filter-label">Accounting method</label>
-                                    <select id="accounting-method" class="form-control">
-                                        <option value="accrual" selected>Accrual</option>
-                                        <option value="cash">Cash</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-
-                        {{-- JS to sync filters --}}
-                        <script>
-                            $(document).ready(function() {
-                                // Sync Report Period
-                                $('#sidebar-filter-period').on('change', function() {
-                                    $('#header-filter-period').val($(this).val());
-                                });
-                                $('#header-filter-period').on('change', function() {
-                                    $('#sidebar-filter-period').val($(this).val());
-                                });
-                            });
-                        </script>
-                        {{-- Filter Side Bar --}}
-
-                        <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
-                            id="ExprotExcel" class="d-none">
-                            <i class="fa fa-file-excel"></i> Excel
-                        </button>
-
                         <button class="btn btn-outline" id="general-options-btn">
                             <i class="fa fa-cog"></i> General options
                         </button>
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -217,17 +47,14 @@
         <div class="report-content">
             <div class="report-title-section">
                 <h2 class="report-title">{{ $pageTitle }}</h2>
-                {{-- <p class="company-name">{{ config('app.name', 'Craig\'s Design and Landscaping Services') }}</p> --}}
+                <p class="company-name">{{ config('app.name', 'Your Company Name') }}</p>
                 <p class="date-range">
-                    <span id="date-range-display">
-                        {{ Carbon\Carbon::now()->startOfMonth()->format('F j, Y') }} -
-                        {{ Carbon\Carbon::now()->format('F j, Y') }}
-                    </span>
+                    <span id="date-range-display">All Products and Services</span>
                 </p>
             </div>
 
             <div class="table-container p-2">
-                {!! $dataTable->table(['class' => 'table customer-balance-table', 'id' => 'customer-balance-table']) !!}
+                {!! $dataTable->table(['class' => 'table product-service-table', 'id' => 'product-service-table']) !!}
             </div>
         </div>
     </div>
@@ -340,43 +167,37 @@
                     <div class="column-item" data-column="0">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> Customer Name
+                            <input type="checkbox" checked> Product/Service Full Name
                         </label>
                     </div>
                     <div class="column-item" data-column="1">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> Current
+                            <input type="checkbox" checked> Type
                         </label>
                     </div>
                     <div class="column-item" data-column="2">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> 1-15 DAYS
+                            <input type="checkbox" checked> Memo/Description
                         </label>
                     </div>
                     <div class="column-item" data-column="3">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> 16-30 DAYS
+                            <input type="checkbox" checked> Sales Price
                         </label>
                     </div>
                     <div class="column-item" data-column="4">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> 31-45 DAYS
+                            <input type="checkbox" checked> Purchase Price
                         </label>
                     </div>
                     <div class="column-item" data-column="5">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> > 45 DAYS
-                        </label>
-                    </div>
-                    <div class="column-item" data-column="6">
-                        <i class="fa fa-grip-vertical handle"></i>
-                        <label class="checkbox-label">
-                            <input type="checkbox" checked> Total
+                            <input type="checkbox" checked> Quantity On Hand
                         </label>
                     </div>
                 </div>
@@ -390,61 +211,114 @@
         </div>
     </div>
 
-    <script>
-        function buildColumnsFromTable() {
-            const headers = document.querySelectorAll('#customer-balance-table thead th');
-            const container = document.querySelector('#sortable-columns');
+    <!-- Filter Modal -->
+    <div class="modal-overlay" id="filter-overlay">
+        <div class="columns-modal">
+            <div class="modal-header">
+                <h5>Filter <i class="fa fa-info-circle"></i></h5>
+                <button type="button" class="btn-close" id="close-filter">&times;</button>
+            </div>
+            <div class="modal-content">
+                <p class="modal-subtitle">Select filter criteria for your report.</p>
 
-            // Clear the old list
-            container.innerHTML = '';
+                <div class="filter-item mb-3">
+                    <label class="filter-label">Category</label>
+                    <select id="filter-category-modal" class="form-control">
+                        <option value="">All Categories</option>
+                        @if(isset($categories))
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label class="filter-label">Type</label>
+                    <select id="filter-type-modal" class="form-control">
+                        <option value="">All Types</option>
+                        <option value="product">Product</option>
+                        <option value="service">Service</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            headers.forEach((th, index) => {
-                const columnName = th.innerText.trim().toUpperCase();
+    <!-- View Options Modal -->
+    <div class="modal-overlay" id="view-options-overlay">
+        <div class="columns-modal">
+            <div class="modal-header">
+                <h5>View options <i class="fa fa-info-circle" title="Adjust how the report looks"></i></h5>
+                <button type="button" class="btn-close" id="close-view-options">&times;</button>
+            </div>
+            <div class="modal-content">
+                <p class="modal-subtitle">Choose display preferences. These do not affect data.</p>
 
-                // Skip BUCKET column
-                if (columnName === 'BUCKET') {
-                    return;
-                }
+                <!-- Table density section -->
+                <div class="option-section">
+                    <h6 class="section-title">Table density</h6>
+                    <div class="option-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="opt-compact"> Compact rows
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="opt-hover" checked> Row hover effects
+                        </label>
+                    </div>
+                </div>
 
-                // Build draggable/checkbox item
-                const div = document.createElement('div');
-                div.classList.add('column-item');
-                div.setAttribute('data-column', index);
-                div.innerHTML = `
-            <i class="fa fa-grip-vertical handle"></i>
-            <label class="checkbox-label">
-                <input type="checkbox" checked> ${columnName}
-            </label>
-        `;
+                <!-- Row style section -->
+                <div class="option-section">
+                    <h6 class="section-title">Row style</h6>
+                    <div class="option-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="opt-striped" checked> Striped rows
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="opt-borders"> Show borders
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="opt-wrap"> Wrap long text
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="opt-sticky-head" checked> Sticky header
+                        </label>
+                    </div>
+                </div>
 
-                container.appendChild(div);
-            });
-        }
+                <!-- Column width section -->
+                <div class="option-section">
+                    <h6 class="section-title">Column width</h6>
+                    <div class="option-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="opt-auto-width" checked> Auto-fit columns
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="opt-equal-width"> Equal column widths
+                        </label>
+                    </div>
+                </div>
 
-        // Build once after DataTable is initialized
-        $(document).ready(function() {
-            buildColumnsFromTable();
-        });
+                <!-- Font size section -->
+                <div class="option-section">
+                    <h6 class="section-title">Font size</h6>
+                    <div class="option-group">
+                        <div class="alignment-group">
+                            <label class="alignment-label">Table font size</label>
+                            <select id="font-size" class="form-control">
+                                <option value="11px">Small (11px)</option>
+                                <option value="13px" selected>Normal (13px)</option>
+                                <option value="15px">Large (15px)</option>
+                                <option value="17px">Extra Large (17px)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // Or rebuild every redraw if needed:
-        $('#customer-balance-table').on('draw.dt', function() {
-            buildColumnsFromTable();
-        });
-    </script>
-
-    <script>
-        $('#customer-balance-table').on('click', '.toggle-bucket', function() {
-            let $row = $(this);
-            let bucket = $row.attr('class').match(/bucket-([^\s]+)/)[1]; // "current"
-            let $icon = $row.find('.icon');
-
-            // toggle
-            $('.bucket-' + bucket).not($row).toggle(); // don’t hide the parent itself
-
-            // swap icon
-            $icon.text($icon.text() === '▶' ? '▼' : '▶');
-        });
-    </script>
 
     <style>
         /* Base styling */
@@ -661,13 +535,13 @@
             overflow-x: auto;
         }
 
-        .customer-balance-table {
+        .product-service-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
         }
 
-        .customer-balance-table th {
+        .product-service-table th {
             background: #f9fafb;
             border-bottom: 2px solid #e5e7eb;
             padding: 12px 16px;
@@ -679,13 +553,13 @@
             letter-spacing: 0.025em;
         }
 
-        .customer-balance-table td {
+        .product-service-table td {
             padding: 12px 16px;
             border-bottom: 1px solid #f3f4f6;
             color: #262626;
         }
 
-        .customer-balance-table tbody tr:hover {
+        .product-service-table tbody tr:hover {
             background: #f9fafb;
         }
 
@@ -911,12 +785,6 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            /* .filter-group {
-                                                                                                                                flex-direction: column;
-                                                                                                                                width: 100%;
-                                                                                                                                gap: 16px;
-                                                                                                                            } */
-
             .filter-item {
                 width: 100%;
                 min-width: auto;
@@ -938,10 +806,6 @@
                 flex-wrap: wrap;
             }
         }
-
-        .parent-row {
-            cursor: pointer;
-        }
     </style>
 
     {!! $dataTable->scripts() !!}
@@ -961,96 +825,6 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-
-    <script>
-        let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-        {{-- console.log([window.Header, window.footerAlignment]) --}}
-
-        function exportDataTable(tableId, pageTitle) {
-            let table = $('#' + tableId).DataTable();
-
-            // Only get visible columns (skip auto-index)
-            let columns = [];
-            $('#' + tableId + ' thead th:visible').each(function() {
-                columns.push($(this).text().trim());
-            });
-
-            // Get visible data rows
-            let data = [];
-
-            const getRealtimeTableData = () => {
-
-                let data = [];
-
-
-                table.rows({
-                    search: 'applied'
-                }).every(function() {
-                    let rowData = this.data();
-
-                    if (typeof rowData === 'object') {
-                        // Only keep values for visible columns
-                        let rowArray = [];
-                        table.columns(':visible').every(function(colIdx) {
-                            let val = rowData[this.dataSrc()] ?? '-';
-                            rowArray.push(val);
-                        });
-                        rowData = rowArray;
-                    }
-                    data.push(rowData);
-                });
-
-                return data
-
-            }
-
-            // Get visible data rows (rendered DOM text, not raw data)
-            $('#' + tableId + ' tbody tr:visible').each(function() {
-                let rowArray = [];
-                $(this).find('td:visible').each(function() {
-                    rowArray.push($(this).text().trim());
-                });
-                data.push(rowArray);
-            });
-
-
-
-            // Send to universal export route
-            $.ajax({
-                url: '{{ route('export.datatable') }}',
-                method: 'POST',
-                data: {
-                    columns: columns,
-                    data: data,
-                    pageTitle: pageTitle,
-                    ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
-                        .textContent : "",
-                    HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
-                        .footerAlignment
-                    ],
-                    _token: '{{ csrf_token() }}'
-                },
-                xhrFields: {
-                    responseType: 'blob'
-                },
-                success: function(blob, status, xhr) {
-                    let filename = xhr.getResponseHeader('Content-Disposition')
-                        .split('filename=')[1]
-                        .replace(/"/g, '');
-                    let link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = filename;
-                    link.click();
-                },
-                error: function(xhr) {
-                    console.error('Export failed:', xhr.responseText);
-                    alert('Export failed! Check console.');
-                }
-            });
-        }
-    </script>
-
     <script>
         $(document).ready(function() {
             // Global variables
@@ -1069,38 +843,6 @@
                 reportBasis: true,
                 footerAlignment: 'center'
             };
-
-            // Initialize date range picker
-            $('#daterange').daterangepicker({
-                startDate: moment($('#filter-start-date').val()),
-                endDate: moment($('#filter-end-date').val()),
-                opens: 'left',
-                autoApply: true,
-                locale: {
-                    format: 'MM/DD/YYYY'
-                },
-                ranges: {
-                    'Today': [moment(), moment()],
-                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
-                    'This Month': [moment().startOf('month'), moment().endOf('month')],
-                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1,
-                        'month').endOf('month')],
-                    'This Quarter': [moment().startOf('quarter'), moment().endOf('quarter')],
-                    'This Year': [moment().startOf('year'), moment().endOf('year')]
-                }
-            }, function(start, end) {
-                // Update hidden inputs with formatted dates for the server
-                $('#filter-start-date').val(start.format('YYYY-MM-DD'));
-                $('#filter-end-date').val(end.format('YYYY-MM-DD'));
-
-                // Update display
-                updateDateDisplay();
-
-                // Auto refresh data
-                refreshData();
-            });
 
             // General Options Modal
             $('#general-options-btn').on('click', function() {
@@ -1132,6 +874,21 @@
                 }
             });
 
+            // Filter Modal
+            $('#filter-btn').on('click', function() {
+                $('#filter-overlay').show();
+            });
+
+            $('#close-filter').on('click', function() {
+                $('#filter-overlay').hide();
+            });
+
+            $('#filter-overlay').on('click', function(e) {
+                if (e.target === this) {
+                    $('#filter-overlay').hide();
+                }
+            });
+
             // Initialize Sortable for column reordering
             if (document.getElementById('sortable-columns')) {
                 new Sortable(document.getElementById('sortable-columns'), {
@@ -1143,295 +900,32 @@
                 });
             }
 
-            // Handle period filter changes
-            $('.filter-period').on('change', function() {
-                updateDateRange($(this).val());
-            });
-
-            // Update date range based on period selection
-            function updateDateRange(period) {
-                const today = moment();
-                let startDate, endDate;
-
-                switch (period) {
-                    case 'all_dates':
-                        startDate = null;
-                        endDate = null;
-                        break;
-
-                    case 'custom_date':
-                        // Do nothing, let user pick manually
-                        return;
-
-                    case 'today':
-                        startDate = today.clone();
-                        endDate = today.clone();
-                        break;
-
-                    case 'yesterday':
-                        startDate = today.clone().subtract(1, 'day');
-                        endDate = today.clone().subtract(1, 'day');
-                        break;
-
-                    case 'this_week':
-                        startDate = today.clone().startOf('week');
-                        endDate = today.clone().endOf('week');
-                        break;
-
-                    case 'this_week_to_date':
-                        startDate = today.clone().startOf('week');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_week':
-                        startDate = today.clone().subtract(1, 'week').startOf('week');
-                        endDate = today.clone().subtract(1, 'week').endOf('week');
-                        break;
-
-                    case 'last_week_to_date':
-                        startDate = today.clone().subtract(1, 'week').startOf('week');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_week_to_today':
-                        startDate = today.clone().subtract(1, 'week').startOf('week');
-                        endDate = today.clone();
-                        break;
-
-                    case 'this_month':
-                        startDate = today.clone().startOf('month');
-                        endDate = today.clone().endOf('month');
-                        break;
-
-                    case 'this_month_to_date':
-                        startDate = today.clone().startOf('month');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_month':
-                        startDate = today.clone().subtract(1, 'month').startOf('month');
-                        endDate = today.clone().subtract(1, 'month').endOf('month');
-                        break;
-
-                    case 'last_month_to_date':
-                        startDate = today.clone().subtract(1, 'month').startOf('month');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_month_to_today':
-                        startDate = today.clone().subtract(1, 'month').startOf('month');
-                        endDate = today.clone();
-                        break;
-
-                    case 'this_quarter':
-                        startDate = today.clone().startOf('quarter');
-                        endDate = today.clone().endOf('quarter');
-                        break;
-
-                    case 'this_quarter_to_date':
-                        startDate = today.clone().startOf('quarter');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_quarter':
-                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
-                        endDate = today.clone().subtract(1, 'quarter').endOf('quarter');
-                        break;
-
-                    case 'last_quarter_to_date':
-                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_quarter_to_today':
-                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
-                        endDate = today.clone();
-                        break;
-
-                    case 'this_year':
-                        startDate = today.clone().startOf('year');
-                        endDate = today.clone().endOf('year');
-                        break;
-
-                    case 'this_year_to_date':
-                        startDate = today.clone().startOf('year');
-                        endDate = today.clone();
-                        break;
-
-                    case 'this_year_to_last_month':
-                        startDate = today.clone().startOf('year');
-                        endDate = today.clone().subtract(1, 'month').endOf('month');
-                        break;
-
-                    case 'last_year':
-                        startDate = today.clone().subtract(1, 'year').startOf('year');
-                        endDate = today.clone().subtract(1, 'year').endOf('year');
-                        break;
-
-                    case 'last_year_to_date':
-                        startDate = today.clone().subtract(1, 'year').startOf('year');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_year_to_today':
-                        startDate = today.clone().subtract(1, 'year').startOf('year');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_7_days':
-                        startDate = today.clone().subtract(6, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_30_days':
-                        startDate = today.clone().subtract(29, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_90_days':
-                        startDate = today.clone().subtract(89, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_12_months':
-                        startDate = today.clone().subtract(12, 'months').startOf('month');
-                        endDate = today.clone().endOf('month');
-                        break;
-
-                    case 'since_30_days_ago':
-                        startDate = today.clone().subtract(30, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'since_60_days_ago':
-                        startDate = today.clone().subtract(60, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'since_90_days_ago':
-                        startDate = today.clone().subtract(90, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'since_365_days_ago':
-                        startDate = today.clone().subtract(365, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'next_week':
-                        startDate = today.clone().add(1, 'week').startOf('week');
-                        endDate = today.clone().add(1, 'week').endOf('week');
-                        break;
-
-                    case 'next_4_weeks':
-                        startDate = today.clone().add(1, 'week').startOf('week');
-                        endDate = today.clone().add(4, 'week').endOf('week');
-                        break;
-
-                    case 'next_month':
-                        startDate = today.clone().add(1, 'month').startOf('month');
-                        endDate = today.clone().add(1, 'month').endOf('month');
-                        break;
-
-                    case 'next_quarter':
-                        startDate = today.clone().add(1, 'quarter').startOf('quarter');
-                        endDate = today.clone().add(1, 'quarter').endOf('quarter');
-                        break;
-
-                    case 'next_year':
-                        startDate = today.clone().add(1, 'year').startOf('year');
-                        endDate = today.clone().add(1, 'year').endOf('year');
-                        break;
-
-                    default:
-                        startDate = today.clone().startOf('month');
-                        endDate = today.clone();
-                }
-
-                // Update the inputs if not custom_date or all_dates
-                // if (startDate && endDate) {
-                //     $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
-                //     $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
-                // }
-                // Update hidden date fields
-                $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
-                $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
-
-                // Update DateRangePicker to reflect the new dates
-                // $('#daterange').data('daterangepicker').setStartDate(startDate);
-                // $('#daterange').data('daterangepicker').setEndDate(endDate);
-                updateDateDisplay();
-                refreshData();
-            }
-
-            // Update date display
-            function updateDateDisplay() {
-                const startDate = moment($('#filter-start-date').val());
-                const endDate = moment($('#filter-end-date').val());
-
-                const formattedStart = startDate.format('MMMM D, YYYY');
-                const formattedEnd = endDate.format('MMMM D, YYYY');
-
-                $('#date-range-display').text(' From ' + formattedStart + ' To ' + formattedEnd);
-            }
-
             // Refresh data function
             function refreshData() {
-                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
-                    window.LaravelDataTables["customer-balance-table"].draw();
-                    // {{-- console.log("HI") --}}
+                if (window.LaravelDataTables && window.LaravelDataTables["product-service-table"]) {
+                    window.LaravelDataTables["product-service-table"].draw();
                 } else {
                     console.log('DataTable not yet initialized');
                     setTimeout(refreshData, 100);
                 }
             }
 
-            // Handle date changes
-            $('#filter-start-date, #filter-end-date').on('apply.daterangepicker', function() {
-                updateDateDisplay();
-                refreshData();
-            });
-
-            // Handle account filter changes
-            $('#filter-account').on('change', function() {
-                refreshData();
-            });
-            $('#filter-end-date').on('change', function() {
-                $('#sidebar-filter-end-date').val($(this).val());
-                updateDateDisplay();
-                refreshData();
-            });
-
-            $('#filter-start-date').on('change', function() {
-                $('#sidebar-filter-end-date').val($(this).val());
-                updateDateDisplay();
-                refreshData();
-            });
-
-            $('#sidebar-filter-end-date').on('change', function() {
-                $('#filter-end-date').val($(this).val());
-                updateDateDisplay();
-                refreshData();
-            });
-
-            $('#sidebar-filter-start-date').on('change', function() {
-                $('#filter-start-date').val($(this).val());
-                updateDateDisplay();
-                refreshData();
-            });
-
-            // Handle accounting method changes
-            $('#accounting-method').on('change', function() {
+            // Handle filter changes
+            $('#filter-category, #filter-type, #filter-category-modal, #filter-type-modal').on('change', function() {
+                // Sync filter values between controls
+                if ($(this).attr('id').includes('modal')) {
+                    const baseId = $(this).attr('id').replace('-modal', '');
+                    $('#' + baseId).val($(this).val());
+                } else {
+                    $('#' + $(this).attr('id') + '-modal').val($(this).val());
+                }
                 refreshData();
             });
 
             // Setup DataTable ajax parameters
-            $('#customer-balance-table').on('preXhr.dt', function(e, settings, data) {
-                data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
-                data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
-                data.account_id = $('#filter-account').val();
-                data.accounting_method = $('#accounting-method').val();
-
+            $('#product-service-table').on('preXhr.dt', function(e, settings, data) {
+                data.category = $('#filter-category').val();
+                data.type = $('#filter-type').val();
                 data.reportOptions = window.reportOptions;
             });
 
@@ -1503,7 +997,7 @@
                     const currentDate = new Date();
                     const dateStr = currentDate.toLocaleDateString();
                     const timeStr = currentDate.toLocaleTimeString();
-                    const basisStr = $('#accounting-method').val() === 'accrual' ? 'Accrual Basis' : 'Cash Basis';
+                    const basisStr = 'Accrual Basis'; // Default for product/service report
 
                     let footerHTML =
                         '<div class="report-footer" style="padding: 20px; border-top: 1px solid #e6e6e6; text-align: ' +
@@ -1564,12 +1058,11 @@
                 });
 
                 // Store column order preference
-                localStorage.setItem('ledger-column-order', JSON.stringify(order));
+                localStorage.setItem('product-service-column-order', JSON.stringify(order));
                 console.log('Column order updated:', order);
 
                 // Apply column order if DataTable supports it
-                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
-                    // Note: Column reordering requires ColReorder extension
+                if (window.LaravelDataTables && window.LaravelDataTables["product-service-table"]) {
                     console.log('Column order would be applied:', order);
                 }
             }
@@ -1580,9 +1073,9 @@
                 const isVisible = $(this).prop('checked');
 
                 if (columnIndex !== undefined && window.LaravelDataTables && window.LaravelDataTables[
-                        "customer-balance-table"]) {
+                        "product-service-table"]) {
                     try {
-                        window.LaravelDataTables["customer-balance-table"].column(columnIndex).visible(
+                        window.LaravelDataTables["product-service-table"].column(columnIndex).visible(
                             isVisible);
                     } catch (error) {
                         console.log('Column visibility change:', columnIndex, isVisible);
@@ -1611,23 +1104,6 @@
                 }
             });
 
-            // Add expand/collapse functionality for account groups
-            $(document).on('click', '.account-group', function() {
-                const accountId = $(this).data('account-id');
-                $('.account-row[data-parent="' + accountId + '"]').toggle();
-
-                // Toggle icon
-                const icon = $(this).find('.expand-icon');
-                if (icon.text() === '▼') {
-                    icon.text('►');
-                } else {
-                    icon.text('▼');
-                }
-            });
-
-            // Initialize with current selection
-            updateDateDisplay();
-
             // Print functionality
             $('.btn-icon[title="Print"]').on('click', function() {
                 // Create print-friendly version
@@ -1636,7 +1112,7 @@
                     <!DOCTYPE html>
                     <html>
                     <head>
-                        <title>A/R Aging Summary Report - Print</title>
+                        <title>Product/Service Report - Print</title>
                         <style>
                             body { font-family: Arial, sans-serif; margin: 20px; }
                             .report-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
@@ -1651,11 +1127,11 @@
                         </style>
                     </head>
                     <body>
-                        <div class="report-title">A/R Aging Summary Report</div>
+                        <div class="report-title">Product/Service Report</div>
                         <div class="company-name">${$('.company-name').text()}</div>
                         <div class="date-range">${$('.date-range').text()}</div>
                         <table>
-                            ${$('.customer-balance-table').html()}
+                            ${$('.product-service-table').html()}
                         </table>
                     </body>
                     </html>
@@ -1667,7 +1143,7 @@
 
             // Save As functionality
             $('.btn-save').on('click', function() {
-                const reportName = prompt('Enter report name:', 'A/R Aging Summary Report - ' + moment()
+                const reportName = prompt('Enter report name:', 'Product/Service Report - ' + moment()
                     .format(
                         'YYYY-MM-DD'));
                 if (reportName) {
@@ -1677,15 +1153,13 @@
                     // Save current settings to localStorage for demo
                     const settings = {
                         name: reportName,
-                        startDate: $('#filter-start-date').val(),
-                        endDate: $('#filter-end-date').val(),
-                        account: $('#filter-account').val(),
-                        accountingMethod: $('#accounting-method').val(),
+                        category: $('#filter-category').val(),
+                        type: $('#filter-type').val(),
                         options: window.reportOptions,
                         savedAt: new Date().toISOString()
                     };
 
-                    localStorage.setItem('saved-report-' + Date.now(), JSON.stringify(settings));
+                    localStorage.setItem('saved-product-service-report-' + Date.now(), JSON.stringify(settings));
                 }
             });
 
@@ -1709,15 +1183,9 @@
                 const option = prompt(
                     'Choose export format:\n1. Excel\n2. PDF\n3. CSV\n\nEnter number (1-3):');
 
-
-                // Get table ID dynamically (assumes closest table in DOM)
-                const tableId = $(this).closest('div').find('table').attr('id');
-                const pageTitle = document.title || 'Report';
-
                 switch (option) {
                     case '1':
-                        //alert('Excel export would be triggered');
-                        $("#ExprotExcel").click();
+                        alert('Excel export would be triggered');
                         break;
                     case '2':
                         alert('PDF export would be triggered');
@@ -1729,14 +1197,109 @@
                         alert('Invalid option');
                 }
             });
+
             // View options functionality
             $('#view-options-btn').on('click', function() {
-                alert('View options panel would open here with additional display settings');
+                $('#view-options-overlay').show();
             });
 
-            // Filter button functionality
-            $('#filter-btn').on('click', function() {
-                alert('Advanced filter panel would open here');
+            $('#close-view-options').on('click', function() {
+                $('#view-options-overlay').hide();
+            });
+
+            $('#view-options-overlay').on('click', function(e) {
+                if (e.target === this) {
+                    $('#view-options-overlay').hide();
+                }
+            });
+
+            // View Options functionality
+            function applyViewOptions() {
+                // Remove any existing custom styles
+                $('#custom-view-styles').remove();
+
+                // Create custom style tag
+                let customCSS = '<style id="custom-view-styles">';
+
+                // Table density
+                if ($('#opt-compact').prop('checked')) {
+                    customCSS += '.product-service-table th, .product-service-table td { padding: 8px 12px; }';
+                } else {
+                    customCSS += '.product-service-table th, .product-service-table td { padding: 12px 16px; }';
+                }
+
+                // Row hover effects
+                if ($('#opt-hover').prop('checked')) {
+                    customCSS += '.product-service-table tbody tr:hover { background: #f9fafb; }';
+                } else {
+                    customCSS += '.product-service-table tbody tr:hover { background: inherit; }';
+                }
+
+                // Striped rows
+                if ($('#opt-striped').prop('checked')) {
+                    customCSS += '.product-service-table tbody tr:nth-child(even) { background-color: #f8f9fa; }';
+                } else {
+                    customCSS += '.product-service-table tbody tr:nth-child(even) { background-color: inherit; }';
+                }
+
+                // Borders
+                if ($('#opt-borders').prop('checked')) {
+                    customCSS += '.product-service-table th, .product-service-table td { border: 1px solid #e5e7eb; }';
+                } else {
+                    customCSS += '.product-service-table th, .product-service-table td { border: none; border-bottom: 1px solid #f3f4f6; }';
+                }
+
+                // Text wrapping
+                if ($('#opt-wrap').prop('checked')) {
+                    customCSS += '.product-service-table th, .product-service-table td { white-space: normal; word-wrap: break-word; }';
+                } else {
+                    customCSS += '.product-service-table th, .product-service-table td { white-space: nowrap; }';
+                }
+
+                // Auto-fit columns
+                if ($('#opt-auto-width').prop('checked')) {
+                    customCSS += '.product-service-table { table-layout: auto; }';
+                } else {
+                    customCSS += '.product-service-table { table-layout: fixed; }';
+                }
+
+                // Equal column widths
+                if ($('#opt-equal-width').prop('checked')) {
+                    customCSS += '.product-service-table th, .product-service-table td { width: 16.67%; }';
+                }
+
+                // Font size
+                const fontSize = $('#font-size').val();
+                customCSS += '.product-service-table, .product-service-table th, .product-service-table td { font-size: ' + fontSize + '; }';
+
+                customCSS += '</style>';
+                $('head').append(customCSS);
+
+                // Apply sticky header
+                if ($('#opt-sticky-head').prop('checked')) {
+                    $('.table-container').css({
+                        'max-height': '500px',
+                        'overflow-y': 'auto'
+                    });
+                    $('.product-service-table thead th').css({
+                        'position': 'sticky',
+                        'top': '0',
+                        'z-index': '10'
+                    });
+                } else {
+                    $('.table-container').css({
+                        'max-height': 'none',
+                        'overflow-y': 'visible'
+                    });
+                    $('.product-service-table thead th').css({
+                        'position': 'static'
+                    });
+                }
+            }
+
+            // Apply view options when checkboxes/selects change
+            $('#view-options-overlay input, #view-options-overlay select').on('change', function() {
+                applyViewOptions();
             });
 
             // Refresh button functionality
@@ -1751,22 +1314,23 @@
             // Initialize general options with default values
             setTimeout(function() {
                 applyGeneralOptions();
+                applyViewOptions();
                 updateColumnCountBadge();
             }, 100);
 
             // Format numbers in table based on options
-            $(document).on('draw.dt', '#customer-balance-table', function() {
+            $(document).on('draw.dt', '#product-service-table', function() {
                 if (window.reportOptions) {
-                    $('.customer-balance-table tbody tr').each(function() {
+                    $('.product-service-table tbody tr').each(function() {
                         const $row = $(this);
 
-                        // Apply number formatting to amount columns
+                        // Apply number formatting to amount columns (sales price, purchase price)
                         $row.find('td').each(function(index) {
                             const $cell = $(this);
                             const text = $cell.text().trim();
 
-                            // Check if cell contains a number
-                            if (text && !isNaN(text.replace(/[,$()]/g, ''))) {
+                            // Check if cell contains a number (skip first 3 columns: name, type, description)
+                            if (index >= 3 && text && !isNaN(text.replace(/[,$()]/g, ''))) {
                                 let value = parseFloat(text.replace(/[,$()]/g, ''));
 
                                 if (window.reportOptions.hideZeroAmounts && value === 0) {
@@ -1821,7 +1385,7 @@
                 }
             });
 
-            console.log('QuickBooks-style General Ledger initialized successfully');
+            console.log('QuickBooks-style Product/Service Report initialized successfully');
         });
     </script>
 @endpush

@@ -3,6 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\DataTables\InventoryValuationSummaryDataTable;
+use App\DataTables\IncomeByCustomerSummaryDataTable;
+use App\DataTables\IncomeByCustomerSummaryTwoDataTable;
+use App\DataTables\SalesByProductServiceSummaryDataTable;
+use App\DataTables\SalesByProductServiceDetailDataTable;
+use App\DataTables\TransactionListByCustomerDataTable;
 use App\Models\ChartOfAccount;
 use App\Models\ChartOfAccountType;
 use App\Models\CustomField;
@@ -95,6 +100,267 @@ public function inventoryValuationSummary(
     return $dataTable->render(
         'productservice.inventoryValuationSummary',
         compact('category', 'types', 'user', 'filter', 'reportPeriod')
+    );
+}
+
+public function incomeByCustomerSummary(
+    \App\DataTables\IncomeByCustomerSummaryDataTable $dataTable,
+    \Illuminate\Http\Request $request
+) {
+    if (!\Auth::user()->can('manage product & service')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+
+    // Page title
+    $pageTitle = __('Product/Service List');
+
+    // Dropdowns for filters
+    $category = \App\Models\ProductServiceCategory::where('created_by', $ownerId)
+        ->where('type', 'product & service')
+        ->pluck('name', 'id')
+        ->prepend(__('Select Category'), '');
+
+    $types = array_merge(['' => __('Select Type')], \App\Models\ProductService::$types);
+
+    $filter = [
+        'selectedCategory' => $request->get('category', ''),
+        'selectedType'     => $request->get('type', ''),
+    ];
+
+    return $dataTable->render(
+        'productservice.incomeByCustomerSummary',
+        compact('pageTitle', 'category', 'types', 'user', 'filter')
+    );
+}
+
+public function incomeByCustomerSummaryTwo(
+    \App\DataTables\IncomeByCustomerSummaryTwoDataTable $dataTable,   // <-- use *Two* here
+    \Illuminate\Http\Request $request
+) {
+    if (!\Auth::user()->can('manage product & service')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    $pageTitle = __('Income By Customer Summary');
+
+    // Get all customers for the dropdown filter
+    $customers = \App\Models\Customer::where($column, $ownerId)
+        ->where('is_active', 1)
+        ->whereNotNull('name')
+        ->orderBy('name')
+        ->pluck('name')
+        ->unique()
+        ->values();
+
+    $filter = [
+        'selectedCustomerName' => $request->get('customer_name', ''),
+        'reportPeriod' => $request->get('report_period', 'all_dates'),
+        'startDateRange' => $request->get('start_date', ''),
+        'endDateRange' => $request->get('end_date', ''),
+        'accountingMethod' => $request->get('accounting_method', 'accrual'),
+    ];
+
+    // Pass Customer model to DataTable
+    return $dataTable->render(
+        'productservice.incomeByCustomerSummaryTwo',
+        compact('pageTitle', 'customers', 'user', 'filter')
+    );
+}
+
+public function SalesByProductServiceDetail(
+    \App\DataTables\SalesByProductServiceDetailDataTable $dataTable,
+    \Illuminate\Http\Request $request
+) {
+    if (!\Auth::user()->can('manage product & service')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    $pageTitle = __('Sales by Product/Service Detail');
+
+    // Get all product/service categories for the dropdown filter
+    $categories = \App\Models\ProductServiceCategory::where($column, $ownerId)
+        ->where('type', 'product & service')
+        ->orderBy('name')
+        ->pluck('name', 'id')
+        ->prepend(__('All Categories'), '');
+
+    // Get product types
+    $types = array_merge(['' => __('All Types')], \App\Models\ProductService::$types);
+
+    // Get all customers for filtering
+    $customers = \App\Models\Customer::where($column, $ownerId)
+        ->where('is_active', 1)
+        ->whereNotNull('name')
+        ->orderBy('name')
+        ->pluck('name')
+        ->unique()
+        ->values();
+
+    $filter = [
+        'selectedCategory' => $request->get('category', ''),
+        'selectedType' => $request->get('type', ''),
+        'selectedProductName' => $request->get('product_name', ''),
+        'selectedCustomerName' => $request->get('customer_name', ''),
+        'reportPeriod' => $request->get('report_period', 'all_dates'),
+        'startDateRange' => $request->get('start_date', ''),
+        'endDateRange' => $request->get('end_date', ''),
+        'accountingMethod' => $request->get('accounting_method', 'accrual'),
+    ];
+
+    return $dataTable->render(
+        'productservice.salesByProductServiceDetail',
+        compact('pageTitle', 'categories', 'types', 'customers', 'user', 'filter')
+    );
+}
+
+public function SalesByProductServiceSummary(
+    \App\DataTables\SalesByProductServiceSummaryDataTable $dataTable,
+    \Illuminate\Http\Request $request
+) {
+    if (!\Auth::user()->can('manage product & service')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    $pageTitle = __('Sales by Product/Service Summary');
+
+    // Get all product/service categories for the dropdown filter
+    $categories = \App\Models\ProductServiceCategory::where($column, $ownerId)
+        ->where('type', 'product & service')
+        ->orderBy('name')
+        ->pluck('name', 'id')
+        ->prepend(__('All Categories'), '');
+
+    // Get product types
+    $types = array_merge(['' => __('All Types')], \App\Models\ProductService::$types);
+
+    $filter = [
+        'selectedCategory' => $request->get('category', ''),
+        'selectedType' => $request->get('type', ''),
+        'selectedProductName' => $request->get('product_name', ''),
+        'reportPeriod' => $request->get('report_period', 'all_dates'),
+        'startDateRange' => $request->get('start_date', ''),
+        'endDateRange' => $request->get('end_date', ''),
+        'accountingMethod' => $request->get('accounting_method', 'accrual'),
+    ];
+
+    return $dataTable->render(
+        'productservice.salesByProductServiceSummary',
+        compact('pageTitle', 'categories', 'types', 'user', 'filter')
+    );
+}
+
+/**
+ * New method for Transaction List by Customer report
+ */
+public function transactionListByCustomer(
+    \App\DataTables\TransactionListByCustomerDataTable $dataTable,
+    \Illuminate\Http\Request $request
+) {
+    if (!\Auth::user()->can('manage product & service')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    $pageTitle = __('Transaction List by Customer');
+
+    // Get all customers for the dropdown filter
+    $customers = \App\Models\Customer::where($column, $ownerId)
+        ->where('is_active', 1)
+        ->whereNotNull('name')
+        ->orderBy('name')
+        ->pluck('name')
+        ->unique()
+        ->values();
+
+    // Get transaction types for filter
+    $transactionTypes = [
+        '' => __('All Transaction Types'),
+        'Invoice' => __('Invoice'),
+        'Invoice Payment' => __('Payment'),
+        'Revenue' => __('Deposit'),
+        'Payment' => __('Expense'),
+        'Expense' => __('Expense'),
+        'Bill' => __('Bill'),
+        'Bill Payment' => __('Bill Payment'),
+    ];
+
+    $filter = [
+        'selectedCustomerName' => $request->get('customer_name', ''),
+        'selectedTransactionType' => $request->get('transaction_type', ''),
+        'startDateRange' => $request->get('start_date', ''),
+        'endDateRange' => $request->get('end_date', ''),
+    ];
+
+    return $dataTable->render(
+        'productservice.transactionListByCustomer',
+        compact('pageTitle', 'customers', 'transactionTypes', 'user', 'filter')
+    );
+}
+
+/**
+ * New method for Estimates by Customer report
+ */
+public function estimatesByCustomer(
+    \App\DataTables\ProposalsByCustomerDataTable $dataTable,
+    \Illuminate\Http\Request $request
+) {
+    if (!\Auth::user()->can('manage product & service')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    $pageTitle = __('Estimates by Customer');
+
+    // Get all customers for the dropdown filter
+    $customers = \App\Models\Customer::where($column, $ownerId)
+        ->where('is_active', 1)
+        ->whereNotNull('name')
+        ->orderBy('name')
+        ->pluck('name')
+        ->unique()
+        ->values();
+
+    // Get proposal statuses for filter
+    $statuses = [
+        '' => __('All Statuses'),
+        '0' => __('Draft'),
+        '1' => __('Open'),
+        '2' => __('Accepted'),
+        '3' => __('Declined'),
+        '4' => __('Close'),
+    ];
+
+    $filter = [
+        'selectedCustomerName' => $request->get('customer_name', ''),
+        'selectedStatus' => $request->get('status', ''),
+        'startDateRange' => $request->get('start_date', ''),
+        'endDateRange' => $request->get('end_date', ''),
+    ];
+
+    return $dataTable->render(
+        'productservice.estimatesByCustomer',
+        compact('pageTitle', 'customers', 'statuses', 'user', 'filter')
     );
 }
 
@@ -251,6 +517,13 @@ private function computePeriod(?string $reportPeriod, ?string $start, ?string $e
             $productService->created_by = \Auth::user()->creatorId();
             $productService->owned_by     = \Auth::user()->ownedId();
             $productService->save();
+             if (!empty($request->quantity)) {
+                //Product Stock Report  
+                $type        = 'manually';
+                $type_id     = 0;
+                $description = $request->quantity . '  ' . __('quantity added by manually');
+                Utility::addProductStock($productService->id, $request->quantity, $type, $description, $type_id);
+            }
             CustomField::saveData($productService, $request->customField);
 
             return redirect()->route('productservice.index')->with('success', __('Product successfully created.'));
@@ -352,11 +625,11 @@ private function computePeriod(?string $reportPeriod, ?string $start, ?string $e
                 $productService->tax_id = !empty($request->tax_id) ? implode(',', $request->tax_id) : '';
                 $productService->unit_id = $request->unit_id;
 
-                if (!empty($request->quantity)) {
-                    $productService->quantity = $request->quantity;
-                } else {
-                    $productService->quantity = 0;
-                }
+                // if (!empty($request->quantity)) {
+                //     $productService->quantity = $request->quantity;
+                // } else {
+                //     $productService->quantity = 0;
+                // }
                 $productService->type = $request->type;
                 $productService->sale_chartaccount_id = $request->sale_chartaccount_id;
                 $productService->expense_chartaccount_id = $request->expense_chartaccount_id;
@@ -944,5 +1217,142 @@ private function computePeriod(?string $reportPeriod, ?string $start, ?string $e
         } else {
             return redirect()->back()->with('error', __('This Product is not found!'));
         }
+    }
+
+    public function inventoryValuationDetail(
+        \App\DataTables\InventoryValuationDetailDataTable $dataTable,
+        \Illuminate\Http\Request $request
+    ) {
+        // Temporarily bypass permission check for testing
+        // if (!\Auth::user()->can('manage product & service')) {
+        //     return redirect()->back()->with('error', __('Permission denied.'));
+        // }
+
+        $user = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+
+        // Dropdowns
+        $category = \App\Models\ProductServiceCategory::where('created_by', $ownerId)
+            ->where('type', 'product & service')
+            ->pluck('name', 'id')
+            ->prepend(__('Select Category'), '');
+
+        $types = array_merge(['' => __('Select Type')], \App\Models\ProductService::$types);
+
+        // Defaults for dates (current month, like ledger)
+        $start = $request->get('start_date') ?: \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d');
+        $end   = $request->get('end_date')   ?: \Carbon\Carbon::now()->format('Y-m-d');
+        $reportPeriod = $request->get('report_period', 'this_month');
+
+        $filter = [
+            'startDateRange'   => $start,
+            'endDateRange'     => $end,
+            'reportPeriod'     => $reportPeriod,
+            'selectedCategory' => $request->get('category', ''),
+            'selectedType'     => $request->get('type', ''),
+        ];
+
+        return $dataTable->render(
+            'productservice.inventoryValuationDetail',
+            compact('category', 'types', 'user', 'filter', 'reportPeriod')
+        );
+    }
+
+    public function purchasesByProductServiceDetail(
+        \App\DataTables\PurchasesByProductServiceDetailDataTable $dataTable,
+        \Illuminate\Http\Request $request
+    )
+    {
+        if (!\Auth::user()->can('manage product & service')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+
+        $user = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+        $pageTitle = __('Purchases by Product/Service Detail');
+
+        // Get all product/service categories for the dropdown filter
+        $categories = \App\Models\ProductServiceCategory::where($column, $ownerId)
+            ->where('type', 'product & service')
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->prepend(__('All Categories'), '');
+
+        // Get product types
+        $types = array_merge(['' => __('All Types')], \App\Models\ProductService::$types);
+
+        // Get all vendors for filtering
+        $vendors = \App\Models\Vender::where($column, $ownerId)
+            ->where('is_active', 1)
+            ->whereNotNull('name')
+            ->orderBy('name')
+            ->pluck('name')
+            ->unique()
+            ->values();
+
+        $filter = [
+            'selectedCategory' => $request->get('category', ''),
+            'selectedType' => $request->get('type', ''),
+            'selectedProductName' => $request->get('product_name', ''),
+            'selectedVendorName' => $request->get('vendor_name', ''),
+            'reportPeriod' => $request->get('report_period', 'all_dates'),
+            'startDateRange' => $request->get('start_date', ''),
+            'endDateRange' => $request->get('end_date', ''),
+        ];
+
+        return $dataTable->render(
+            'productservice.purchasesByProductServiceDetail',
+            compact('pageTitle', 'categories', 'types', 'vendors', 'user', 'filter')
+        );
+    }
+
+    /**
+     * Sales Tax Liability Report
+     */
+    public function SalesTaxLiabilityReport(\App\DataTables\SalesTaxLiabilityReportDataTable $dataTable, \Illuminate\Http\Request $request)
+    {
+        if (!\Auth::user()->can('manage product & service')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+
+        $user = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+        $pageTitle = __('Sales Tax Liability Report');
+
+        // Get all customers for the dropdown filter
+        $customers = \App\Models\Customer::where($column, $ownerId)
+            ->where('is_active', 1)
+            ->whereNotNull('name')
+            ->orderBy('name')
+            ->pluck('name')
+            ->unique()
+            ->values();
+
+        // Get all product/service categories for the dropdown filter
+        $categories = \App\Models\ProductServiceCategory::where($column, $ownerId)
+            ->where('type', 'product & service')
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->prepend(__('All Categories'), '');
+
+        // Get product types
+        $types = array_merge(['' => __('All Types')], \App\Models\ProductService::$types);
+
+        $filter = [
+            'selectedCustomerName' => $request->get('customer_name', ''),
+            'selectedCategory' => $request->get('category', ''),
+            'selectedType' => $request->get('type', ''),
+            'selectedProductName' => $request->get('product_name', ''),
+            'reportPeriod' => $request->get('report_period', 'all_dates'),
+            'startDateRange' => $request->get('start_date', ''),
+            'endDateRange' => $request->get('end_date', ''),
+            'accountingMethod' => $request->get('accounting_method', 'accrual'),
+        ];
+
+        return $dataTable->render('report.sales_tax_liability_report', compact('pageTitle', 'customers', 'categories', 'types', 'user', 'filter'));
     }
 }

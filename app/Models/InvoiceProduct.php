@@ -13,11 +13,15 @@ class InvoiceProduct extends Model
         'tax',
         'discount',
         'total',
+        'price',
+        'description',
     ];
 
     public function product(){
         return $this->hasOne('App\Models\ProductService', 'id', 'product_id');
-    }    
+    }
 
-  
+    public function invoice(){
+        return $this->belongsTo('App\Models\Invoice', 'invoice_id', 'id');
+    }
 }

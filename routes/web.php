@@ -443,43 +443,53 @@ Route::group(['middleware' => ['verified']], function () {
 
     Route::get('productservice/index', [ProductServiceController::class, 'index'])->name('productservice.index');
     Route::get('productservice/inventory-valuation-summary', [ProductServiceController::class, 'inventoryValuationSummary'])->name('productservice.inventoryValuationSummary');
+    Route::get('productservice/product-service-list', [ProductServiceController::class, 'incomeByCustomerSummary'])->name('productservice.incomeByCustomerSummary');
+    Route::get('productservice/income-by-Customer-Summary', [ProductServiceController::class, 'incomeByCustomerSummaryTwo'])->name('productservice.incomeByCustomerSummaryTwo');
+    Route::get('productservice/Sales-by-Product-Service-Summary', [ProductServiceController::class, 'SalesByProductServiceSummary'])->name('productservice.SalesByProductServiceSummary');
+    Route::get('productservice/Sales-by-Product-Service-Detail', [ProductServiceController::class, 'SalesByProductServiceDetail'])->name('productservice.SalesByProductServiceDetail');
+    Route::get('productservice/transaction-list-by-customer', [ProductServiceController::class, 'transactionListByCustomer'])->name('productservice.transactionListByCustomer');
+    Route::get('productservice/estimates-by-customer', [ProductServiceController::class, 'estimatesByCustomer'])->name('productservice.estimatesByCustomer');
+
+    Route::get('sales-Tax-Liability-Report', [ProductServiceController::class, 'SalesTaxLiabilityReport'])->name('SalesTaxLiabilityReport');
+    
+    // Test route for estimates by customer report
+    Route::get('/test-estimates-query', function() {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['error' => 'Not authenticated'], 401);
+            }
+            
+            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            
+            // Test the actual DataTable query
+            $dataTable = new \App\DataTables\ProposalsByCustomerDataTable();
+            $query = $dataTable->query(new \App\Models\Proposal());
+            $results = $query->limit(5)->get();
+            
+            return response()->json([
+                'status' => 'success',
+                'user' => $user->name,
+                'owner_id' => $ownerId,
+                'results_count' => $results->count(),
+                'query_class' => get_class($query),
+                'results' => $results->toArray()
+            ]);
+            
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    });
+
     Route::get('productservice/{id}/detail', [ProductServiceController::class, 'warehouseDetail'])->name('productservice.detail');
     Route::post('empty-cart', [ProductServiceController::class, 'emptyCart'])->middleware(['auth', 'XSS']);
     Route::post('warehouse-empty-cart', [ProductServiceController::class, 'warehouseemptyCart'])->name('warehouse-empty-cart')->middleware(['auth', 'XSS']);
     Route::resource('productservice', ProductServiceController::class)->middleware(['auth', 'XSS', 'revalidate']);
-
-    //Product Stock
-    Route::resource('productstock', ProductStockController::class)->middleware(['auth', 'XSS']);
-
-    //Customer
-    Route::group(
-        [
-            'middleware' => [
-                'auth',
-                'XSS',
-                'revalidate',
-            ],
-        ],
-        function () {
-            Route::get('customer/{id}/show', [CustomerController::class, 'show'])->name('customer.show');
-            Route::resource('customer', CustomerController::class);
-        }
-    );
-
-    //Vendor
-    Route::group(
-        [
-            'middleware' => [
-                'auth',
-                'XSS',
-                'revalidate',
-            ],
-        ],
-        function () {
-            Route::get('vender/{id}/show', [VenderController::class, 'show'])->name('vender.show');
-            Route::resource('vender', VenderController::class);
-        }
-    );
 
     Route::group(
         [
@@ -666,8 +676,10 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('report/expense-summary', [ReportController::class, 'expenseSummary'])->name('report.expense.summary');
             Route::get('report/income-vs-expense-summary', [ReportController::class, 'incomeVsExpenseSummary'])->name('report.income.vs.expense.summary');
             Route::get('report/tax-summary', [ReportController::class, 'taxSummary'])->name('report.tax.summary');
-            //        Route::get('report/profit-loss-summary', [ReportController::class, 'profitLossSummary'])->name('report.profit.loss.summary');
-            Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary'])->name('report.invoice.summary');
+Route::get('report/taxable-sales-summary', [ReportController::class, 'taxableSalesSummary'])->name('report.taxableSalesSummary');
+Route::get('report/taxable-sales-detail', [ReportController::class, 'taxableSalesDetail'])->name('report.taxableSalesDetail');
+//        Route::get('report/profit-loss-summary', [ReportController::class, 'profitLossSummary'])->name('report.profit.loss.summary');
+Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary'])->name('report.invoice.summary');
             Route::get('report/bill-summary', [ReportController::class, 'billSummary'])->name('report.bill.summary');
             Route::get('report/product-stock-report', [ReportController::class, 'productStock'])->name('report.product.stock.report');
             Route::get('report/invoice-report', [ReportController::class, 'invoiceReport'])->name('report.invoice');
@@ -685,7 +697,10 @@ Route::group(['middleware' => ['verified']], function () {
             Route::post('export/balance-sheet', [ReportController::class, 'balanceSheetExport'])->name('balance.sheet.export');
             Route::post('export/profit-loss', [ReportController::class, 'profitLossExport'])->name('profit.loss.export');
             Route::get('report/sales', [ReportController::class, 'salesReport'])->name('report.sales');
-            Route::get('report/sales/salesbyCustomerTypeDetail', [ReportController::class, 'SalesbyCustomerTypeDetailReport'])->name('report.salesbyCustomerTypeDetail');
+            Route::get('report/sales/SalesByCustomerSummary', [ReportController::class, 'SalesByCustomerSummary'])->name('report.sales.salesByCustomerSummary');
+            Route::get('report/sales/SalesByCustomerDetail', [ReportController::class, 'SalesByCustomerDetail'])->name('report.sales.salesByCustomerDetail');
+            Route::get('report/DepositDetail', [ReportController::class, 'DepositDetail'])->name('report.depositDetail');
+            Route::get('report/sales/SalesbyCustomerTypeDetailReport', [ReportController::class, 'SalesbyCustomerTypeDetailReport'])->name('report.salesbyCustomerTypeDetail');
             // Route::get('report/sales/salesbyCustomerTypeDetail/data', [ReportController::class, 'SalesbyCustomerTypeDetailReportData'])->name('report.salesbyCustomerTypeDetail.data');
             Route::post('export/sales', [ReportController::class, 'salesReportExport'])->name('sales.export');
             Route::get('report/receivables', [ReportController::class, 'ReceivablesReport'])->name('report.receivables');
@@ -791,6 +806,7 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('profit-loss-detail', [VoucherController::class, 'profitLossDetail'])->name('profit-loss-detail.index');
     Route::get('profit-loss-detail/export', [VoucherController::class, 'exportProfitLossDetail'])->name('profit-loss-detail.export');
 
+
     // //Abdullah Reports (What owes you)
     // Route::get("/receivables/agingsummary", [VoucherController::class, 'ARAgingSummary'])->name("AgingSummary.index");
     // Route::get("/receivables/agingdetails", [VoucherController::class, 'AgingDetails'])->name("AgingDetails.index");
@@ -858,7 +874,8 @@ Route::group(['middleware' => ['verified']], function () {
 
 
     // Abdullah Excel Export Route
-    Route::post('/export-datatable', [VoucherController::class, 'excelExport'])->name('export.datatable');
+    Route::post('/export-datatable', [VoucherController::class, 'ExportReport'])->name('export.datatable');
+
 
 
     // cya routes
@@ -1656,6 +1673,8 @@ Route::group(['middleware' => ['verified']], function () {
 
     Route::get('export/productservice', [ProductServiceController::class, 'export'])->name('productservice.export');
     Route::get('import/productservice/file', [ProductServiceController::class, 'importFile'])->name('productservice.file.import');
+    Route::get('productservice/inventory-valuation-detail', [ProductServiceController::class, 'inventoryValuationDetail'])->name('productservice.inventoryValuationDetail');
+    Route::get('productservices/purchases-by-product-service-detail', [ProductServiceController::class, 'purchasesByProductServiceDetail'])->name('productservice.purchasesByProductServiceDetail');
     Route::post('import/productservice', [ProductServiceController::class, 'import'])->name('productservice.import');
     Route::get('export/customer', [CustomerController::class, 'export'])->name('customer.export');
     Route::get('import/customer/file', [CustomerController::class, 'importFile'])->name('customer.file.import');
@@ -1677,6 +1696,7 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('export/transaction', [TransactionController::class, 'export'])->name('transaction.export');
     Route::get('export/accountstatement', [ReportController::class, 'export'])->name('accountstatement.export');
     Route::get('export/productstock', [ReportController::class, 'stock_export'])->name('productstock.export');
+    Route::get('export/product-stock', [ReportController::class, 'stock_export'])->name('productstock.index');
     Route::get('export/payroll', [ReportController::class, 'PayrollReportExport'])->name('payroll.export');
     Route::get('export/leave', [ReportController::class, 'LeaveReportExport'])->name('leave.export');
 

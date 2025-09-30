@@ -477,6 +477,7 @@ private function yearList()
                     $taxes = \App\Models\Utility::tax($it->tax);
                     if (!empty($taxes)) {
                         foreach ($taxes as $t) {
+                            if($t === null) continue;
                             $amount += \App\Models\Utility::taxRate($t->rate, $it->price, $it->quantity, $it->discount);
                         }
                     }
@@ -579,6 +580,7 @@ private function yearList()
                 $taxes = \App\Models\Utility::tax($it->tax);
                 if (!empty($taxes)) {
                     foreach ($taxes as $t) {
+                        if($t === null) continue;
                         $estimatesAmount += \App\Models\Utility::taxRate($t->rate, $it->price, $it->quantity, $it->discount);
                     }
                 }
