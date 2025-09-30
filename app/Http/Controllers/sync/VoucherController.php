@@ -14,7 +14,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Exports\UniversalDataTableExport;
-use Maatwebsite\Excel\Facades\Excel;
+// use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Facades\Excel as ExcelFacade;
+use Maatwebsite\Excel\Excel;
 
 class VoucherController extends Controller
 {
@@ -804,9 +806,36 @@ class VoucherController extends Controller
         ]);
     }
 
-    public function excelExport(Request $request)
+    // public function excelExport(Request $request, $format = 'pdf')
+    // {
+    //     // Validate required data
+    //     $request->validate([
+    //         'columns' => 'required|array',
+    //         'data' => 'required|array',
+    //         'pageTitle' => 'required|string',
+    //     ]);
+
+    //     $columns = $request->input('columns');
+    //     $data = collect($request->input('data'));
+    //     $pageTitle = $request->input('pageTitle');
+    //     $ReportPeriod = $request->input('ReportPeriod') ?? "";
+    //     $HeaderFooterAlignment = $request->input('HeaderFooterAlignment') ?? "";
+    //     // dd($HeaderFooterAlignment);
+
+    //     // sanitize pageTitle for filename
+    //     $sanitizedTitle = preg_replace('/[\/\\\\]+/', '_', $pageTitle);
+    //     $filename = str_replace(' ', '_', $sanitizedTitle) . '_' . now()->format('YmdHis') . '.xlsx';
+
+    //     return Excel::download(
+    //         new UniversalDataTableExport($data, $columns, $pageTitle, $ReportPeriod, $HeaderFooterAlignment),
+    //         $filename
+    //     );
+
+    // }
+
+
+    public function ExportReport(Request $request, $format = 'excel')
     {
-        // Validate required data
         $request->validate([
             'columns' => 'required|array',
             'data' => 'required|array',
@@ -818,17 +847,35 @@ class VoucherController extends Controller
         $pageTitle = $request->input('pageTitle');
         $ReportPeriod = $request->input('ReportPeriod') ?? "";
         $HeaderFooterAlignment = $request->input('HeaderFooterAlignment') ?? "";
-        // dd($HeaderFooterAlignment);
+        $format = $request->input('format', $format);
 
-        // sanitize pageTitle for filename
         $sanitizedTitle = preg_replace('/[\/\\\\]+/', '_', $pageTitle);
-        $filename = str_replace(' ', '_', $sanitizedTitle) . '_' . now()->format('YmdHis') . '.xlsx';
+        $filename = str_replace(' ', '_', $sanitizedTitle) . '_' . now()->format('YmdHis');
 
-        return Excel::download(
-            new UniversalDataTableExport($data, $columns, $pageTitle, $ReportPeriod, $HeaderFooterAlignment),
-            $filename
+        $export = new \App\Exports\UniversalDataTableExport(
+            $data,
+            $columns,
+            $pageTitle,
+            $ReportPeriod,
+            $HeaderFooterAlignment
         );
 
+        if ($format === 'pdf') {
+            $exportPdf = new \App\Exports\UniversalDataTableExportPdf(
+                $data,
+                $columns,
+                $pageTitle,
+                $ReportPeriod,
+                $HeaderFooterAlignment
+            );
+            return $exportPdf->download($filename . '.pdf');
+        }
+
+        return ExcelFacade::download(
+            $export,
+            $filename . '.xlsx',
+            Excel::XLSX
+        );
     }
 
 

@@ -1005,7 +1005,7 @@
                     columns: columns,
                     data: data,
                     pageTitle: pageTitle,
-                    ReportPeriod: $(".report-title-section .date-range")[0].textContent,
+                    ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0].textContent : "",
                     HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
                         .footerAlignment
                     ],
