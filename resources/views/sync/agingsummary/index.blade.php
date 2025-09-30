@@ -834,10 +834,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                            flex-direction: column;
-                                                                                            width: 100%;
-                                                                                            gap: 16px;
-                                                                                        } */
+                                                                                                flex-direction: column;
+                                                                                                width: 100%;
+                                                                                                gap: 16px;
+                                                                                            } */
 
             .filter-item {
                 width: 100%;
@@ -942,7 +942,8 @@
                     columns: columns,
                     data: data,
                     pageTitle: pageTitle,
-                    ReportPeriod: $(".report-title-section .date-range")[0].textContent,
+                    ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
+                        .textContent : "",
                     HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
                         .footerAlignment
                     ],

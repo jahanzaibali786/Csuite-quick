@@ -858,7 +858,7 @@ Route::group(['middleware' => ['verified']], function () {
 
 
     // Abdullah Excel Export Route
-    Route::post('/export-datatable', [VoucherController::class, 'excelExport'])->name('export.datatable');
+    Route::post('/export-datatable', [VoucherController::class, 'ExportReport'])->name('export.datatable');
 
 
     // cya routes

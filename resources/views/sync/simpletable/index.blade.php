@@ -35,6 +35,11 @@
                 <i class="fa fa-file-excel"></i> Excel
             </button>
 
+            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')" id="ExprotPDF"
+                class="d-none">
+                <i class="fa fa-file-excel"></i> Excel
+            </button>
+
 
             <div class="table-container p-2">
                 {!! $dataTable->table(['class' => 'table customer-balance-table', 'id' => 'customer-balance-table']) !!}
@@ -724,10 +729,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                    flex-direction: column;
-                                                                                                                                                    width: 100%;
-                                                                                                                                                    gap: 16px;
-                                                                                                                                                } */
+                                                                                                                                                        flex-direction: column;
+                                                                                                                                                        width: 100%;
+                                                                                                                                                        gap: 16px;
+                                                                                                                                                    } */
 
             .filter-item {
                 width: 100%;
@@ -775,20 +780,20 @@
 
     <script>
         /*$(function() {
-                                $.extend(true, $.fn.dataTable.defaults, {
-                                    dom: 'Bfrtip',
-                                    buttons: [{
-                                            extend: 'excel',
-                                            text: '<i class="fa fa-file-excel"></i> Excel',
-                                            action: function(e, dt, button, config) {
-                                                window.location = dt.ajax.url().replace('/ajax', '/excel');
-                                            }
-                                        },
-                                        {
-                                            extend: 'print',
-                                            text: '<i class="fa fa-print"></i> Print',
-                                            title: '{{ $pageTitle ?? 'Report' }}',
-                                            messageTop: `
+                                    $.extend(true, $.fn.dataTable.defaults, {
+                                        dom: 'Bfrtip',
+                                        buttons: [{
+                                                extend: 'excel',
+                                                text: '<i class="fa fa-file-excel"></i> Excel',
+                                                action: function(e, dt, button, config) {
+                                                    window.location = dt.ajax.url().replace('/ajax', '/excel');
+                                                }
+                                            },
+                                            {
+                                                extend: 'print',
+                                                text: '<i class="fa fa-print"></i> Print',
+                                                title: '{{ $pageTitle ?? 'Report' }}',
+                                                messageTop: `
                         <div style="text-align:center; font-size:16px; font-weight:bold;">
                             {{ $pageTitle }}
                         </div>
@@ -799,14 +804,14 @@
                             Prepared at: {{ now()->format('F j, Y g:i A') }}
                         </div>
                     `
-                                        }
-                                    ]
-                                });
-                            });*/
+                                            }
+                                        ]
+                                    });
+                                });*/
 
         let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        function exportDataTable(tableId, pageTitle) {
+        function exportDataTable(tableId, pageTitle, format = "excel") {
             let table = $('#' + tableId).DataTable();
 
             // Only get visible columns (skip auto-index)
@@ -842,6 +847,7 @@
                     columns: columns,
                     data: data,
                     pageTitle: pageTitle,
+                    format: format,
                     _token: '{{ csrf_token() }}'
                 },
                 xhrFields: {
@@ -1581,7 +1587,8 @@
                         $("#ExprotExcel").click();
                         break;
                     case '2':
-                        alert('PDF export would be triggered');
+                        $("#ExprotPDF").click();
+                        //alert('PDF export would be triggered');
                         break;
                     case '3':
                         alert('CSV export would be triggered');
