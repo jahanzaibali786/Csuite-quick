@@ -37,9 +37,9 @@ class UniversalDataTableExportPdf
         $html = '<html><head><style>
             body { font-family: DejaVu Sans, sans-serif; font-size:12px; }
             h1 { text-align: ' . $this->headerFooterAlignment[0] . '; font-size:24px; margin-bottom:5px; }
-            h2 { text-align: ' . $this->headerFooterAlignment[0] . '; font-size:14px; margin-top:0; color:#555; }
+            .report-period { text-align: ' . $this->headerFooterAlignment[0] . '; font-size:11px; margin-top:0; color:#555; }
             table { width:100%; border-collapse:collapse; margin-top:15px; }
-            th, td { border:1px solid #ccc; padding:6px 8px; }
+            th, td { border:0px solid #ccc; border-bottom: 1px solid #f3f4f6; padding:6px 8px; }
             th { background:#f1f1f1; font-weight:bold; text-align:center; }
             tr.bold td { font-weight:bold; }
             .footer { margin-top:30px; text-align: ' . $this->headerFooterAlignment[1] . '; font-size:11px; color:#6B7280; }
@@ -48,7 +48,7 @@ class UniversalDataTableExportPdf
         // Title + period
         $html .= "<h1>{$this->pageTitle}</h1>";
         if (!empty($this->reportPeriod)) {
-            $html .= "<h2>{$this->reportPeriod}</h2>";
+            $html .= "<p class='report-period'>{$this->reportPeriod}</p>";
         }
 
         // Table
@@ -64,7 +64,12 @@ class UniversalDataTableExportPdf
 
             foreach ($row as $cell) {
                 $val = trim($cell);
-                if (stripos($val, 'subtotal') !== false || stripos($val, 'total') !== false) {
+                if (
+                    stripos($val, 'subtotal') !== false ||
+                    stripos($val, 'total') !== false ||
+                    strpos($val, '▶') !== false ||
+                    strpos($val, '▼') !== false
+                ) {
                     $isBold = true;
                 }
                 $rowHtml .= '<td>' . htmlspecialchars($val) . '</td>';

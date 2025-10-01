@@ -17,6 +17,47 @@
             </div>
         </div>
 
+
+        <!-- Bootstrap Modal -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content p-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Choose Export Format</h5> <button type="button" class="btn-close"
+                            data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center row">
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('aging-summary-table', '{{ $pageTitle }}')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="excel">Export to
+                                Excel</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('aging-summary-table', '{{ $pageTitle }}', 'pdf')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="pdf">Export to
+                                PDF</button>
+                        </div>
+                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Show modal on export button click
+            $('.btn-icon[title="Export"]').on('click', function() {
+                $('#exportModal').modal('show');
+            });
+
+            // Handle export actions
+            $('#exportModal button[data-action]').on('click', function() {
+                // Hide modal after action
+                $('#exportModal').modal('hide');
+            });
+        </script>
+
         <!-- Filter Controls -->
         <div class="filter-controls">
             <div class="filter-row">
@@ -178,6 +219,11 @@
 
                         <button onclick="exportDataTable('aging-summary-table', '{{ $pageTitle }}')" id="ExprotExcel"
                             class="d-none">
+                            <i class="fa fa-file-excel"></i> Excel
+                        </button>
+
+                        <button onclick="exportDataTable('aging-summary-table', '{{ $pageTitle }}', 'pdf')"
+                            id="ExprotPDF" class="d-none">
                             <i class="fa fa-file-excel"></i> Excel
                         </button>
 
@@ -834,10 +880,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                flex-direction: column;
-                                                                                                width: 100%;
-                                                                                                gap: 16px;
-                                                                                            } */
+                                                                                                                flex-direction: column;
+                                                                                                                width: 100%;
+                                                                                                                gap: 16px;
+                                                                                                            } */
 
             .filter-item {
                 width: 100%;
@@ -884,7 +930,7 @@
 
         console.log([window.Header, window.footerAlignment])
 
-        function exportDataTable(tableId, pageTitle) {
+        function exportDataTable(tableId, pageTitle, format = 'excel') {
             let table = $('#' + tableId).DataTable();
             console.log(tableId, table, pageTitle)
 
@@ -947,6 +993,7 @@
                     HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
                         .footerAlignment
                     ],
+                    format: format,
                     _token: '{{ csrf_token() }}'
                 },
                 xhrFields: {
@@ -1597,7 +1644,7 @@
             });
 
             // Export functionality
-            $('.btn-icon[title="Export"]').on('click', function() {
+            /*$('.btn-icon[title="Export"]').on('click', function() {
                 // Create export menu
                 const exportOptions = [{
                         text: 'Export to Excel',
@@ -1623,11 +1670,12 @@
 
                 switch (option) {
                     case '1':
-                        //alert('Excel export would be triggered');
+                        // alert('Excel export would be triggered');
                         $("#ExprotExcel").click();
                         break;
                     case '2':
-                        alert('PDF export would be triggered');
+                        $("#ExprotPDF").click();
+                        // alert('PDF export would be triggered');
                         break;
                     case '3':
                         alert('CSV export would be triggered');
@@ -1635,7 +1683,7 @@
                     default:
                         alert('Invalid option');
                 }
-            });
+            });*/
 
             // View options functionality
             $('#view-options-btn').on('click', function() {
