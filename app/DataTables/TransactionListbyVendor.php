@@ -87,8 +87,8 @@ class TransactionListByVendor extends DataTable
         // Grand total row
         $finalData->push((object) [
             'transaction_date' => '',
-            'transaction_type' => '',
-            'transaction' => 'Grand Total',
+            'transaction_type' => 'Grand Total',
+            'transaction' => '',
             'posting_status' => '',
             'memo' => '',
             'account_full_name' => '',
@@ -197,9 +197,9 @@ class TransactionListByVendor extends DataTable
             Column::make('transaction_date')->title('Date'),
             Column::make('transaction_type')->title('Transaction Type'),
             Column::make('transaction')->title('Transaction'),
-            Column::make('posting_status')->title('Posting Y/N'),
+            Column::make('posting_status')->title('Posting Y/N')->addClass('default-hidden'),
             Column::make('memo')->title('Memo / Description'),
-            Column::make('account_full_name')->title('Account Full Name'),
+            Column::make('account_full_name')->title('Account Full Name')->addClass('default-hidden'),
             Column::make('amount')->title('Amount'),
         ];
     }

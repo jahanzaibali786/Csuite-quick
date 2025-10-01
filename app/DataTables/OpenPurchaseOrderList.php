@@ -201,7 +201,7 @@ class OpenPurchaseOrderList extends DataTable
             Column::make('transaction_date')->title('Date'),
             Column::make('transaction')->title('Transaction'),
             Column::make('memo')->title('Memo / Description'),
-            Column::make('ship_via')->title('Ship Via'),
+            Column::make('ship_via')->title('Ship Via')->addClass('default-hidden'),
             Column::make('amount')->title('Amount'),
             Column::make('open_balance')->title('PO Open Balance'),
         ];

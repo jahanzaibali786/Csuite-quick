@@ -23,9 +23,9 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
             if (isset($row['id']))
                 unset($row['id']);
 
-            foreach ($row as $key => $value) {
-                $row[$key] = trim(str_replace('▼', '', strip_tags($value)));
-            }
+            // foreach ($row as $key => $value) {
+                // $row[$key] = trim(str_replace('▼', '', strip_tags($value)));
+            // }
 
             return $row;
         });
@@ -129,7 +129,12 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
                     $isBoldRow = false;
                     foreach (range(1, $columnCount) as $colIndex) {
                         $cellValue = trim($sheet->getCellByColumnAndRow($colIndex, $row)->getValue());
-                        if (stripos($cellValue, 'subtotal') !== false || stripos($cellValue, 'total') !== false) {
+                        if (
+                            stripos($cellValue, 'subtotal') !== false ||
+                            stripos($cellValue, 'total') !== false ||
+                            strpos($cellValue, '▶') !== false ||
+                            strpos($cellValue, '▼') !== false
+                        ) {
                             $isBoldRow = true;
                         }
                         if ($colIndex === 1 && !empty($cellValue)) {
