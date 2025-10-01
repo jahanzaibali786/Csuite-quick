@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\DataTables\CustomerContactListDataTable;
+use App\DataTables\CustomerContactListPhoneNumbersDataTable;
 use App\Exports\CustomerExport;
 use App\Imports\CustomerImport;
 use App\Models\Customer;
@@ -26,6 +28,74 @@ use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
+
+public function contactList(
+    CustomerContactListDataTable $dataTable,
+    \Illuminate\Http\Request $request
+) {
+    if (!\Auth::user()->can('manage customer')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user    = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    $pageTitle = __('Customer Contact List');
+
+    $filter = [
+        'selectedCustomerName' => $request->get('customer_name', ''),
+    ];
+
+    // NEW: all active customer names for the dropdown
+    $customers = \App\Models\Customer::query()
+        ->where($column, $ownerId)
+        ->where('is_active', 1)
+        ->whereNotNull('name')
+        ->orderBy('name')
+        ->pluck('name')
+        ->unique()
+        ->values();
+
+    return $dataTable->render(
+        'customer.contactList',
+        compact('pageTitle', 'user', 'filter', 'customers')
+    );
+}
+public function contactListPhoneNumbers(
+    CustomerContactListPhoneNumbersDataTable $dataTable,
+    \Illuminate\Http\Request $request
+) {
+    if (!\Auth::user()->can('manage customer')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user    = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    $pageTitle = __('Customer Phone List');
+
+    $filter = [
+        'selectedCustomerName' => $request->get('customer_name', ''),
+    ];
+
+    // NEW: all active customer names for the dropdown
+    $customers = \App\Models\Customer::query()
+        ->where($column, $ownerId)
+        ->where('is_active', 1)
+        ->whereNotNull('name')
+        ->orderBy('name')
+        ->pluck('name')
+        ->unique()
+        ->values();
+
+    return $dataTable->render(
+        'customer.contactList',
+        compact('pageTitle', 'user', 'filter', 'customers')
+    );
+}
+
 
     public function dashboard()
     {

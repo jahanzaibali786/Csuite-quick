@@ -212,7 +212,7 @@ class InvoiceController extends Controller
                     $invoiceProduct->product_id = $products[$i]['item'];
                     $invoiceProduct->quantity = $products[$i]['quantity'];
                     $invoiceProduct->tax = $products[$i]['tax'];
-    //                $invoiceProduct->discount    = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+                      // $invoiceProduct->discount    = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
                     $invoiceProduct->discount = $products[$i]['discount'];
                     $invoiceProduct->price = $products[$i]['price'];
                     $invoiceProduct->description = $products[$i]['description'];
@@ -245,6 +245,12 @@ class InvoiceController extends Controller
                     if (isset($setting['twilio_invoice_notification']) && $setting['twilio_invoice_notification'] == 1) {
                         Utility::send_twilio_msg($customer->contact, 'new_invoice', $invoiceNotificationArr);
                     }
+
+                    $type = 'invoice';
+                    $type_id = $invoice->id;
+                    $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                    Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
+
 
                 }
                     $data['id'] = $invoice->id;
@@ -356,11 +362,11 @@ class InvoiceController extends Controller
                     }
                 }
                 //Product Stock Report
-                $type = 'invoice';
-                $type_id = $invoice->id;
-                StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
-                $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
-                Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
+                // $type = 'invoice';
+                // $type_id = $invoice->id;
+                // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+                // $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                // Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
 
                 //webhook
                 $module = 'New Invoice';
@@ -447,11 +453,12 @@ class InvoiceController extends Controller
                 $voucher = JournalEntry::where('category', 'Invoice')->where('reference_id', $invoice->id)->where('voucher_type', 'JV')->first();
                 $products = $request->items;
                 $reciveable = 0;
+                StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+                // dd('noman');
                 for ($i = 0; $i < count($products); $i++) {
                     $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
                     $tax = 0;
                     if ($invoiceProduct == null) {
-
                         $invoiceProduct = new InvoiceProduct();
                         $invoiceProduct->invoice_id = $invoice->id;
                         $invoiceProduct->product_id = $products[$i]['item'];
@@ -546,27 +553,36 @@ class InvoiceController extends Controller
                                 Utility::addTransactionLines($dataline , 'create');
                             }
                         }
-
+                        
                         Utility::total_quantity('minus', $products[$i]['quantity'], $products[$i]['item']);
-
+                         $type = 'invoice';
+                        $type_id = $invoice->id;
+                        // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+                        $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                        if (empty($products[$i]['id'])) {
+                            Utility::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
+                        }
                         $updatePrice = ($products[$i]['price'] * $products[$i]['quantity']) + ($products[$i]['itemTaxPrice']) - ($products[$i]['discount']);
                         Utility::updateUserBalance('customer', $request->customer_id, $updatePrice, 'credit');
-                    } else {
 
+                    } else {
+                        
                         $invoiceProduct->quantity = $products[$i]['quantity'];
                         $invoiceProduct->tax = $products[$i]['tax'];
                         $invoiceProduct->discount = $products[$i]['discount'];
                         $invoiceProduct->price = $products[$i]['price'];
                         $invoiceProduct->description = $products[$i]['description'];
                         $invoiceProduct->save();
+                        if($voucher){
 
-                        $journalItem = JournalItem::where('journal', $voucher->id)->where('product_ids', $invoiceProduct->id)->first();
-                        $journalItem->credit       = ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount']));
-                        $journalItem->save(); 
-                        // also update transaction lines
-                        $transaction_line = TransactionLines::where('reference_id',$invoice->voucher_id)->where('product_id',$invoice->id)->where('reference','Invoice Journal')->where('product_item_id',$invoiceProduct->id)->where('product_type','Invoice')->first();
-                        $transaction_line->credit = $journalItem->credit;
-                        $transaction_line->save();
+                            $journalItem = JournalItem::where('journal', $voucher->id)->where('product_ids', $invoiceProduct->id)->first();
+                            $journalItem->credit       = ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount']));
+                            $journalItem->save(); 
+                            // also update transaction lines
+                            $transaction_line = TransactionLines::where('reference_id',$invoice->voucher_id)->where('product_id',$invoice->id)->where('reference','Invoice Journal')->where('product_item_id',$invoiceProduct->id)->where('product_type','Invoice')->first();
+                            $transaction_line->credit = $journalItem->credit;
+                            $transaction_line->save();
+                        }
 
                         $tax += floatval($products[$i]['itemTaxPrice']);
                         $reciveable += ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount'])) + floatval($products[$i]['itemTaxPrice']);
@@ -581,8 +597,12 @@ class InvoiceController extends Controller
                             $transaction_tax->credit = $journal_tax->credit;
                             $transaction_tax->save();
                         }
-
                         Utility::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
+                        //Product Stock Report
+                        $type = 'invoice';
+                        $type_id = $invoice->id;
+                        $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                        Utility::addProductStock($invoiceProduct->product_id, $products[$i]['quantity'], $type, $description, $type_id);
 
                     }
 
@@ -615,14 +635,16 @@ class InvoiceController extends Controller
                         Utility::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
                     }
 
-                    //Product Stock Report
-                    $type = 'invoice';
-                    $type_id = $invoice->id;
-                    StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
-                    $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
-                    if (empty($products[$i]['id'])) {
-                        Utility::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
-                    }
+                    // //Product Stock Report
+                    // $type = 'invoice';
+                    // $type_id = $invoice->id;
+                    // // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+                    // $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                    // if (!empty($products[$i]['id'])) {
+                    //     dd($products, $products[$i]);
+                    //     Utility::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
+                    // }
+
 
                 }
 
@@ -771,6 +793,8 @@ class InvoiceController extends Controller
                 {
                     $invoice = Invoice::find($invoiceProduct->invoice_id);
                     $productService = ProductService::find($invoiceProduct->product_id);
+                    StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id', '=', $invoiceProduct->product_id)->delete();
+                    Utility::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
 
                     Utility::updateUserBalance('customer', $invoice->customer_id, $request->amount, 'debit');
 

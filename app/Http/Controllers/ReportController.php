@@ -3,6 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\DataTables\SalesbyCustomerTypeDetailDataTable;
+use App\DataTables\SalesByCustomerSummaryDataTable;
+use App\DataTables\SalesByCustomerDetailDataTable;
+use App\DataTables\DepositDetailDataTable;
+use App\DataTables\TaxableSalesSummaryDataTable;
+use App\DataTables\TaxableSalesDetailDataTable;
 use App\DataTables\GeneralLedgerListDataTable;
 use App\Exports\AccountStatementExport;
 use App\Exports\BalanceSheetExport;
@@ -32,6 +37,7 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Invoice;
 use App\Models\InvoiceProduct;
+use App\Models\InvoicePayment;
 use App\Models\Lead;
 use App\Models\Leave;
 use App\Models\LeaveType;
@@ -40,6 +46,7 @@ use App\Models\PaySlip;
 use App\Models\Pipeline;
 use App\Models\Pos;
 use App\Models\ProductServiceCategory;
+use App\Models\ProductService;
 use App\Models\Purchase;
 use App\Models\Revenue;
 use App\Models\Source;
@@ -53,7 +60,6 @@ use App\Models\UserDeal;
 use App\Models\Utility;
 use App\Models\Vender;
 use App\Models\warehouse;
-use App\Models\InvoicePayment;
 use App\Models\WarehouseProduct;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -5125,6 +5131,10 @@ class ReportController extends Controller
 
     public function SalesbyCustomerTypeDetailReport(SalesbyCustomerTypeDetailDataTable $dataTable, Request $request)
     {
+        if (!\Auth::user()->can('manage report')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+
         if (!empty($request->start_date) && !empty($request->end_date)) {
             $start = $request->start_date;
             $end   = $request->end_date;
@@ -5133,7 +5143,15 @@ class ReportController extends Controller
             $end   = date('Y-m-d');   // today
         }
 
-        // 🔹 Invoice Items
+        // 🔹 Filter values for Blade
+        $filter['startDateRange'] = $start;
+        $filter['endDateRange']   = $end;
+        $filter['accountingMethod'] = $request->get('accounting_method', 'accrual');
+
+        // Get user for the view
+        $user = \Auth::user();
+
+        // 🔹 Invoice Items for display summary
         $invoiceItems = InvoiceProduct::select(
             'product_services.name',
             \DB::raw('sum(invoice_products.quantity) as quantity'),
@@ -5148,124 +5166,256 @@ class ReportController extends Controller
             ->get()
             ->toArray();
 
-        // 🔹 Invoice Customers
-        $invoiceCustomeres = Invoice::select(
-            'customers.name',
-            \DB::raw('count(DISTINCT invoices.customer_id, invoice_products.invoice_id) as invoice_count')
-        )
-            ->selectRaw('sum((invoice_products.price * invoice_products.quantity) - invoice_products.discount) as price')
-            ->selectRaw('(SELECT SUM((price * quantity - discount) * (taxes.rate / 100)) 
-                      FROM invoice_products
-                      LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                      WHERE invoice_products.invoice_id = invoices.id) as total_tax')
-            ->leftJoin('customers', 'customers.id', 'invoices.customer_id')
-            ->leftJoin('invoice_products', 'invoice_products.invoice_id', 'invoices.id')
-            ->where('invoices.created_by', \Auth::user()->creatorId())
-            ->whereBetween(\DB::raw('DATE(invoices.issue_date)'), [$start, $end])
-            ->groupBy('invoices.invoice_id')
-            ->get()
-            ->toArray();
-
-        $mergedArray = [];
-        foreach ($invoiceCustomeres as $item) {
-            $name = $item["name"];
-            if (!isset($mergedArray[$name])) {
-                $mergedArray[$name] = [
-                    "name" => $name,
-                    "invoice_count" => 0,
-                    "price" => 0.0,
-                    "total_tax" => 0.0,
-                ];
-            }
-            $mergedArray[$name]["invoice_count"] += $item["invoice_count"];
-            $mergedArray[$name]["price"] += $item["price"];
-            $mergedArray[$name]["total_tax"] += $item["total_tax"];
-        }
-        $invoiceCustomers = array_values($mergedArray);
-
-        // 🔹 Filter values for Blade
-        $filter['startDateRange'] = $start;
-        $filter['endDateRange']   = $end;
-
-        // 🔹 Apply same filters to raw models
-        $transactions = Transaction::whereBetween(\DB::raw('DATE(date)'), [$start, $end])->get()->toArray();
-        $Invoice = Invoice::whereBetween(\DB::raw('DATE(issue_date)'), [$start, $end])->get()->toArray();
-        $InvoiceProduct = InvoiceProduct::whereBetween(\DB::raw('DATE(created_at)'), [$start, $end])->get()->toArray();
-        $InvoicePayment = InvoicePayment::whereBetween(\DB::raw('DATE(date)'), [$start, $end])->get()->toArray();
-
-        // ✅ Normalize for Blade
-        $normalizedCustomers = [];
-
-        foreach ($transactions as $transaction) {
-            $normalizedCustomers[] = [
-                'type'            => $transaction['type'] ?? 'Transaction',
-                'date'            => $transaction['date'] ?? '',
-                'invoice_number'  => $transaction['payment_id'] ?? '',
-                'memo'            => $transaction['description'] ?? '',
-                'name'            => $transaction['user_type'] === 'Customer' ? 'Customer #' . ($transaction['user_id'] ?? '') : '',
-                'quantity'        => '',
-                'sales_price'     => '',
-                'amount'          => $transaction['amount'] ?? '',
-                'balance'         => '',
-                'sales_with_tax'  => '',
-            ];
-        }
-
-        foreach ($Invoice as $invoice) {
-            $normalizedCustomers[] = [
-                'type'            => 'Invoice',
-                'date'            => $invoice['issue_date'] ?? '',
-                'invoice_number'  => $invoice['ref_number'] ?? '',
-                'memo'            => 'Invoice Ref #' . ($invoice['ref_number'] ?? ''),
-                'name'            => 'Customer #' . ($invoice['customer_id'] ?? ''),
-                'quantity'        => '',
-                'sales_price'     => '',
-                'amount'          => '',
-                'balance'         => '',
-                'sales_with_tax'  => '',
-            ];
-        }
-
-        foreach ($InvoiceProduct as $product) {
-            $normalizedCustomers[] = [
-                'type'            => 'InvoiceProduct',
-                'date'            => $product['created_at'] ?? '',
-                'invoice_number'  => $product['invoice_id'] ?? '',
-                'memo'            => $product['description'] ?? '',
-                'name'            => '',
-                'quantity'        => $product['quantity'] ?? '',
-                'sales_price'     => $product['price'] ?? '',
-                'amount'          => $product['price'] ?? '',
-                'balance'         => '',
-                'sales_with_tax'  => '',
-            ];
-        }
-
-        foreach ($InvoicePayment as $payment) {
-            $normalizedCustomers[] = [
-                'type'            => 'InvoicePayment',
-                'date'            => $payment['date'] ?? '',
-                'invoice_number'  => $payment['invoice_id'] ?? '',
-                'memo'            => $payment['description'] ?? '',
-                'name'            => '',
-                'quantity'        => '',
-                'sales_price'     => '',
-                'amount'          => $payment['amount'] ?? '',
-                'balance'         => '',
-                'sales_with_tax'  => '',
-            ];
-        }
-
-        // Merge normalized data with original invoiceCustomers
-        $invoiceCustomers = array_merge($invoiceCustomers, $normalizedCustomers);
-
-        // return view('report.salesbyCustomerTypeDetail', compact('filter', 'invoiceItems', 'invoiceCustomers'));
-        return $dataTable->render('report.salesbyCustomerTypeDetail', compact('filter', 'invoiceItems'));
+        return $dataTable->render('report.salesbyCustomerTypeDetail', compact('filter', 'invoiceItems', 'user'));
     }
+
+    public function SalesByCustomerSummary(
+        SalesByCustomerSummaryDataTable $dataTable,
+        Request $request
+    ) {
+        if (!\Auth::user()->can('manage invoice')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
     
+        $user    = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $column  = ($user->type === 'company') ? 'created_by' : 'owned_by';
+    
+        // Resolve date range (default = Jan 1 current year .. today)
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $start = $request->start_date;
+            $end   = $request->end_date;
+        } else {
+            $start = date('Y-01-01');
+            $end   = date('Y-m-d');
+        }
+    
+        $pageTitle = __('Sales by Customer Summary');
+    
+        $filter = [
+            'startDateRange' => $start,
+            'endDateRange'   => $end,
+        ];
 
+        // Get customers for filter dropdown
+        $customers = Customer::where('created_by', $ownerId)
+            ->orderBy('name', 'asc')
+            ->pluck('name')
+            ->unique()
+            ->values();
 
+        // Debug data availability
+        $debugInfo = [
+            'customers_count' => Customer::where('created_by', $ownerId)->count(),
+            'invoices_count' => Invoice::where('created_by', $ownerId)->count(),
+            'invoice_products_count' => InvoiceProduct::whereHas('invoice', function($q) use ($ownerId) {
+                $q->where('created_by', $ownerId);
+            })->count(),
+            'sample_customers' => Customer::where('created_by', $ownerId)->limit(3)->pluck('name'),
+            'sample_invoices' => Invoice::where('created_by', $ownerId)
+                ->whereBetween('issue_date', [$start, $end])
+                ->limit(3)->pluck('id'),
+        ];
+    
+        // Debug: Log request details
+        \Log::info('SalesByCustomerSummary Controller Debug', [
+            'user_id' => $user->id,
+            'user_type' => $user->type,
+            'owner_id' => $ownerId,
+            'column' => $column,
+            'start_date' => $start,
+            'end_date' => $end,
+            'customers_count' => $customers->count(),
+            'request_params' => $request->all(),
+            'debug_info' => $debugInfo
+        ]);
+        
+        // Pass filters to the DataTable ajax so query() can read request('...')
+        $dataTable = $dataTable->with([
+            'start_date' => $start,
+            'end_date'   => $end,
+        ]);
+    
+        // Make ownership available to the DT via request() too
+        request()->merge([
+            'owner_id'    => $ownerId,
+            'owner_column'=> $column,
+        ]);
+    
+        return $dataTable->render(
+            'report.salesByCustomerSummary',
+            compact('pageTitle', 'filter', 'customers')
+        );
+    }
 
+    public function SalesByCustomerDetail(
+        SalesByCustomerDetailDataTable $dataTable,
+        Request $request
+    ) {
+        if (!\Auth::user()->can('manage invoice')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    
+        $user    = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $column  = ($user->type === 'company') ? 'created_by' : 'owned_by';
+    
+        // Resolve date range (default = Jan 1 current year .. today)
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $start = $request->start_date;
+            $end   = $request->end_date;
+        } else {
+            $start = date('Y-01-01');
+            $end   = date('Y-m-d');
+        }
+    
+        $pageTitle = __('Sales by Customer Detail');
+    
+        $filter = [
+            'startDateRange' => $start,
+            'endDateRange'   => $end,
+            'selectedCustomerName' => $request->get('customer_name', ''),
+            'accountingMethod' => $request->get('accounting_method', 'accrual'),
+        ];
+
+        // Get customers for filter dropdown
+        $customers = Customer::where('created_by', $ownerId)
+            ->orderBy('name', 'asc')
+            ->pluck('name')
+            ->unique()
+            ->values();
+
+        // Debug data availability
+        $debugInfo = [
+            'customers_count' => Customer::where('created_by', $ownerId)->count(),
+            'invoices_count' => Invoice::where('created_by', $ownerId)->count(),
+            'invoice_products_count' => InvoiceProduct::whereHas('invoice', function($q) use ($ownerId) {
+                $q->where('created_by', $ownerId);
+            })->count(),
+            'sample_customers' => Customer::where('created_by', $ownerId)->limit(3)->pluck('name'),
+            'sample_invoices' => Invoice::where('created_by', $ownerId)
+                ->whereBetween('issue_date', [$start, $end])
+                ->limit(3)->pluck('id'),
+        ];
+    
+        // Debug: Log request details
+        \Log::info('SalesByCustomerDetail Controller Debug', [
+            'user_id' => $user->id,
+            'user_type' => $user->type,
+            'owner_id' => $ownerId,
+            'column' => $column,
+            'start_date' => $start,
+            'end_date' => $end,
+            'customers_count' => $customers->count(),
+            'request_params' => $request->all(),
+            'debug_info' => $debugInfo
+        ]);
+        
+        // Pass filters to the DataTable ajax so query() can read request('...')
+        $dataTable = $dataTable->with([
+            'start_date' => $start,
+            'end_date'   => $end,
+        ]);
+    
+        // Make ownership available to the DT via request() too
+        request()->merge([
+            'owner_id'    => $ownerId,
+            'owner_column'=> $column,
+        ]);
+    
+        return $dataTable->render(
+            'report.salesByCustomerDetail',
+            compact('pageTitle', 'filter', 'customers')
+        );
+    }
+
+    public function DepositDetail(
+        DepositDetailDataTable $dataTable,
+        Request $request
+    ) {
+        if (!\Auth::user()->can('manage invoice')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    
+        $user    = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $column  = ($user->type === 'company') ? 'created_by' : 'owned_by';
+    
+        // Resolve date range (default = Jan 1 current year .. today)
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $start = $request->start_date;
+            $end   = $request->end_date;
+        } else {
+            $start = date('Y-01-01');
+            $end   = date('Y-m-d');
+        }
+    
+        $pageTitle = __('Deposit Detail');
+    
+        $filter = [
+            'startDateRange' => $start,
+            'endDateRange'   => $end,
+            'selectedCustomerName' => $request->get('customer_name', ''),
+            'selectedVendorName' => $request->get('vendor_name', ''),
+            'accountingMethod' => $request->get('accounting_method', 'accrual'),
+        ];
+
+        // Get customers for filter dropdown
+        $customers = Customer::where('created_by', $ownerId)
+            ->orderBy('name', 'asc')
+            ->pluck('name')
+            ->unique()
+            ->values();
+
+        // Get vendors for filter dropdown
+        $vendors = Vender::where('created_by', $ownerId)
+            ->orderBy('name', 'asc')
+            ->pluck('name')
+            ->unique()
+            ->values();
+
+        // Debug data availability
+        $debugInfo = [
+            'customers_count' => Customer::where('created_by', $ownerId)->count(),
+            'vendors_count' => Vender::where('created_by', $ownerId)->count(),
+            'invoice_payments_count' => InvoicePayment::whereHas('invoice', function($q) use ($ownerId) {
+                $q->where('created_by', $ownerId);
+            })->count(),
+            'revenues_count' => Revenue::where('created_by', $ownerId)->count(),
+            'sample_customers' => Customer::where('created_by', $ownerId)->limit(3)->pluck('name'),
+        ];
+    
+        // Debug: Log request details
+        \Log::info('DepositDetail Controller Debug', [
+            'user_id' => $user->id,
+            'user_type' => $user->type,
+            'owner_id' => $ownerId,
+            'column' => $column,
+            'start_date' => $start,
+            'end_date' => $end,
+            'customers_count' => $customers->count(),
+            'vendors_count' => $vendors->count(),
+            'request_params' => $request->all(),
+            'debug_info' => $debugInfo
+        ]);
+        
+        // Pass filters to the DataTable ajax so query() can read request('...')
+        $dataTable = $dataTable->with([
+            'start_date' => $start,
+            'end_date'   => $end,
+        ]);
+    
+        // Make ownership available to the DT via request() too
+        request()->merge([
+            'owner_id'    => $ownerId,
+            'owner_column'=> $column,
+        ]);
+    
+        return $dataTable->render(
+            'report.depositDetail',
+            compact('pageTitle', 'filter', 'customers', 'vendors')
+        );
+    }
 
     public function salesReport(Request $request)
     {
@@ -5812,4 +5962,104 @@ class ReportController extends Controller
     {
         return view('allReports.reports');
     }
+
+    /**
+     * Taxable Sales Summary Report
+     * 
+     * This report shows the total sales of taxable products and services
+     * with a breakdown by product/service name.
+     */
+public function taxableSalesSummary(TaxableSalesSummaryDataTable $dataTable, Request $request)
+{
+    if (!\Auth::user()->can('manage product & service')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user    = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    $pageTitle = __('Taxable Sales Summary');
+
+    $customers = Customer::where($column, $ownerId)
+        ->where('is_active', 1)
+        ->whereNotNull('name')
+        ->orderBy('name')
+        ->pluck('name')
+        ->unique()
+        ->values();
+
+    $categories = ProductServiceCategory::where($column, $ownerId)
+        ->where('type', 'product & service')
+        ->orderBy('name')
+        ->pluck('name', 'id')
+        ->prepend(__('All Categories'), '');
+
+    $types = array_merge(['' => __('All Types')], ProductService::$types);
+
+    $filter = [
+        'selectedCustomerName' => $request->get('customer_name', ''),
+        'selectedCategory'     => $request->get('category', ''),
+        'selectedType'         => $request->get('type', ''),
+        'selectedProductName'  => $request->get('product_name', ''),
+        'reportPeriod'         => $request->get('report_period', 'all_dates'),
+        'startDateRange'       => $request->get('start_date', ''),
+        'endDateRange'         => $request->get('end_date', ''),
+        'accountingMethod'     => $request->get('accounting_method', 'accrual'),
+    ];
+
+    return $dataTable->render('report.taxable_sales_summary', compact(
+        'pageTitle', 'customers', 'categories', 'types', 'user', 'filter'
+    ));
+}
+
+    /**
+     * Taxable Sales Summary Report
+     * 
+     * This report shows the total sales of taxable products and services
+     * with a breakdown by product/service name.
+     */
+public function taxableSalesDetail(TaxableSalesDetailDataTable $dataTable, Request $request)
+{
+    if (!\Auth::user()->can('manage product & service')) {
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
+    $user    = \Auth::user();
+    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    $pageTitle = __('Taxable Sales Detail');
+
+    $customers = Customer::where($column, $ownerId)
+        ->where('is_active', 1)
+        ->whereNotNull('name')
+        ->orderBy('name')
+        ->pluck('name')
+        ->unique()
+        ->values();
+
+    $categories = ProductServiceCategory::where($column, $ownerId)
+        ->where('type', 'product & service')
+        ->orderBy('name')
+        ->pluck('name', 'id')
+        ->prepend(__('All Categories'), '');
+
+    $types = array_merge(['' => __('All Types')], ProductService::$types);
+
+    $filter = [
+        'selectedCustomerName' => $request->get('customer_name', ''),
+        'selectedCategory'     => $request->get('category', ''),
+        'selectedType'         => $request->get('type', ''),
+        'selectedProductName'  => $request->get('product_name', ''),
+        'reportPeriod'         => $request->get('report_period', 'all_dates'),
+        'startDateRange'       => $request->get('start_date', ''),
+        'endDateRange'         => $request->get('end_date', ''),
+        'accountingMethod'     => $request->get('accounting_method', 'accrual'),
+    ];
+
+    return $dataTable->render('report.taxable_sales_detail', compact(
+        'pageTitle', 'customers', 'categories', 'types', 'user', 'filter'
+    ));
+}
 }
