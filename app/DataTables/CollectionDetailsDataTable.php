@@ -269,11 +269,11 @@ class CollectionDetailsDataTable extends DataTable
             Column::make('issue_date')->title('Date'),   // 👈 added
             Column::make('transaction')->title('Transaction'),
             Column::make('type')->title('Type'),
-            Column::make('status_label')->title('Status'),
+            Column::make('status_label')->title('Status')->addClass('default-hidden'),
             Column::make('due_date')->title('Due Date'), // 👈 moved here
             Column::make('past_due')->title('Past Due'),
             Column::make('total_amount')->title('Amount'),
-            // Column::make('balance_due')->title('Balance Due'),
+            Column::make('balance_due')->title('Balance Due')->addClass('default-hidden'),
             Column::make('open_balance')->title('Open Balance'),
 
         ];

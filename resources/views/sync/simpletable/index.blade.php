@@ -10,12 +10,54 @@
                 <div class="actions">
                     <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
                     <button class="btn btn-icon" title="Print"><i class="fa fa-print"></i></button>
-                    <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
+                    <button class="btn btn-icon" type="button" data-toggle="modal" data-target="#exampleModal"
+                        title="Export">
+                        <i class="fa fa-external-link-alt"></i>
+                    </button>
                     <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
                     <button class="btn btn-success btn-save">Save As</button>
                 </div>
             </div>
         </div>
+
+        <!-- Bootstrap Modal -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content p-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Choose Export Format</h5> <button type="button" class="btn-close"
+                            data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center row">
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center" data-action="excel">Export to
+                                Excel</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center" data-action="pdf">Export to
+                                PDF</button>
+                        </div>
+                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Show modal on export button click
+            $('.btn-icon[title="Export"]').on('click', function() {
+                $('#exportModal').modal('show');
+            });
+
+            // Handle export actions
+            $('#exportModal button[data-action]').on('click', function() {
+                // Hide modal after action
+                $('#exportModal').modal('hide');
+            });
+        </script>
+
 
         <!-- Report Content -->
         <div class="report-content">
@@ -729,10 +771,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                        flex-direction: column;
-                                                                                                                                                        width: 100%;
-                                                                                                                                                        gap: 16px;
-                                                                                                                                                    } */
+                                                                                                                                                                                                flex-direction: column;
+                                                                                                                                                                                                width: 100%;
+                                                                                                                                                                                                gap: 16px;
+                                                                                                                                                                                            } */
 
             .filter-item {
                 width: 100%;
@@ -780,20 +822,20 @@
 
     <script>
         /*$(function() {
-                                    $.extend(true, $.fn.dataTable.defaults, {
-                                        dom: 'Bfrtip',
-                                        buttons: [{
-                                                extend: 'excel',
-                                                text: '<i class="fa fa-file-excel"></i> Excel',
-                                                action: function(e, dt, button, config) {
-                                                    window.location = dt.ajax.url().replace('/ajax', '/excel');
-                                                }
-                                            },
-                                            {
-                                                extend: 'print',
-                                                text: '<i class="fa fa-print"></i> Print',
-                                                title: '{{ $pageTitle ?? 'Report' }}',
-                                                messageTop: `
+                                                                            $.extend(true, $.fn.dataTable.defaults, {
+                                                                                dom: 'Bfrtip',
+                                                                                buttons: [{
+                                                                                        extend: 'excel',
+                                                                                        text: '<i class="fa fa-file-excel"></i> Excel',
+                                                                                        action: function(e, dt, button, config) {
+                                                                                            window.location = dt.ajax.url().replace('/ajax', '/excel');
+                                                                                        }
+                                                                                    },
+                                                                                    {
+                                                                                        extend: 'print',
+                                                                                        text: '<i class="fa fa-print"></i> Print',
+                                                                                        title: '{{ $pageTitle ?? 'Report' }}',
+                                                                                        messageTop: `
                         <div style="text-align:center; font-size:16px; font-weight:bold;">
                             {{ $pageTitle }}
                         </div>
@@ -804,10 +846,10 @@
                             Prepared at: {{ now()->format('F j, Y g:i A') }}
                         </div>
                     `
-                                            }
-                                        ]
-                                    });
-                                });*/
+                                                                                    }
+                                                                                ]
+                                                                            });
+                                                                        });*/
 
         let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
@@ -1557,7 +1599,7 @@
             });
 
             // Export functionality
-            $('.btn-icon[title="Export"]').on('click', function() {
+            /*$('.btn-icon[title="Export"]').on('click', function() {
                 // Create export menu
                 const exportOptions = [{
                         text: 'Export to Excel',
@@ -1596,7 +1638,7 @@
                     default:
                         alert('Invalid option');
                 }
-            });
+            });*/
 
             // View options functionality
             $('#view-options-btn').on('click', function() {
