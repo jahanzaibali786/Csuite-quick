@@ -17,6 +17,47 @@
             </div>
         </div>
 
+
+        <!-- Bootstrap Modal -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content p-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Choose Export Format</h5> <button type="button" class="btn-close"
+                            data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center row">
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="excel">Export to
+                                Excel</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="pdf">Export to
+                                PDF</button>
+                        </div>
+                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Show modal on export button click
+            $('.btn-icon[title="Export"]').on('click', function() {
+                $('#exportModal').modal('show');
+            });
+
+            // Handle export actions
+            $('#exportModal button[data-action]').on('click', function() {
+                // Hide modal after action
+                $('#exportModal').modal('hide');
+            });
+        </script>
+
         <!-- Filter Controls -->
         <div class="filter-controls">
             <div class="filter-row">
@@ -83,7 +124,11 @@
                     </div>
 
                     <!-- Action buttons row -->
-                    <div class="col-md-4 d-flex align-items-end gap-2 " style="justify-content: end;">
+                    <div class="d-flex align-items-end gap-2 " style="justify-content: end;">
+
+                        <button class="btn btn-outline" id="columns-btn">
+                            <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
+                        </button>
 
                         <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
                             data-bs-target="#filterSidebar" aria-controls="filterSidebar">
@@ -197,6 +242,16 @@
                     </span>
                 </p>
             </div>
+
+            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')" id="ExprotExcel"
+                class="d-none">
+                <i class="fa fa-file-excel"></i> Excel
+            </button>
+
+            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')" id="ExprotPDF"
+                class="d-none">
+                <i class="fa fa-file-excel"></i> Excel
+            </button>
 
             <div class="table-container p-2">
                 {!! $dataTable->table(['class' => 'table customer-balance-table', 'id' => 'customer-balance-table']) !!}
@@ -362,6 +417,117 @@
         </div>
     </div>
 
+    <script>
+        function buildColumnsFromTable() {
+            const headers = document.querySelectorAll('#customer-balance-table thead th');
+            const container = document.querySelector('#sortable-columns');
+            const table = window.LaravelDataTables?.['customer-balance-table'];
+
+            // Clear the old list
+            container.innerHTML = '';
+
+            headers.forEach((th) => {
+                const columnName = th.innerText.trim().toUpperCase();
+                const isHidden = th.classList.contains('default-hidden');
+
+                // Skip BUCKET column
+                if (columnName === 'BUCKET') {
+                    return;
+                }
+
+                // Determine DataTables column index safely
+                let colIndex = null;
+                if (table) {
+                    try {
+                        colIndex = table.column(th).index();
+                    } catch (e) {
+                        colIndex = $(th).index(); // fallback
+                    }
+                } else {
+                    colIndex = $(th).index();
+                }
+
+                // Build draggable/checkbox item
+                const div = document.createElement('div');
+                div.classList.add('column-item');
+                div.setAttribute('data-column', colIndex);
+                div.innerHTML = `
+                <i class="fa fa-grip-vertical handle"></i>
+                <label class="checkbox-label">
+                    <input type="checkbox" ${isHidden ? '' : 'checked'}> ${columnName}
+                </label>
+            `;
+
+                container.appendChild(div);
+            });
+        }
+
+        // Build once after DataTable is initialized
+        $(document).ready(function() {
+            buildColumnsFromTable();
+
+            const hideDefaultColumns = () => {
+                if (window.LaravelDataTables && window.LaravelDataTables['customer-balance-table']) {
+                    const table = window.LaravelDataTables['customer-balance-table'];
+
+                    $('#customer-balance-table thead th.default-hidden').each(function() {
+                        const colIndex = table.column(this).index();
+                        table.column(colIndex).visible(false);
+
+                        $(`.column-item[data-column="${colIndex}"] input[type="checkbox"]`).prop(
+                            'checked', false);
+                    });
+
+
+                    {{-- buildColumnsFromTable(); --}}
+                } else {
+                    setTimeout(hideDefaultColumns, 500); // retry until ready
+                    console.warn("DataTable instance not ready yet...");
+                }
+            };
+
+            hideDefaultColumns();
+        });
+
+        // Rebuild on every table redraw
+        $('#customer-balance-table').on('draw.dt', function() {
+            buildColumnsFromTable();
+        });
+
+        // Delegated event binding for dynamically created checkboxes
+        $(document).on('change', '#sortable-columns input[type="checkbox"]', function() {
+            const columnIndex = $(this).closest('.column-item').data('column');
+            const isVisible = $(this).prop('checked');
+
+            if (columnIndex !== undefined && window.LaravelDataTables?.['customer-balance-table']) {
+                try {
+                    window.LaravelDataTables['customer-balance-table'].column(columnIndex).visible(isVisible);
+                } catch (error) {
+                    console.error('Column visibility change failed:', columnIndex, isVisible, error);
+                }
+            }
+
+            // Update column count badge if function exists
+            if (typeof updateColumnCountBadge === 'function') {
+                updateColumnCountBadge();
+            }
+        });
+    </script>
+
+
+    <script>
+        $('#customer-balance-table').on('click', '.toggle-bucket', function() {
+            let $row = $(this);
+            let bucket = $row.attr('class').match(/bucket-([^\s]+)/)[1]; // "current"
+            let $icon = $row.find('.icon');
+
+            // toggle
+            $('.bucket-' + bucket).not($row).toggle(); // don’t hide the parent itself
+
+            // swap icon
+            $icon.text($icon.text() === '▶' ? '▼' : '▶');
+        });
+    </script>
 
     <style>
         /* Base styling */
@@ -829,10 +995,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                        flex-direction: column;
-                                                                        width: 100%;
-                                                                        gap: 16px;
-                                                                    } */
+                                                                                                                                                                                                flex-direction: column;
+                                                                                                                                                                                                width: 100%;
+                                                                                                                                                                                                gap: 16px;
+                                                                                                                                                                                            } */
 
             .filter-item {
                 width: 100%;
@@ -855,6 +1021,10 @@
                 flex-wrap: wrap;
             }
         }
+
+        .parent-row {
+            cursor: pointer;
+        }
     </style>
 
     {!! $dataTable->scripts() !!}
@@ -873,6 +1043,97 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+
+    <script>
+        let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        console.log([window.Header, window.footerAlignment])
+
+        function exportDataTable(tableId, pageTitle, format = "excel") {
+            let table = $('#' + tableId).DataTable();
+
+            // Only get visible columns (skip auto-index)
+            let columns = [];
+            $('#' + tableId + ' thead th:visible').each(function() {
+                columns.push($(this).text().trim());
+            });
+
+            // Get visible data rows
+            let data = [];
+
+            const getRealtimeTableData = () => {
+
+                let data = [];
+
+
+                table.rows({
+                    search: 'applied'
+                }).every(function() {
+                    let rowData = this.data();
+
+                    if (typeof rowData === 'object') {
+                        // Only keep values for visible columns
+                        let rowArray = [];
+                        table.columns(':visible').every(function(colIdx) {
+                            let val = rowData[this.dataSrc()] ?? '-';
+                            rowArray.push(val);
+                        });
+                        rowData = rowArray;
+                    }
+                    data.push(rowData);
+                });
+
+                return data
+
+            }
+
+            // Get visible data rows (rendered DOM text, not raw data)
+            $('#' + tableId + ' tbody tr:visible').each(function() {
+                let rowArray = [];
+                $(this).find('td:visible').each(function() {
+                    rowArray.push($(this).text().trim());
+                });
+                data.push(rowArray);
+            });
+
+
+
+            // Send to universal export route
+            $.ajax({
+                url: '{{ route('export.datatable') }}',
+                method: 'POST',
+                data: {
+                    columns: columns,
+                    data: data,
+                    pageTitle: pageTitle,
+                    ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
+                        .textContent : "",
+                    HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
+                        .footerAlignment
+                    ],
+                    format: format,
+                    _token: '{{ csrf_token() }}'
+                },
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                success: function(blob, status, xhr) {
+                    let filename = xhr.getResponseHeader('Content-Disposition')
+                        .split('filename=')[1]
+                        .replace(/"/g, '');
+                    let link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                },
+                error: function(xhr) {
+                    console.error('Export failed:', xhr.responseText);
+                    alert('Export failed! Check console.');
+                }
+            });
+        }
+    </script>
 
     <script>
         $(document).ready(function() {
@@ -1202,7 +1463,6 @@
             function refreshData() {
                 if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
                     window.LaravelDataTables["customer-balance-table"].draw();
-                    // {{-- console.log("HI") --}}
                 } else {
                     console.log('DataTable not yet initialized');
                     setTimeout(refreshData, 100);
@@ -1501,7 +1761,7 @@
             });
 
             // Export functionality
-            $('.btn-icon[title="Export"]').on('click', function() {
+            /*$('.btn-icon[title="Export"]').on('click', function() {
                 // Create export menu
                 const exportOptions = [{
                         text: 'Export to Excel',
@@ -1520,12 +1780,19 @@
                 const option = prompt(
                     'Choose export format:\n1. Excel\n2. PDF\n3. CSV\n\nEnter number (1-3):');
 
+
+                // Get table ID dynamically (assumes closest table in DOM)
+                const tableId = $(this).closest('div').find('table').attr('id');
+                const pageTitle = document.title || 'Report';
+
                 switch (option) {
                     case '1':
-                        alert('Excel export would be triggered');
+                        // alert('Excel export would be triggered');
+                        $("#ExprotExcel").click();
                         break;
                     case '2':
-                        alert('PDF export would be triggered');
+                        $("#ExprotPDF").click();
+                        // alert('PDF export would be triggered');
                         break;
                     case '3':
                         alert('CSV export would be triggered');
@@ -1533,7 +1800,7 @@
                     default:
                         alert('Invalid option');
                 }
-            });
+            });*/
 
             // View options functionality
             $('#view-options-btn').on('click', function() {

@@ -15,12 +15,12 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
         return datatables()
             ->eloquent($query)
             ->addColumn('transaction_type', function ($row) {
-                return 'Invoice'; // Later expand for Payments, Transactions, etc.
+                return 'Invoice';
             })
             ->addColumn('transaction_date', function ($row) {
                 return optional($row->invoice)->issue_date
                     ? Carbon::parse($row->invoice->issue_date)->format('m/d/Y')
-                    : '-';
+                    : 'No date available';
             })
             ->addColumn('invoice_number', function ($row) {
                 return optional($row->invoice)->ref_number ?? $row->invoice_id ?? '-';
@@ -36,21 +36,50 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
             ->addColumn('customer_name', function ($row) {
                 return optional(optional($row->invoice)->customer)->name ?? '-';
             })
+
+            // ---- Raw numeric fields (for accurate front-end formatting) ----
+            ->addColumn('quantity_raw', function ($row) {
+                return (float) ($row->quantity ?? 0);
+            })
+            ->addColumn('sales_price_raw', function ($row) {
+                return (float) ($row->price ?? 0);
+            })
+            ->addColumn('amount_raw', function ($row) {
+                return (float) (($row->price ?? 0) * ($row->quantity ?? 0));
+            })
+            ->addColumn('balance_raw', function ($row) {
+                return (float) (optional($row->invoice)->getDue() ?? 0);
+            })
+            ->addColumn('sales_with_tax_raw', function ($row) {
+                $baseAmount = (float) (($row->price ?? 0) * ($row->quantity ?? 0));
+                $discount   = (float) ($row->discount ?? 0);
+                $tax = 0.0;
+
+                if ($row->tax) {
+                    foreach (explode(',', $row->tax) as $taxId) {
+                        $taxObj = Tax::find($taxId);
+                        if ($taxObj) {
+                            $tax += (($row->price ?? 0) * ($row->quantity ?? 0) - $discount) * ($taxObj->rate / 100);
+                        }
+                    }
+                }
+                return $baseAmount + $tax;
+            })
+
+            // ---- Formatted display fields (kept for non-JS context/fallbacks) ----
             ->addColumn('quantity', function ($row) {
-                return $row->quantity ?? 0;
+                return number_format(($row->quantity ?? 0), 2);
             })
             ->addColumn('sales_price', function ($row) {
-                return $row->price ? number_format($row->price, 2) : '0.00';
+                return number_format(($row->price ?? 0), 2);
             })
             ->addColumn('amount', function ($row) {
-                return ($row->price && $row->quantity)
-                    ? number_format($row->price * $row->quantity, 2)
-                    : '0.00';
+                $val = ($row->price ?? 0) * ($row->quantity ?? 0);
+                return number_format($val, 2);
             })
             ->addColumn('balance', function ($row) {
-                return optional($row->invoice)->getDue()
-                    ? number_format(optional($row->invoice)->getDue(), 2)
-                    : '0.00';
+                $val = optional($row->invoice)->getDue() ?? 0;
+                return number_format($val, 2);
             })
             ->addColumn('sales_with_tax', function ($row) {
                 $baseAmount = ($row->price ?? 0) * ($row->quantity ?? 0);
@@ -90,28 +119,34 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
             });
         }
 
+        // Filter by created_by through invoice relationship
+        $query->whereHas('invoice', function ($q) {
+            $q->where('created_by', \Auth::user()->creatorId());
+        });
+
         return $query->orderBy('id', 'desc');
     }
 
     public function html()
     {
         return $this->builder()
-            ->setTableId('customer-report')
+            ->setTableId('ledger-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->dom('Bfrtip')
+            ->dom('t')
             ->orderBy(1, 'desc')
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'autoWidth'  => false,
-                'paging'     => true,   // ✅ prevent -1 length bug
-                'pageLength' => 50,     // default rows per page
-                'searching'  => true,
-                'info'       => true,
-                'ordering'   => true,
-                'buttons'    => [
-                    'copy', 'excel', 'csv', 'pdf', 'print', 'colvis'
-                ],
+                'paging'     => false,
+                'searching'  => false,
+                'info'       => false,
+                'ordering'   => false,
+                'processing' => true,
+                'serverSide' => true,
+                'scrollX'    => true,
+                'scrollY'    => '420px',
+                'scrollCollapse' => true,
             ]);
     }
 
@@ -123,6 +158,8 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
             Column::make('invoice_number')->title('Invoice Number / Num')->width('120px'),
             Column::make('memo_description')->title('Memo/Description')->width('200px'),
             Column::make('customer_name')->title('Customer Name')->width('150px'),
+
+            // Display columns (formatted); raw fields are in the JSON payload for JS renderers
             Column::make('quantity')->title('Quantity')->width('100px')->addClass('text-right'),
             Column::make('sales_price')->title('Sales Price')->width('100px')->addClass('text-right'),
             Column::make('amount')->title('Amount')->width('120px')->addClass('text-right'),

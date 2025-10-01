@@ -13,6 +13,10 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Exports\UniversalDataTableExport;
+// use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Facades\Excel as ExcelFacade;
+use Maatwebsite\Excel\Excel;
 
 class VoucherController extends Controller
 {
@@ -519,7 +523,7 @@ class VoucherController extends Controller
         return $pdf->download('profit-loss-detail-' . $fromDate->format('Y-m-d') . '-to-' . $toDate->format('Y-m-d') . '.pdf');
     }
 
-    public function AgingSummary(\App\DataTables\AgingSummaryDataTable $dataTable, Request $request)
+    public function ARAgingSummary(\App\DataTables\AgingSummaryDataTable $dataTable, Request $request)
     {
         $pageTitle = 'A/R Aging Summary Report';
 
@@ -534,20 +538,346 @@ class VoucherController extends Controller
         ]);
     }
 
-    public function AgingDetails(\App\DataTables\AgingDetailsDataTable $dataTable, Request $request)
+    // app/Http/Controllers/BillController.php
+    public function APAgingSummary(\App\DataTables\APAgingSummaryDataTable $dataTable, Request $request)
     {
-        $this->pageTitle = 'Receivables Aging Details';
+        $pageTitle = 'A/P Aging Summary Report';
 
         if ($request->ajax()) {
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.agingdetails.index', [
+        return $dataTable->render('sync.agingsummary.index', [
+            'pageTitle' => $pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+
+    public function AgingDetails(\App\DataTables\AgingDetailsDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'A/R Aging Detail Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
             'pageTitle' => $this->pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
         ]);
     }
+
+    public function APAgingDetails(\App\DataTables\APAgingDetailsDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'A/P Aging Detail Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function billsandpayments(\App\DataTables\BillsandPayments $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Bills and Applied Payments';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function vendorbalancesummary(\App\DataTables\VendorBalanceSummary $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Vendor Balance Summary';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function vendorbalancedetail(\App\DataTables\VendorBalanceDetail $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Vendor Balance Detail Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function unpaidbillsreport(\App\DataTables\UnpaidBillsReportDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Unpaid Bills Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function billpaymentlist(\App\DataTables\BillPaymentList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Bill Payment List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function openpurchaseorderdetail(\App\DataTables\OpenPurchaseOrderDetail $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Open Purchase Order Detail';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function openpurchaseorderlist(\App\DataTables\OpenPurchaseOrderList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Open Purchase Order List by Vendor';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function purchaselist(\App\DataTables\PurchaseList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Purchase List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function transactionlistbyvendor(\App\DataTables\TransactionListbyVendor $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Transaction List by Vendor';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function expensesbyvendorsummary(\App\DataTables\ExpensesByVendorSummary $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Expenses by Vendor Summary';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function purchasebyvendor(\App\DataTables\PurchasesbyVendorDetail $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Purchases by Vendor Detail';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function purchasesbyproductservicedetail(\App\DataTables\PurchasesbyProductServiceDetail $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Purchases by Product/Service Detail';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+
+    public function employeescontactlist(\App\DataTables\EmployeesContactList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Employees Contact List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
+
+    public function vendorscontactlist(\App\DataTables\VendorsContactList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Vendor Contact List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
+
+
+    public function vendorsphonelist(\App\DataTables\VendorsPhoneList $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Vendor Phone List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
+
+    // public function excelExport(Request $request, $format = 'pdf')
+    // {
+    //     // Validate required data
+    //     $request->validate([
+    //         'columns' => 'required|array',
+    //         'data' => 'required|array',
+    //         'pageTitle' => 'required|string',
+    //     ]);
+
+    //     $columns = $request->input('columns');
+    //     $data = collect($request->input('data'));
+    //     $pageTitle = $request->input('pageTitle');
+    //     $ReportPeriod = $request->input('ReportPeriod') ?? "";
+    //     $HeaderFooterAlignment = $request->input('HeaderFooterAlignment') ?? "";
+    //     // dd($HeaderFooterAlignment);
+
+    //     // sanitize pageTitle for filename
+    //     $sanitizedTitle = preg_replace('/[\/\\\\]+/', '_', $pageTitle);
+    //     $filename = str_replace(' ', '_', $sanitizedTitle) . '_' . now()->format('YmdHis') . '.xlsx';
+
+    //     return Excel::download(
+    //         new UniversalDataTableExport($data, $columns, $pageTitle, $ReportPeriod, $HeaderFooterAlignment),
+    //         $filename
+    //     );
+
+    // }
+
+
+    public function ExportReport(Request $request, $format = 'excel')
+    {
+        $request->validate([
+            'columns' => 'required|array',
+            'data' => 'required|array',
+            'pageTitle' => 'required|string',
+        ]);
+
+        $columns = $request->input('columns');
+        $data = collect($request->input('data'));
+        $pageTitle = $request->input('pageTitle');
+        $ReportPeriod = $request->input('ReportPeriod') ?? "";
+        $HeaderFooterAlignment = $request->input('HeaderFooterAlignment') ?? "";
+        $format = $request->input('format', $format);
+
+        $sanitizedTitle = preg_replace('/[\/\\\\]+/', '_', $pageTitle);
+        $filename = str_replace(' ', '_', $sanitizedTitle) . '_' . now()->format('YmdHis');
+
+        $export = new \App\Exports\UniversalDataTableExport(
+            $data,
+            $columns,
+            $pageTitle,
+            $ReportPeriod,
+            $HeaderFooterAlignment
+        );
+
+        if ($format === 'pdf') {
+            $exportPdf = new \App\Exports\UniversalDataTableExportPdf(
+                $data,
+                $columns,
+                $pageTitle,
+                $ReportPeriod,
+                $HeaderFooterAlignment
+            );
+            return $exportPdf->download($filename . '.pdf');
+        }
+
+        return ExcelFacade::download(
+            $export,
+            $filename . '.xlsx',
+            Excel::XLSX
+        );
+    }
+
 
 
     public function CustomerBalance(\App\DataTables\CustomerBalanceDataTable $dataTable, Request $request)
@@ -601,6 +931,21 @@ class VoucherController extends Controller
     public function OpenInvoiceList(\App\DataTables\OpenInvoiceList $dataTable, Request $request)
     {
         $this->pageTitle = 'Open Invoices Report';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+    }
+
+    public function InvoicesandReceivedPayments(\App\DataTables\InvoicesandReceivedPaymentsDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Invoices and Received Payments';
 
         if ($request->ajax()) {
             return $dataTable->ajax();

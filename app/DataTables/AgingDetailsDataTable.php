@@ -29,6 +29,8 @@ class AgingDetailsDataTable extends DataTable
 
         $grandTotalAmount = 0;
         $grandBalanceDue = 0;
+        $grandOpenBalance = 0;
+
 
         // Group invoices into buckets
         $groupedData = $data->groupBy(function ($row) use ($end) {
@@ -60,6 +62,7 @@ class AgingDetailsDataTable extends DataTable
         foreach ($groupedData as $bucket => $rows) {
             $subtotalAmount = 0;
             $subtotalDue = 0;
+            $subtotalOpen = 0;
 
             // Add subtotal row
             $finalData->push((object) [
@@ -67,7 +70,7 @@ class AgingDetailsDataTable extends DataTable
                 'id' => null,
                 'due_date' => '',
                 // 'transaction' => '<strong>Subtotal for ' . $bucket . '</strong>',
-                'transaction' => '<strong>' . $bucket . '</strong>',
+                'transaction' => '<span class="" data-bucket="' . \Str::slug($bucket) . '"> <span class="icon">▼</span> <strong>' . $bucket . '</strong></span>',
                 'type' => '',
                 'status_label' => '',
                 'customer' => '',
@@ -76,12 +79,14 @@ class AgingDetailsDataTable extends DataTable
                 'balance_due' => null,
                 'isPlaceholder' => true,
                 'isSubtotal' => false,
+                'isParent' => true
             ]);
 
             foreach ($rows as $row) {
                 $subtotalAmount += ($row->subtotal ?? 0) + ($row->total_tax ?? 0);
                 $subtotalDue += $row->balance_due;
                 $row->bucket = $bucket; // keep bucket info in each row
+                $subtotalOpen += $row->open_balance;
                 $finalData->push($row);
             }
 
@@ -98,6 +103,7 @@ class AgingDetailsDataTable extends DataTable
                 'age' => '',
                 'total_amount' => $subtotalAmount,
                 'balance_due' => $subtotalDue,
+                'open_balance' => $subtotalOpen,
                 'isSubtotal' => true,
             ]);
 
@@ -112,12 +118,14 @@ class AgingDetailsDataTable extends DataTable
                 'age' => '',
                 'total_amount' => 0,
                 'balance_due' => 0,
+                'open_balance' => 0,
                 'isPlaceholder' => true,
                 "isSubtotal" => true,
             ]);
 
             $grandTotalAmount += $subtotalAmount;
             $grandBalanceDue += $subtotalDue;
+            $grandOpenBalance += $subtotalOpen;
         }
 
         // Add grand total row
@@ -132,11 +140,13 @@ class AgingDetailsDataTable extends DataTable
             'age' => '',
             'total_amount' => $grandTotalAmount,
             'balance_due' => $grandBalanceDue,
+            'open_balance' => $grandOpenBalance,
             'isGrandTotal' => true,
         ]);
 
         return datatables()
             ->collection($finalData)
+
             ->addColumn('bucket', fn($row) => $row->bucket ?? '')
             ->addColumn(
                 'transaction',
@@ -154,13 +164,13 @@ class AgingDetailsDataTable extends DataTable
                 $status = $row->status ?? 0;
                 $labels = \App\Models\Invoice::$statues;
                 $classes = [
-                    0 => 'bg-secondary',
-                    1 => 'bg-warning',
-                    2 => 'bg-danger',
-                    3 => 'bg-info',
-                    4 => 'bg-primary',
+                    0 => 'nbg-secondary',
+                    1 => 'nbg-warning',
+                    2 => 'nbg-danger',
+                    3 => 'nbg-info',
+                    4 => 'nbg-primary',
                 ];
-                return '<span class="status_badge badge text-white ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
+                return '<span class="status_badger badger text-whit ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
                     . __($labels[$status] ?? '-') . '</span>';
             })
             ->addColumn(
@@ -175,6 +185,7 @@ class AgingDetailsDataTable extends DataTable
                 ? ''
                 : ($row->age > 0 ? $row->age . ' Days' : '-')
             )
+            ->addColumn('issue_date', fn($row) => $row->issue_date ?? '')
             ->editColumn('total_amount', function ($row) {
                 if (isset($row->isHeader) || isset($row->isPlaceholder)) {
                     return '';
@@ -196,6 +207,39 @@ class AgingDetailsDataTable extends DataTable
                 ? ''
                 : number_format($row->balance_due ?? 0)
             )
+            ->editColumn(
+                'open_balance',
+                fn($row) =>
+                isset($row->isHeader) || isset($row->isPlaceholder)
+                ? ''
+                : number_format($row->open_balance ?? 0)
+            )
+            ->setRowClass(function ($row) {
+                if (property_exists($row, 'isParent') && $row->isParent) {
+                    return 'parent-row toggle-bucket bucket-' . \Str::slug($row->bucket ?? 'na');
+                }
+
+                if (property_exists($row, 'isSubtotal') && $row->isSubtotal && !property_exists($row, 'isGrandTotal')) {
+                    return 'subtotal-row bucket-' . \Str::slug($row->bucket ?? 'na');
+                }
+
+                if (
+                    !property_exists($row, 'isParent') &&
+                    !property_exists($row, 'isSubtotal') &&
+                    !property_exists($row, 'isGrandTotal') &&
+                    !property_exists($row, 'isPlaceholder')
+                ) {
+                    return 'child-row bucket-' . \Str::slug($row->bucket ?? 'na');
+                }
+
+                if (property_exists($row, 'isGrandTotal') && $row->isGrandTotal) {
+                    return 'grandtotal-row';
+                }
+
+                return '';
+            })
+
+
             ->rawColumns(['transaction', 'status_label']);
     }
 
@@ -237,6 +281,19 @@ class AgingDetailsDataTable extends DataTable
                     - (IFNULL(SUM(invoice_payments.amount),0)
                     + (SELECT IFNULL(SUM(credit_notes.amount),0) FROM credit_notes WHERE credit_notes.invoice = invoices.id))
                  ) as balance_due'),
+                DB::raw('(
+                    (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
+                    + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
+                       FROM invoice_products 
+                       LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
+                       WHERE invoice_products.invoice_id = invoices.id)
+                    - (IFNULL(SUM(invoice_payments.amount),0)
+                       + (SELECT IFNULL(SUM(credit_notes.amount),0) 
+                          FROM credit_notes 
+                          WHERE credit_notes.invoice = invoices.id))
+                ) as open_balance'),
+
+
                 DB::raw('GREATEST(DATEDIFF(CURDATE(), invoices.due_date), 0) as age')
             )
             ->leftJoin('customers', 'customers.id', '=', 'invoices.customer_id')
@@ -253,7 +310,7 @@ class AgingDetailsDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('aging-details-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->orderBy(0, 'asc')
@@ -279,15 +336,16 @@ function (row, data, start, end, display) {
     };
 
     // Total over all pages
-    var totalAmount = api.column(7, { page: 'all'}).data()
-        .reduce((a, b) => parseVal(a) + parseVal(b), 0);
+var totalAmount = api.column(6, { page: 'all'}).data()
+    .reduce((a, b) => parseVal(a) + parseVal(b), 0);
 
-    var totalDue = api.column(8, { page: 'all'}).data()
-        .reduce((a, b) => parseVal(a) + parseVal(b), 0);
+var totalDue = api.column(7, { page: 'all'}).data()
+    .reduce((a, b) => parseVal(a) + parseVal(b), 0);
 
-    // Update footer
-    $(api.column(7).footer()).html(totalAmount.toLocaleString());
-    $(api.column(8).footer()).html(totalDue.toLocaleString());
+// Update footer
+$(api.column(6).footer()).html(totalAmount.toLocaleString());
+$(api.column(7).footer()).html(totalDue.toLocaleString());
+
 }
 JS
             ]);
@@ -297,14 +355,17 @@ JS
     {
         return [
             Column::make('bucket')->title('Bucket')->visible(false),
-            Column::make('due_date')->title('Date'),
+            Column::make('issue_date')->title('Date'),   // 👈 added
             Column::make('transaction')->title('Transaction'),
             Column::make('type')->title('Type'),
             Column::make('status_label')->title('Status'),
             Column::make('customer')->title('Customer Name'),
-            Column::make('age')->title('Age'),
+            // Column::make('age')->title('Age'),
+            Column::make('due_date')->title('Due Date'),
             Column::make('total_amount')->title('Amount'),
-            Column::make('balance_due')->title('Balance Due'),
+            // Column::make('balance_due')->title('Balance Due'),
+            Column::make('open_balance')->title('Open Balance'),
+
         ];
     }
 }

@@ -27,65 +27,70 @@ class CustomerBalanceDetailReport extends DataTable
             $subtotalAmount = 0;
             $subtotalDue = 0;
             $subtotalBalance = 0;
+            $runningBalance = 0; // 👈 cumulative balance for this customer
 
-            // Header row for this customer
+            // Header row
             $finalData->push((object) [
-                'transaction' => '<strong>' . $customer . '</strong>',
+                // 'transaction' => '<strong>' . $customer . '</strong>',
+                'customer' => $customer,
+                'transaction' => '<span class="" data-bucket="' . \Str::slug($customer) . '"> <span class="icon">▼</span> <strong>' . $customer . '</strong></span>',
                 'due_date' => '',
                 'type' => null,
                 'status_label' => '',
                 'total_amount' => null,
-                'balance' => 0,      // 👈 added
-                'open_balance' => 0,      // 👈 added
+                'balance' => 0,
+                'open_balance' => 0,
                 'balance_due' => null,
                 'isPlaceholder' => true,
                 'isSubtotal' => true,
+                'isParent' => true
             ]);
-
 
             foreach ($rows as $row) {
                 $subtotalAmount += ($row->subtotal ?? 0) + ($row->total_tax ?? 0);
                 $subtotalDue += $row->balance_due;
-                $subtotalBalance += $row->balance ?? 0; // Error happens when I add this row
+                $runningBalance += $row->balance_due;   // 👈 add running balance logic here
+                $row->balance = $runningBalance;        // 👈 overwrite balance with cumulative value
+
                 $row->customer = $customer;
-                $row->past_due = $row->age > 0 ? $row->age . ' Days' : '-'; // 👈 Past Due column
+                $row->past_due = $row->age > 0 ? $row->age . ' Days' : '-';
+
                 $finalData->push($row);
             }
 
-            // Subtotal row for this customer
+            // Subtotal row
             $finalData->push((object) [
-                // 'customer' => '<strong>Subtotal</strong>',
-                'transaction' => '<strong>Subtotal For '. $customer .'</strong>',
+                'customer' => $customer,
+                'transaction' => '<strong>Subtotal For ' . $customer . '</strong>',
                 'due_date' => '',
                 'past_due' => '',
                 'type' => '',
                 'status_label' => '',
-                // 'age' => '',
                 'total_amount' => $subtotalAmount,
                 'balance_due' => $subtotalDue,
-                'balance' => $subtotalBalance,
+                'balance' => $runningBalance,   // 👈 show last running balance for this customer
                 'isSubtotal' => true,
             ]);
 
             $finalData->push((object) [
+
                 'transaction' => '',
                 'due_date' => '',
                 'type' => '',
                 'status_label' => '',
                 'total_amount' => 0,
-                'balance' => 0,      // 👈 added
-                'open_balance' => 0,      // 👈 added
+                'balance' => 0,
+                'open_balance' => 0,
                 'balance_due' => 0,
                 'isPlaceholder' => true,
                 'isSubtotal' => true,
             ]);
 
-
             $grandTotalAmount += $subtotalAmount;
             $grandBalanceDue += $subtotalDue;
-            $grandBalance += $subtotalBalance;
-
+            $grandBalance += $runningBalance;  // 👈 careful: depends if grand total should also be cumulative or just sum
         }
+
 
         // ✅ Add grand total row
         $finalData->push((object) [
@@ -127,13 +132,13 @@ class CustomerBalanceDetailReport extends DataTable
                 $status = $row->status ?? 0;
                 $labels = \App\Models\Invoice::$statues;
                 $classes = [
-                    0 => 'bg-secondary',
-                    1 => 'bg-warning',
-                    2 => 'bg-danger',
-                    3 => 'bg-info',
-                    4 => 'bg-primary',
+                    0 => 'nbg-secondary',
+                    1 => 'nbg-warning',
+                    2 => 'nbg-danger',
+                    3 => 'nbg-info',
+                    4 => 'nbg-primary',
                 ];
-                return '<span class="status_badge badge text-white ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
+                return '<span class="status_badger badger text-whit ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
                     . __($labels[$status] ?? '-') . '</span>';
             })
             ->addColumn('issue_date', fn($row) => $row->issue_date ?? '')
@@ -167,6 +172,30 @@ class CustomerBalanceDetailReport extends DataTable
                 fn($row) =>
                 isset($row->isPlaceholder) ? '' : number_format($row->balance_due ?? 0)
             )
+            ->setRowClass(function ($row) {
+                if (property_exists($row, 'isParent') && $row->isParent) {
+                    return 'parent-row toggle-bucket bucket-' . \Str::slug($row->customer ?? 'na');
+                }
+
+                if (property_exists($row, 'isSubtotal') && $row->isSubtotal && !property_exists($row, 'isGrandTotal')) {
+                    return 'subtotal-row bucket-' . \Str::slug($row->customer ?? 'na');
+                }
+
+                if (
+                    !property_exists($row, 'isParent') &&
+                    !property_exists($row, 'isSubtotal') &&
+                    !property_exists($row, 'isGrandTotal') &&
+                    !property_exists($row, 'isPlaceholder')
+                ) {
+                    return 'child-row bucket-' . \Str::slug($row->customer ?? 'na');
+                }
+
+                if (property_exists($row, 'isGrandTotal') && $row->isGrandTotal) {
+                    return 'grandtotal-row';
+                }
+
+                return '';
+            })
             ->rawColumns(['customer', 'transaction', 'status_label']);
     }
 

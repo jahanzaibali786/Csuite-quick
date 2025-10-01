@@ -1289,11 +1289,11 @@
                             <li class="dash-item {{ Request::route()->getName() == 'transaction.deposits' ? 'active' : '' }}">
                                 <a class="dash-link" href="#">{{ __('Deposits') }}</a>
                             </li>
-                            @if (Gate::check('manage customer'))
+                            {{-- @if (Gate::check('manage customer'))
                                 <li class="dash-item {{ Request::segment(1) == 'customer' ? 'active' : '' }}">
                                     <a class="dash-link" href="{{ route('customer.index') }}">{{ __('Customers') }}</a>
                                 </li>
-                            @endif
+                            @endif --}}
                             {{-- <li class="dash-item {{ Request::route()->getName() == 'revenue.index' ? 'active' : '' }}">
                                 <a class="dash-link" href="{{ route('revenue.index') }}">{{ __('Revenue') }}</a>
                             </li>
