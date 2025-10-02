@@ -61,13 +61,18 @@ public function create()
             ->toArray();
 
         // Dynamic subtypes from existing bank accounts (tenant-scoped)
-        $account_subtypes = BankAccount::where('created_by', \Auth::user()->creatorId())
-            ->whereNotNull('account_subtype')
-            ->select('account_subtype')
-            ->distinct()
-            ->orderBy('account_subtype')
-            ->pluck('account_subtype', 'account_subtype')
-            ->toArray();
+        // $account_subtypes = BankAccount::where('created_by', \Auth::user()->creatorId())
+        //     ->whereNotNull('account_subtype')
+        //     ->select('account_subtype')
+        //     ->distinct()
+        //     ->orderBy('account_subtype')
+        //     ->pluck('account_subtype', 'account_subtype')
+        //     ->toArray();
+            $account_subtypes = [
+                'saving'   => 'Saving Account',
+                'current'  => 'Current Account',
+                'fixed'    => 'Fixed Deposit',
+            ];
         $account_subtypes = ['' => __('Select Type')] + $account_subtypes;
 
         $customFields = CustomField::where('created_by', \Auth::user()->creatorId())
