@@ -9,7 +9,9 @@
                 <span class="last-updated">Last updated 8 minutes ago</span>
                 <div class="actions">
                     <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
-                    <button class="btn btn-icon" title="Print"><i class="fa fa-print"></i></button>
+                    <button class="btn btn-icon"
+                        onclick="exportDataTable('aging-summary-table', '{{ $pageTitle }}', 'print')"><i
+                            class="fa fa-print"></i></button>
                     <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
                     <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
                     <button class="btn btn-success btn-save">Save As</button>
@@ -880,10 +882,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                flex-direction: column;
-                                                                                                                width: 100%;
-                                                                                                                gap: 16px;
-                                                                                                            } */
+                                                                                                                    flex-direction: column;
+                                                                                                                    width: 100%;
+                                                                                                                    gap: 16px;
+                                                                                                                } */
 
             .filter-item {
                 width: 100%;
@@ -1003,10 +1005,20 @@
                     let filename = xhr.getResponseHeader('Content-Disposition')
                         .split('filename=')[1]
                         .replace(/"/g, '');
-                    let link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = filename;
-                    link.click();
+
+                    if (format === "print") {
+                        let fileURL = URL.createObjectURL(blob);
+                        let printWindow = window.open(fileURL);
+                        printWindow.onload = function() {
+                            printWindow.focus();
+                            printWindow.print();
+                        };
+                    } else {
+                        let link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(blob);
+                        link.download = filename;
+                        link.click();
+                    }
                 },
                 error: function(xhr) {
                     console.error('Export failed:', xhr.responseText);
