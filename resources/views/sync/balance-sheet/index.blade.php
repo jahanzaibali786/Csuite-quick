@@ -93,7 +93,6 @@
         .subtotal-row {
             background-color: #f8f9fa;
             font-weight: bold;
-            display: none;
         }
 
         .total-row {

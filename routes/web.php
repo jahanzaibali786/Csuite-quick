@@ -755,6 +755,39 @@ Route::group(['middleware' => ['verified']], function () {
 
     Route::post('chart-of-account/subtype', [ChartOfAccountController::class, 'getSubType'])->name('charofAccount.subType')->middleware(['auth', 'XSS', 'revalidate']);
 
+    //Product Stock
+    Route::resource('productstock', ProductStockController::class)->middleware(['auth', 'XSS']);
+
+    //Customer
+    Route::group(
+        [
+            'middleware' => [
+                'auth',
+                'XSS',
+                'revalidate',
+            ],
+        ],
+        function () {
+            Route::get('customer/{id}/show', [CustomerController::class, 'show'])->name('customer.show');
+            Route::resource('customer', CustomerController::class);
+        }
+    );
+
+    //Vendor
+    Route::group(
+        [
+            'middleware' => [
+                'auth',
+                'XSS',
+                'revalidate',
+            ],
+        ],
+        function () {
+            Route::get('vender/{id}/show', [VenderController::class, 'show'])->name('vender.show');
+            Route::resource('vender', VenderController::class);
+        }
+    );
+
     Route::group(
         [
             'middleware' => [

@@ -20,6 +20,11 @@ class JournalEntry extends Model
         return $this->hasmany('App\Models\JournalItem', 'journal', 'id');
     }
 
+    public function journalItem()
+    {
+        return $this->hasmany('App\Models\JournalItem', 'journal', 'id');
+    }
+
     public function totalCredit()
     {
         $total = 0;

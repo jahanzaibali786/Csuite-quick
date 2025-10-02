@@ -147,7 +147,7 @@ class BalanceSheetDataTable extends DataTable
                 DB::raw('COALESCE(SUM(journal_items.debit), 0) as total_debit'),
                 DB::raw('COALESCE(SUM(journal_items.credit), 0) as total_credit'),
             ])
-            ->whereIn('chart_of_account_types.name', ['Asset', 'Liability', 'Equity'])
+            ->whereIn('chart_of_account_types.name', ['Assets', 'Liabilities', 'Equity'])
             ->groupBy('chart_of_accounts.id', 'chart_of_accounts.name', 'chart_of_account_types.name')
             ->orderBy('chart_of_account_types.name')
             ->orderBy('chart_of_accounts.name')
@@ -176,7 +176,7 @@ class BalanceSheetDataTable extends DataTable
         };
 
         // ---------- Assets Section ----------
-        $assetAccounts = $accounts->where('account_type', 'Asset')->map(function ($acc) {
+        $assetAccounts = $accounts->where('account_type', 'Assets')->map(function ($acc) {
             $amount = $acc->total_debit - $acc->total_credit;
             return (object) [
                 'id' => 'asset-acc-' . $acc->id,
@@ -215,7 +215,7 @@ class BalanceSheetDataTable extends DataTable
         $report->push($emptyRow(''));
 
         // ---------- Liabilities Section ----------
-        $liabilityAccounts = $accounts->where('account_type', 'Liability')->map(function ($acc) {
+        $liabilityAccounts = $accounts->where('account_type', 'Liabilities')->map(function ($acc) {
             $amount = $acc->total_credit - $acc->total_debit;
             return (object) [
                 'id' => 'liability-acc-' . $acc->id,
@@ -292,9 +292,12 @@ class BalanceSheetDataTable extends DataTable
         // ---------- Net Profit/Loss ----------
         $netProfit = $this->calculateNetProfit();
         
-        $report->push($emptyRow('Retained Earnings', 0, $netProfit, [
-            'id' => 'retained-earnings',
-            'is_subtotal' => true
+
+        // --- Add accumulated profit/loss row ---
+        $report->push($emptyRow('Accumulated (Loss) / Profit', 0, $netProfit, [
+            'id' => 'net-profit',
+            'class' => 'net-profit',
+            'is_total' => true, // This is a total row, but not a subtotal row
         ]));
 
         // Empty row for spacing
@@ -317,8 +320,8 @@ class BalanceSheetDataTable extends DataTable
             ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
             ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
             ->where("journal_entries.{$this->owner}", $this->companyId)
-            ->where('journal_entries.date', '<=', $this->asOfDate)
-            ->whereIn('chart_of_account_types.name', ['Income', 'Expense'])
+            ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate))) // Convert to date format for MySQL compatibility
+            ->whereIn('chart_of_account_types.name', ['Income', 'Expenses', 'Costs of Goods Sold'])
             ->selectRaw('SUM(journal_items.credit - journal_items.debit) as net_profit')
             ->value('net_profit');
 

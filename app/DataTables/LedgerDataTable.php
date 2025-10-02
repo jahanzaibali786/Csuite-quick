@@ -14,6 +14,17 @@ class LedgerDataTable extends DataTable
 {
     public $accountId1;
 
+    protected $companyId;
+
+    protected $owner;
+
+
+    public function __construct()
+    {
+        $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
+        $this->owner = \Auth::user()->type === 'company' ? 'created_by' : 'owned_by';
+    }
+
     /** Call this from the controller */
     public function setAccountId($accountId1): self
     {
@@ -42,7 +53,7 @@ class LedgerDataTable extends DataTable
                 if ($account) {
                     // Get entries for this account
                     $accountEntries = $entries->where('account', $this->accountId1);
-                    $accountTotal = $accountEntries->sum('debit') - $accountEntries->sum('credit');
+                $accountTotal = $openingBalance + $accountEntries->sum('debit') - $accountEntries->sum('credit');
 
                     // Add account header
                     $data->push([
@@ -59,7 +70,7 @@ class LedgerDataTable extends DataTable
                     ]);
 
                     // Add opening balance row if applicable
-                    if (in_array($accountType, ['Asset', 'Liability', 'Equity'])) {
+                    if (in_array($accountType, ['Assets', 'Liabilities', 'Equity'])) {
                         $data->push([
                             'id' => 'opening-' . $account->id,
                             'date' => request('startDate') ?? Carbon::now()->startOfMonth()->format('Y-m-d'),
@@ -133,7 +144,7 @@ class LedgerDataTable extends DataTable
                     $runningBalance = 0;
 
                     // Get opening balance for this account
-                    if (in_array($accountType, ['Asset', 'Liability', 'Equity'])) {
+                    if (in_array($accountType, ['Assets', 'Liabilities', 'Equity'])) {
                         $runningBalance = $this->getOpeningBalanceForAccount($accountId);
 
                         $data->push([
@@ -194,7 +205,6 @@ class LedgerDataTable extends DataTable
 
     public function query()
     {
-        // dd(request()->all());
         $query = JournalItem::query()
             ->with([
                 'accounts:id,name,type,sub_type',
@@ -203,7 +213,7 @@ class LedgerDataTable extends DataTable
                 'journalEntry:id,date,reference,journal_id,owned_by'
             ])
             ->whereHas('journalEntry', function ($q) {
-                $q->where('journal_entries.owned_by', 2); // Specify the table name
+                $q->where("journal_entries.{$this->owner}", $this->companyId); // Specify the table name, 2 is for company
             });
         if (request()->filled('account_id') && request('account_id') !== 'all') {
             $query->where('account', request('account_id'));
@@ -235,7 +245,7 @@ class LedgerDataTable extends DataTable
             ->join('chart_of_accounts', 'chart_of_accounts.id', '=', 'journal_items.account')
             ->join('chart_of_account_sub_types', 'chart_of_account_sub_types.id', '=', 'chart_of_accounts.sub_type')
             ->join('chart_of_account_types', 'chart_of_account_types.id', '=', 'chart_of_account_sub_types.type')
-            ->where('journal_entries.owned_by', 2) // Explicitly reference the table
+            ->where("journal_entries.{$this->owner}", $this->companyId) // Explicitly reference the table
             ->orderBy('chart_of_account_types.name', 'asc')   // First by type
             ->orderBy('chart_of_account_sub_types.name', 'asc') // Then by subtype
             ->orderBy('chart_of_accounts.name', 'asc')        // Then by account
@@ -243,7 +253,7 @@ class LedgerDataTable extends DataTable
     }
 
     /**
-     * Calculate Opening Balance before startDate (only for Asset, Liability, Equity)
+     * Calculate Opening Balance before startDate (only for Assets, Liabilities, Equity)
      */
     protected function getOpeningBalance(): float
     {
@@ -258,13 +268,13 @@ class LedgerDataTable extends DataTable
         }
 
         $accountType = $this->getAccountType();
-        if (!in_array($accountType, ['Asset', 'Liability', 'Equity'])) {
+        if (!in_array($accountType, ['Assets', 'Liabilities', 'Equity'])) {
             return 0; // Income & Expense reset each year
         }
 
         $query = \DB::table('journal_items')
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_items.journal')
-            ->where('journal_entries.owned_by', 2) // Specify the table name
+            ->where("journal_entries.{$this->owner}", $this->companyId) // Specify the table name
             ->where('journal_entries.date', '<', $start);
 
         if (request()->filled('account_id') && request('account_id') !== 'all') {
@@ -274,7 +284,7 @@ class LedgerDataTable extends DataTable
         }
 
         $totals = $query->selectRaw("SUM(debit) as total_debit, SUM(credit) as total_credit")->first();
-
+        
         return ($totals->total_debit ?? 0) - ($totals->total_credit ?? 0);
     }
 
@@ -300,14 +310,15 @@ class LedgerDataTable extends DataTable
 
         // Get account type
         $accountType = optional($account->types)->name;
-        if (!in_array($accountType, ['Asset', 'Liability', 'Equity'])) {
+        if (!in_array($accountType, ['Assets', 'Liabilities', 'Equity'])) {
             return 0; // Income & Expense reset each year
         }
 
         $query = \DB::table('journal_items')
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_items.journal')
-            ->where('journal_entries.owned_by', 2)
-            ->where('journal_entries.date', '<', $start)
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->where('journal_entries.created_at', '<', date('Y-m-d 00:00:01', strtotime($start)))
+            // ->where('journal_entries.date', '<', $start)
             ->where('journal_items.account', $accountId);
 
         $totals = $query->selectRaw("SUM(debit) as total_debit, SUM(credit) as total_credit")->first();
