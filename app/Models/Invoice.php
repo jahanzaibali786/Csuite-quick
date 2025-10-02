@@ -18,11 +18,14 @@ class Invoice extends Model
     ];
 
     public static $statues = [
-        'Draft',
-        'Sent',
-        'Unpaid',
-        'Partialy Paid',
-        'Paid',
+        'Draft', // 0
+        'Sent', // 1
+        'Unpaid', // 2
+        'Partialy Paid', // 3
+        'Paid', // 4
+        'Pending Approval',  // 5
+        'Approved',        //6  
+        'Rejected' // 7
     ];
 
 
@@ -42,7 +45,7 @@ class Invoice extends Model
     }
     public function bankPayments()
     {
-        return $this->hasMany('App\Models\InvoiceBankTransfer', 'invoice_id', 'id')->where('status','!=','Approved');
+        return $this->hasMany('App\Models\InvoiceBankTransfer', 'invoice_id', 'id')->where('status', '!=', 'Approved');
     }
     public function customer()
     {
@@ -67,8 +70,7 @@ class Invoice extends Model
     public function getSubTotal()
     {
         $subTotal = 0;
-        foreach($this->items as $product)
-        {
+        foreach ($this->items as $product) {
 
             $subTotal += ($product->price * $product->quantity);
         }
@@ -95,8 +97,7 @@ class Invoice extends Model
     {
         $taxData = Utility::getTaxData();
         $totalTax = 0;
-        foreach($this->items as $product)
-        {
+        foreach ($this->items as $product) {
             // $taxes = Utility::totalTaxRate($product->tax);
 
             $taxArr = explode(',', $product->tax);
@@ -114,8 +115,7 @@ class Invoice extends Model
     public function getTotalDiscount()
     {
         $totalDiscount = 0;
-        foreach($this->items as $product)
-        {
+        foreach ($this->items as $product) {
             $totalDiscount += $product->discount;
         }
 
@@ -125,8 +125,7 @@ class Invoice extends Model
     public function getDue()
     {
         $due = 0;
-        foreach($this->payments as $payment)
-        {
+        foreach ($this->payments as $payment) {
             $due += $payment->amount;
         }
 
@@ -136,7 +135,7 @@ class Invoice extends Model
     public static function change_status($invoice_id, $status)
     {
 
-        $invoice         = Invoice::find($invoice_id);
+        $invoice = Invoice::find($invoice_id);
         $invoice->status = $status;
         $invoice->update();
     }

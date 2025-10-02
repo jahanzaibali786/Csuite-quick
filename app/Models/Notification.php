@@ -16,407 +16,479 @@ class Notification extends Model
         'notification_for',
     ];
 
+    /**
+     * Configuration map for notification types
+     */
+    private function getNotificationConfig(): array
+    {
+        return [
+            // Deals
+            'assign_lead' => [
+                'route' => 'leads.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} Added you in lead <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-plus',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'create_deal' => [
+                'route' => 'leads.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} Create deal from lead <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-plus',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'assign_deal' => [
+                'route' => 'deals.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} Added you in deal <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-plus',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'create_deal_call' => [
+                'route' => 'deals.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} Create new Deal Call in deal <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-phone',
+                'icon_color' => 'bg-info',
+                'not_type' => 'simple',
+            ],
+            'update_deal_source' => [
+                'route' => 'deals.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} Update Sources in deal <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-file-alt',
+                'icon_color' => 'bg-warning',
+                'not_type' => 'simple',
+            ],
+            'create_task' => [
+                'route' => 'deals.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} Create new Task in deal <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-tasks',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'create_transfer' => [
+                'route' => 'bank-transfer.index',
+                'route_param' => null,
+                'text_template' => '{user} Created a new Bank Transfer <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-tasks',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'create_employee' => [
+                'route' => 'employee.index',
+                'route_param' => null,
+                'text_template' => '{user} Created a new Employee <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-tasks',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'assign_project' => [
+                'route' => 'projects.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} Assigned a Project <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-tasks',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'add_product' => [
+                'route' => 'deals.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} Add new Products in deal <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-dolly',
+                'icon_color' => 'bg-danger',
+                'not_type' => 'simple',
+            ],
+            'add_discussion' => [
+                'route' => 'deals.show',
+                'route_param' => 'deal_id',
+                'text_template' => '{user} Add new Discussion in deal <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-comments',
+                'icon_color' => 'bg-info',
+                'not_type' => 'simple',
+            ],
+            'move_deal' => [
+                'route' => 'deals.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} Moved the deal <b class="font-weight-bold">{name}</b> from {old_status} to {new_status}',
+                'icon' => 'fa fa-arrows-alt',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+
+            // Estimations
+            'assign_estimation' => [
+                'route' => 'estimations.show',
+                'route_param' => 'estimation_id',
+                'text_template' => '{user} Added you in estimation <b class="font-weight-bold">{estimation_name}</b>',
+                'icon' => 'fa fa-plus',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+
+            // Leads
+            'create_lead_call' => [
+                'route' => 'leads.show',
+                'route_param' => 'lead_id',
+                'text_template' => '{user} Create new Lead Call in lead <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-phone',
+                'icon_color' => 'bg-info',
+                'not_type' => 'simple',
+            ],
+            'update_lead_source' => [
+                'route' => 'leads.show',
+                'route_param' => 'lead_id',
+                'text_template' => '{user} Update Sources in lead <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-file-alt',
+                'icon_color' => 'bg-warning',
+                'not_type' => 'simple',
+            ],
+            'add_lead_product' => [
+                'route' => 'leads.show',
+                'route_param' => 'lead_id',
+                'text_template' => '{user} Add new Products in lead <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-dolly',
+                'icon_color' => 'bg-danger',
+                'not_type' => 'simple',
+            ],
+            'add_lead_discussion' => [
+                'route' => 'leads.show',
+                'route_param' => 'lead_id',
+                'text_template' => '{user} Add new Discussion in lead <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-comments',
+                'icon_color' => 'bg-info',
+                'not_type' => 'simple',
+            ],
+            'move_lead' => [
+                'route' => 'leads.show',
+                'route_param' => 'lead_id',
+                'text_template' => '{user} Moved the lead <b class="font-weight-bold">{name}</b> from {old_status} to {new_status}',
+                'icon' => 'fa fa-arrows-alt',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+
+            // HR Management
+            'leave' => [
+                'route' => 'leave.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} {notification_for} <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'approval',
+            ],
+
+            // Invoice Management
+            'create_invoice' => [
+                'route' => 'invoice.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} created a new invoice <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-file-invoice',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'approval',
+                'approve_route' => 'invoice.approve',
+                'reject_route' => 'invoice.reject',
+            ],
+            'approval_request_invoice' => [
+                'route' => 'invoice.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} sent a invoice <b class="font-weight-bold">{name}</b> for approval',
+                'icon' => 'fa fa-file-invoice',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'approval',
+                'approve_route' => 'invoice.approve',
+                'reject_route' => 'invoice.reject',
+            ],
+            'create_expanse' => [
+                'route' => 'expense.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} created a new expanse <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-file-bill',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'approval',
+                'approve_route' => 'expense.approve',
+                'reject_route' => 'expense.reject',
+            ],
+            'request_approve_bill' => [
+                'route' => 'bill.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} sent a bill <b class="font-weight-bold">{name}</b> for approval',
+                'icon' => 'fa fa-file-bill',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'approval',
+                'approve_route' => 'bill.approve',
+                'reject_route' => 'bill.reject',
+            ],
+            'create_bill' => [
+                'route' => 'bill.show',
+                'route_param' => 'data_id',
+                'text_template' => '{user} created a new bill <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-file-bill',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'approval',
+                'approve_route' => 'bill.approve',
+                'reject_route' => 'bill.reject',
+            ],
+            'task' => [
+                'route' => 'projects.tasks.index',
+                'route_param' => 'project_id',
+                'text_template' => '{user} {notification_for} <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'checklist' => [
+                'route' => 'projects.tasks.index',
+                'route_param' => 'project_id',
+                'text_template' => '{user} {notification_for} <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'comment' => [
+                'route' => 'projects.tasks.index',
+                'route_param' => 'project_id',
+                'text_template' => '{user} {notification_for} <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'bug' => [
+                'route' => 'task.bug.kanban',
+                'route_param' => 'project_id',
+                'text_template' => '{user} {notification_for} <b class="font-weight-bold">{name}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'termination' => [
+                'route' => 'termination.show',
+                'route_param' => 'data_id',
+                'text_template' => '{name} {notification_for} <b class="font-weight-bold">{user}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'warning' => [
+                'route' => 'warning.show',
+                'route_param' => 'data_id',
+                'text_template' => '{name} {notification_for} <b class="font-weight-bold">{user}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'resignation' => [
+                'route' => 'resignation.show',
+                'route_param' => 'data_id',
+                'text_template' => '{name} {notification_for}',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'transfer' => [
+                'route' => 'transfer.show',
+                'route_param' => 'data_id',
+                'text_template' => '{name} {notification_for} <b class="font-weight-bold">{user}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'promotion' => [
+                'route' => 'promotion.show',
+                'route_param' => 'data_id',
+                'text_template' => '{name} {notification_for} {promotion} <b class="font-weight-bold">by {user}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'award' => [
+                'route' => 'award.show',
+                'route_param' => 'data_id',
+                'text_template' => '{name} {notification_for} <b class="font-weight-bold">{user}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'travel' => [
+                'route' => 'travel.show',
+                'route_param' => 'data_id',
+                'text_template' => '{name} {notification_for}',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'complaint' => [
+                'route' => 'complaint.show',
+                'route_param' => 'data_id',
+                'text_template' => '{name} {notification_for} <b class="font-weight-bold">{user}</b>',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'announcement' => [
+                'route' => 'announcement.index',
+                'route_param' => null,
+                'text_template' => '{user} {notification_for}',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'holiday' => [
+                'route' => 'holiday.index',
+                'route_param' => null,
+                'text_template' => '{user} {notification_for}',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'event' => [
+                'route' => 'event.index',
+                'route_param' => null,
+                'text_template' => '{user} {notification_for}',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+            'policy' => [
+                'route' => 'company-policy.index',
+                'route_param' => null,
+                'text_template' => '{user} {notification_for}',
+                'icon' => 'fa fa-eye',
+                'icon_color' => 'bg-primary',
+                'not_type' => 'simple',
+            ],
+        ];
+    }
+
     public function toHtml()
     {
-        $data       = json_decode($this->data);
-        $link       = '#';
-        $icon       = 'fa fa-bell';
-        $icon_color = 'bg-primary';
-        $text       = '';
-        
-        if(isset($data->updated_by) && !empty($data->updated_by))
-        {
-            $usr = User::find($data->updated_by);
+        $data = json_decode($this->data);
+        $config = $this->getNotificationConfig();
+
+        // Check if notification type exists in config
+        if (!isset($config[$this->type])) {
+            return '';
         }
 
-        if(!empty($usr))
-        {
-            // For Deals Notification
-            if($this->type == 'assign_lead')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('leads.show', [$data->data_id,]);
-                $text       = $usr->name . " " . __('Added you') . " " . __('in lead') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-plus";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'create_deal')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('leads.show', [$data->data_id,]);
-                $text       = $usr->name . " " . __('Create deal') . " " . __('from lead') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-plus";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'assign_deal')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('deals.show', [$data->data_id,]);
-                $text       = $usr->name . " " . __('Added you') . " " . __('in deal') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-plus";
-                $icon_color = 'bg-primary';
-            }
+        $notificationConfig = $config[$this->type];
 
-            if($this->type == 'create_deal_call')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('deals.show', [$data->data_id,]);
-                $text       = $usr->name . " " . __('Create new Deal Call') . " " . __('in deal') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-phone";
-                $icon_color = 'bg-info';
-            }
+        // Get user who triggered the notification
+        $user = null;
+        if (isset($data->updated_by) && !empty($data->updated_by)) {
+            $user = User::find($data->updated_by);
+        }
 
-            if($this->type == 'update_deal_source')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('deals.show', [$data->data_id,]);
-                $text       = $usr->name . " " . __('Update Sources') . " " . __('in deal') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-file-alt";
-                $icon_color = 'bg-warning';
-            }
+        if (!$user) {
+            return '';
+        }
 
-            if($this->type == 'create_task')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('deals.show', [$data->data_id,]);
-                $text       = $usr->name . " " . __('Create new Task') . " " . __('in deal') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-tasks";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'create_transfer')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('bank-transfer.index');
-                $text       = $usr->name . " " . __('Created a new Bank Transfer') .  " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-tasks";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'create_employee')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('employee.index');
-                $text       = $usr->name . " " . __('Created a new Employee') .  " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-tasks";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'assign_project')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('projects.show',[$data->data_id]);
-                $text       = $usr->name . " " . __('Assigned a Project') .  " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-tasks";
-                $icon_color = 'bg-primary';
-            }
+        // Build route
+        $link = $this->buildRoute($notificationConfig, $data);
 
-            if($this->type == 'add_product')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('deals.show', [$data->data_id,]);
-                $text       = $usr->name . " " . __('Add new Products') . " " . __('in deal') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-dolly";
-                $icon_color = 'bg-danger';
-            }
+        // Build text using template
+        $text = $this->buildText($notificationConfig['text_template'], $data, $user);
 
-            if($this->type == 'add_discussion')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('deals.show', [$data->deal_id,]);
-                $text       = $usr->name . " " . __('Add new Discussion') . " " . __('in deal') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-comments";
-                $icon_color = 'bg-info';
-            }
+        // Build HTML
+        return $this->buildHtml(
+            $link,
+            $notificationConfig['icon'],
+            $notificationConfig['icon_color'],
+            $text,
+            $notificationConfig['not_type'],
+            $notificationConfig
+        );
+    }
 
-            if($this->type == 'move_deal')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('deals.show', [$data->data_id,]);
-                $text       = $usr->name . " " . __('Moved the deal') . " <b class='font-weight-bold'>" . $data->name . "</b> " . __('from') . " " . __(ucwords($data->old_status)) . " " . __('to') . " " . __(ucwords($data->new_status));
-                $icon       = "fa fa-arrows-alt";
-                $icon_color = 'bg-primary';
-            }
-            // end deals
+    private function buildRoute(array $config, object $data): string
+    {
+        if ($config['route_param'] === null) {
+            return route($config['route']);
+        }
 
-            // for estimations
-            if($this->type == 'assign_estimation')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('estimations.show', [$data->estimation_id,]);
-                $text       = $usr->name . " " . __('Added you') . " " . __('in estimation') . " <b class='font-weight-bold'>" . $data->estimation_name . "</b> ";
-                $icon       = "fa fa-plus";
-                $icon_color = 'bg-primary';
-            }
-            // end estimations
+        $paramValue = $data->{$config['route_param']} ?? null;
 
-            // For Leads Notification
-            // if($this->type == 'assign_lead')
-            // {
-            $not_type = 'simple';
-            $not_id= $this->id;
-            //     $link       = route('leads.show', [$data->lead_id,]);
-            //     $text       = $usr->name . " " . __('Added you') . " " . __('in lead') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-            //     $icon       = "fa fa-plus";
-            //     $icon_color = 'bg-primary';
-            // }
+        if ($paramValue === null) {
+            return '#';
+        }
+        return route($config['route'], [$paramValue]);
+    }
 
-            if($this->type == 'create_lead_call')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('leads.show', [$data->lead_id,]);
-                $text       = $usr->name . " " . __('Create new Lead Call') . " " . __('in lead') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-phone";
-                $icon_color = 'bg-info';
-            }
+    private function buildText(string $template, object $data, User $user): string
+    {
+        $replacements = [
+            '{user}' => $user->name,
+            '{name}' => $data->name ?? '',
+            '{estimation_name}' => $data->estimation_name ?? '',
+            '{notification_for}' => __($this->notification_for ?? ''),
+            '{old_status}' => __(ucwords($data->old_status ?? '')),
+            '{new_status}' => __(ucwords($data->new_status ?? '')),
+            '{promotion}' => $data->promotion ?? '',
+        ];
 
-            if($this->type == 'update_lead_source')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('leads.show', [$data->lead_id,]);
-                $text       = $usr->name . " " . __('Update Sources') . " " . __('in lead') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-file-alt";
-                $icon_color = 'bg-warning';
-            }
+        $text = $template;
+        foreach ($replacements as $placeholder => $value) {
+            $text = str_replace($placeholder, $value, $text);
+        }
 
-            if($this->type == 'add_lead_product')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('leads.show', [$data->lead_id,]);
-                $text       = $usr->name . " " . __('Add new Products') . " " . __('in lead') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-dolly";
-                $icon_color = 'bg-danger';
-            }
+        // Translate the text
+        return __($text);
+    }
 
-            if($this->type == 'add_lead_discussion')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('leads.show', [$data->lead_id,]);
-                $text       = $usr->name . " " . __('Add new Discussion') . " " . __('in lead') . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-comments";
-                $icon_color = 'bg-info';
-            }
+    private function buildHtml(
+        string $link,
+        string $icon,
+        string $iconColor,
+        string $text,
+        string $notType,
+        array $config
+    ): string {
+        $date = $this->created_at->diffForHumans();
 
-            if($this->type == 'move_lead')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('leads.show', [$data->lead_id,]);
-                $text       = $usr->name . " " . __('Moved the lead') . " <b class='font-weight-bold'>" . $data->name . "</b> " . __('from') . " " . __(ucwords($data->old_status)) . " " . __('to') . " " . __(ucwords($data->new_status));
-                $icon       = "fa fa-arrows-alt";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'leave')
-            {
-                $not_type = 'approval';
-                $link       = route('leave.show', [$data->data_id,]);
-                $text       = $usr->name . " " . @$this->notification_for . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'task')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('projects.tasks.index', [$data->project_id,]);
-                $text       = $usr->name . " " . @$this->notification_for . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'checklist')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('projects.tasks.index', [$data->project_id]);
-                $text       = $usr->name . " " . @$this->notification_for . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'comment')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('projects.tasks.index', [$data->project_id,]);
-                $text       = $usr->name . " " . @$this->notification_for . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'bug')
-            {
-                
-                $not_type = 'simple';
-                $not_id= $this->id;// dd($this->data);
-                $link       = route('task.bug.kanban', [@$data->project_id]);
-                $text       = $usr->name . " " . @$this->notification_for . " <b class='font-weight-bold'>" . $data->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'termination')
-            {
-                
-                $not_type = 'simple';
-                $not_id= $this->id;// dd($this->data);
-                $link       = route('termination.show', [@$data->data_id]);
-                $text       = $data->name . " " . @$this->notification_for . " <b class='font-weight-bold'>" . $usr->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'warning')
-            {
-                
-                $not_type = 'simple';
-                $not_id= $this->id;// dd($this->data);
-                $link       = route('warning.show', [@$data->data_id]);
-                $text       = $data->name . " " . @$this->notification_for . " <b class='font-weight-bold'>" . $usr->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'resignation')
-            {
-                
-                $not_type = 'simple';
-                $not_id= $this->id;// dd($this->data);
-                $link       = route('resignation.show', [@$data->data_id]);
-                $text       = $data->name . " " . @$this->notification_for ;
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'transfer')
-            {
-                
-                $not_type = 'simple';
-                $not_id= $this->id;// dd($this->data);
-                $link       = route('transfer.show', [@$data->data_id]);
-                $text       = $data->name . " " . @$this->notification_for . " <b class='font-weight-bold'>" . $usr->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'promotion')
-            {
-                
-                $not_type = 'simple';
-                $not_id= $this->id;// dd($this->data);
-                $link       = route('promotion.show', [@$data->data_id]);
-                $text       = $data->name . " " . @$this->notification_for . $data->promotion." <b class='font-weight-bold'>by " . $usr->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'award')
-            {
-                
-                $not_type = 'simple';
-                $not_id= $this->id;// dd($this->data);
-                $link       = route('award.show', [@$data->data_id]);
-                $text       = $data->name . " " . @$this->notification_for ." <b class='font-weight-bold'> " . $usr->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'travel')
-            {
-                
-                $not_type = 'simple';
-                $not_id= $this->id;// dd($this->data);
-                $link       = route('travel.show', [@$data->data_id]);
-                $text       = $data->name . " " . @$this->notification_for;
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'complaint')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('complaint.show', [@$data->data_id]);
-                $text       = $data->name . " " . @$this->notification_for . " <b class='font-weight-bold'>" . $usr->name . "</b> ";
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'announcement')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('announcement.index', );
-                $text       = @$usr->name . " " . @$this->notification_for ;
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'holiday')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('holiday.index', );
-                $text       = @$usr->name . " " . @$this->notification_for ;
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'event')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('event.index', );
-                $text       = @$usr->name . " " . @$this->notification_for ;
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            if($this->type == 'policy')
-            {
-                $not_type = 'simple';
-                $not_id= $this->id;
-                $link       = route('company-policy.index', );
-                $text       = @$usr->name . " " . @$this->notification_for ;
-                $icon       = "fa fa-eye";
-                $icon_color = 'bg-primary';
-            }
-            // end Leads
+        // Show approve/reject buttons only for non-simple notification types
+        $approvalButtons = '';
+        if ($notType !== 'simple') {
+            $approveRoute = $config['approve_route'] ?? $config['route'] . '.approve';
+            $rejectRoute = $config['reject_route'] ?? $config['route'] . '.reject';
+            $approvalButtons = '
+                <div class="d-flex align-items-center ml-4 ps-4" style="margin-left:1.5rem;">
+                    <form method="POST" action="' . route($approveRoute, [$this->data_id]) . '" class="d-inline">
+                        ' . csrf_field() . '
+                        <button type="submit" class="btn btn-sm btn-success mr-1">
+                            ' . __('Approve') . '
+                        </button>
+                    </form>
+                    <form method="POST" action="' . route($rejectRoute, [$this->data_id]) . '" class="d-inline ms-2">
+                        ' . csrf_field() . '
+                        <button type="submit" class="btn btn-sm btn-danger">
+                            ' . __('Reject') . '
+                        </button>
+                    </form>
+                </div>';
+        }
 
-            $date = $this->created_at->diffForHumans();
-            // $html = '<a href="' . $link . '" class="list-group-item list-group-item-action">
-            //                     <div class="d-flex align-items-center">
-            //                             <div>
-            //                                 <span class="avatar ' . $icon_color . ' text-white rounded-circle"><i class="' . $icon . '"></i></span>
-            //                             </div>
-            //                         <div class="flex-fill ml-3">
-            //                             <div class="h6 text-sm mb-0">' . $text . '</div>
-            //                             <small class="text-muted text-xs">' . $date . '</small>
-            //                         </div>
-            //                     </div>
-            //                 </a>';
-            $html = '<a href="#"
-                        class="list-group-item list-group-item-action notification_model"
-                        onclick="showNotificationModal(this)"
-                        data-link="' . $link . '" data-type="'.$not_type.'" data-notificationId="'.$not_id.'">
-                        <div class="d-flex align-items-center p-1 border-bottom">
-                            <div>
-                                <span class="avatar ' . $icon_color . ' text-white rounded-circle" style="max-width: 40px; max-height: 40px; margin-right: 7px;">
-                                    <i class="' . $icon . '"></i>
-                                </span>
-                            </div>
-                            <div class="flex-fill ml-3">
-                                <div class="h6 text-sm mb-0 notification-message">' . $text . '</div>
-                                <small class="text-muted text-xs">' . $date . '</small>
-                            </div>
+        return '<a href="#"
+                    class="list-group-item list-group-item-action notification_model border-bottom"
+                    onclick="showNotificationModal(this)"
+                    data-link="' . $link . '" 
+                    data-type="' . $notType . '" 
+                    data-notificationId="' . $this->id . '">
+                    <div class="d-flex align-items-center p-1 ">
+                        <div>
+                            <span class="avatar ' . $iconColor . ' text-white rounded-circle" 
+                                  style="max-width: 40px; max-height: 40px; margin-right: 7px;">
+                                <i class="' . $icon . '"></i>
+                            </span>
                         </div>
-                    </a>';
-
-        }
-        else
-        {
-            $html = '';
-        }
-
-        return $html;
+                        <div class="flex-fill ml-3">
+                            <div class="h6 text-sm mb-0 notification-message">' . $text . '</div>
+                            <small class="text-muted text-xs">' . $date . '</small>
+                        </div>
+                    </div>
+                    ' . $approvalButtons . '
+                </a>';
     }
 }

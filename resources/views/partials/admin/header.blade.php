@@ -333,92 +333,143 @@
 </div>
 
     <!-- Notification Modal -->
-    <div class="modal fade" id="notificationModal" tabindex="-1" role="dialog" aria-labelledby="notificationModalLabel" aria-hidden="true">
+    {{-- <div class="modal fade" id="notificationModal" tabindex="-1" role="dialog" aria-labelledby="notificationModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="notificationModalLabel">Notification Action</h5>
-                    {{-- <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button> --}}
                 </div>
                 <div class="modal-body">
                     <p>Would you like to approve or reject this notification?</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Reject</button>
-                    {{-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> --}}
                     <a id="approveBtn" href="#" class="btn btn-success">Approve</a>
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
 </header>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        function getBaseUrl() {
-            const {
-                protocol,
-                host,
-                pathname
-            } = window.location;
-            const pathArray = pathname.split('/').filter(part => part); 
-            const basePath = pathArray.length > 0 ? '' : '';
-            return `${protocol}//${host}${basePath}`;
-        }
+document.addEventListener('DOMContentLoaded', function() {
+    function getBaseUrl() {
+        const { protocol, host, pathname } = window.location;
+        const pathArray = pathname.split('/').filter(part => part); 
+        const basePath = pathArray.length > 0 ? '' : '';
+        return `${protocol}//${host}${basePath}`;
+    }
 
-        function markAsSeen(notificationId) {
-            const notification = $(`.notification-item[data-id="${notificationId}"]`);
-            notification.css('opacity', '0.7');
+    function markAsSeen(notificationId) {
+        const notification = $(`.notification-item[data-id="${notificationId}"]`);
+        notification.css('opacity', '0.7');
 
-            setTimeout(() => notification.addClass('d-none'), 500);
+        setTimeout(() => notification.addClass('d-none'), 500);
 
-            const baseUrl = getBaseUrl(); // Get the base URL
+        const baseUrl = getBaseUrl();
+        $.ajax({
+            url: `${baseUrl}/has_Seen/${notificationId}`,
+            type: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function() {
+                console.log(`Notification ${notificationId} marked as seen.`);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error marking notification as seen:', error);
+            }
+        });
+    }
+
+    // Handle notification clicks (for navigation)
+    document.querySelectorAll('.notification_model').forEach(function(element) {
+        element.addEventListener('click', function(event) {
+            // Check if the clicked element is a button or inside a form
+            if (event.target.tagName === 'BUTTON' || event.target.closest('form')) {
+                return; // Don't handle navigation if it's a button click
+            }
+
+            event.preventDefault();
+
+            const link = this.getAttribute('data-link');
+            const notificationType = this.getAttribute('data-type');
+            const notificationId = this.getAttribute('data-notificationId');
+
+            // Mark as seen and navigate
+            markAsSeen(notificationId);
+            
+            if (link && link !== '#') {
+                window.location.href = link;
+            }
+        });
+    });
+
+    // Handle approve/reject button clicks
+    document.querySelectorAll('.notification_model form').forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(this);
+            const actionUrl = this.getAttribute('action');
+            const button = this.querySelector('button[type="submit"]');
+            const originalText = button.textContent;
+            const notificationElement = this.closest('.notification_model');
+            const notificationId = notificationElement.getAttribute('data-notificationId');
+
+            // Disable button and show loading state
+            button.disabled = true;
+            button.textContent = 'Processing...';
+
             $.ajax({
-                url: `${baseUrl}/has_Seen/${notificationId}`,
+                url: actionUrl,
                 type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
-                success: function() {
-                    console.log(`Notification ${notificationId} marked as seen.`);
+                success: function(response) {
+                    // Mark notification as seen
+                    markAsSeen(notificationId);
+                    
+                    // Show success message
+                    if (response.message) {
+                        alert(response.message);
+                    } else {
+                        alert('Action processed successfully.');
+                        // window.location.reload();
+                    }
+                    
+                    // Remove the notification from view
+                    notificationElement.style.opacity = '0.5';
+                    setTimeout(() => {
+                        notificationElement.remove();
+                    }, 300);
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error marking notification as seen:', error);
-                }
-            });
-        }
-
-        document.querySelectorAll('.notification_model').forEach(function(element) {
-            element.addEventListener('click', function(event) {
-                event.preventDefault(); // Prevent default link behavior
-
-                // Get the link from the clicked element's data attribute
-                const link = this.getAttribute('data-link');
-                const notificationType = this.getAttribute('data-type');
-                if (notificationType == 'simple') {
-                    const notificationId = this.getAttribute('data-notificationId');
-                    markAsSeen(notificationId);
-                    window.location.href = link;
-                } else if (notificationType == 'approval') {
-                    const approveBtn = document.getElementById('approveBtn');
-                    approveBtn.href = link;
-                    const message = this.querySelector('.notification-message').textContent;
-                    $('#notificationModal').find('.modal-body').text(message);
-                    $('#notificationModal').modal('show');
-                    $('.modal-backdrop').removeClass('modal-backdrop fade show');
-                    const notificationId = this.getAttribute('data-notificationId');
-                    markAsSeen(notificationId);
-                } else {
-                    $('#notificationModal').find('.modal-footer').empty();
-                    const message = this.querySelector('.notification-message').textContent;
-                    $('#notificationModal').find('.modal-body').text(message);
-                    $('#notificationModal').modal('show');
-                    $('.modal-backdrop').removeClass('modal-backdrop fade show');
-                    const notificationId = this.getAttribute('data-notificationId');
-                    markAsSeen(notificationId);
+                    console.error('Error processing action:', error);
+                    
+                    // Re-enable button
+                    button.disabled = false;
+                    button.textContent = originalText;
+                    
+                    // Show error message
+                    let errorMessage = 'An error occurred while processing the action.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    alert(errorMessage);
                 }
             });
         });
     });
+
+    // Prevent event bubbling for buttons
+    document.querySelectorAll('.notification_model button').forEach(function(button) {
+        button.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+    });
+});
 </script>
