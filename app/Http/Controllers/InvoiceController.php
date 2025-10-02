@@ -49,10 +49,10 @@ class InvoiceController extends Controller
             $user = \Auth::user();
             $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
             $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
-            $customer = Customer::where($column, '=',$ownerId)->get()->pluck('name', 'id');
+            $customer = Customer::where($column, '=', $ownerId)->get()->pluck('name', 'id');
             $customer->prepend('Select Customer', '');
             $status = Invoice::$statues;
-            $query = Invoice::where($column, '=',$ownerId);
+            $query = Invoice::where($column, '=', $ownerId);
 
             if (!empty($request->customer)) {
                 $query->where('customer_id', '=', $request->customer);
@@ -170,119 +170,333 @@ class InvoiceController extends Controller
         return json_encode($data);
     }
 
+    // public function store(Request $request)
+    // {
+    //     \DB::beginTransaction();
+    //     try {
+    //         if (\Auth::user()->can('create invoice')) {
+    //             $validator = \Validator::make(
+    //                 $request->all(),
+    //                 [
+    //                     'customer_id' => 'required',
+    //                     'issue_date' => 'required',
+    //                     'due_date' => 'required',
+    //                     // 'category_id' => 'required',
+    //                     'items' => 'required',
+    //                 ]
+    //             );
+    //             if ($validator->fails()) {
+    //                 $messages = $validator->getMessageBag();
+    //                 return redirect()->back()->with('error', $messages->first());
+    //             }
+    //             $status = Invoice::$statues;
+    //             $invoice = new Invoice();
+    //             $invoice->invoice_id = $this->invoiceNumber();
+    //             $invoice->customer_id = $request->customer_id;
+    //             $invoice->status = 0;
+    //             $invoice->issue_date = $request->issue_date;
+    //             $invoice->due_date = $request->due_date;
+    //             $invoice->category_id = $request->category_id ?? 1;
+    //             $invoice->ref_number = $request->ref_number;
+    //             //            $invoice->discount_apply = isset($request->discount_apply) ? 1 : 0;
+    //             $invoice->created_by = \Auth::user()->creatorId();
+    //             $invoice->owned_by = \Auth::user()->ownedId();
+    //             $invoice->save();
+    //             CustomField::saveData($invoice, $request->customField);
+    //             $products = $request->items;
+    //             $newitems = $request->items;
+    //             $reciveable = 0;
+    //             for ($i = 0; $i < count($products); $i++) {
+
+    //                 $invoiceProduct = new InvoiceProduct();
+    //                 $invoiceProduct->invoice_id = $invoice->id;
+    //                 $invoiceProduct->product_id = $products[$i]['item'];
+    //                 $invoiceProduct->quantity = $products[$i]['quantity'];
+    //                 $invoiceProduct->tax = $products[$i]['tax'];
+    //                 // $invoiceProduct->discount    = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
+    //                 $invoiceProduct->discount = $products[$i]['discount'];
+    //                 $invoiceProduct->price = $products[$i]['price'];
+    //                 $invoiceProduct->description = $products[$i]['description'];
+    //                 $invoiceProduct->save();
+    //                 $newitems[$i]['prod_id'] = $invoiceProduct->id; // Add the key and value
+
+
+    //                 //inventory management (Quantity)
+    //                 Utility::total_quantity('minus', $invoiceProduct->quantity, $invoiceProduct->product_id);
+
+    //                 //For Notification
+    //                 $setting = Utility::settings(\Auth::user()->creatorId());
+    //                 $customer = Customer::find($request->customer_id);
+    //                 $invoiceNotificationArr = [
+    //                     'invoice_number' => \Auth::user()->invoiceNumberFormat($invoice->invoice_id),
+    //                     'user_name' => \Auth::user()->name,
+    //                     'invoice_issue_date' => $invoice->issue_date,
+    //                     'invoice_due_date' => $invoice->due_date,
+    //                     'customer_name' => $customer->name,
+    //                 ];
+    //                 //Slack Notification
+    //                 if (isset($setting['invoice_notification']) && $setting['invoice_notification'] == 1) {
+    //                     Utility::send_slack_msg('new_invoice', $invoiceNotificationArr);
+    //                 }
+    //                 //Telegram Notification
+    //                 if (isset($setting['telegram_invoice_notification']) && $setting['telegram_invoice_notification'] == 1) {
+    //                     Utility::send_telegram_msg('new_invoice', $invoiceNotificationArr);
+    //                 }
+    //                 //Twilio Notification
+    //                 if (isset($setting['twilio_invoice_notification']) && $setting['twilio_invoice_notification'] == 1) {
+    //                     Utility::send_twilio_msg($customer->contact, 'new_invoice', $invoiceNotificationArr);
+    //                 }
+
+    //                 $type = 'invoice';
+    //                 $type_id = $invoice->id;
+    //                 $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+    //                 Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
+
+
+    //             }
+    //             $data['id'] = $invoice->id;
+    //             $data['no'] = $invoice->invoice_id;
+    //             $data['date'] = $invoice->issue_date;
+    //             $data['created_at'] = date('Y-m-d', strtotime($invoice->issue_date)) . ' ' . date('h:i:s');
+    //             $data['reference'] = $invoice->ref_number;
+    //             $data['category'] = 'Invoice';
+    //             $data['owned_by'] = $invoice->owned_by;
+    //             $data['created_by'] = $invoice->created_by;
+    //             $data['prod_id'] = $invoiceProduct->product_id;
+    //             $data['items'] = $newitems;
+    //             $dataret = Utility::jrentry($data);
+    //             $invoice->voucher_id = $dataret;
+    //             $invoice->save();
+
+    //             $us_mail = 'false';
+    //             $us_notify = 'false';
+    //             $us_approve = 'false';
+    //             $usr_Notification = [];
+    //             $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'crm')->where('status', 1)->first();
+    //             if ($workflow) {
+    //                 $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)->where('status', 1)->where('level_id', 4)->get();
+    //                 foreach ($workflowaction as $action) {
+    //                     $useraction = json_decode($action->assigned_users);
+    //                     if ('create-invoice' == $action->node_id) {
+    //                         if (@$useraction != '') {
+
+    //                             $useraction = json_decode($useraction);
+    //                             foreach ($useraction as $anyaction) {
+    //                                 // make new user array
+    //                                 if ($anyaction->type == 'user') {
+    //                                     $usr_Notification[] = $anyaction->id;
+    //                                 }
+    //                             }
+    //                         }
+    //                         $raw_json = trim($action->applied_conditions, '"');
+    //                         $cleaned_json = stripslashes($raw_json);
+    //                         $applied_conditions = json_decode($cleaned_json, true);
+
+    //                         if (isset($applied_conditions['conditions']) && is_array($applied_conditions['conditions'])) {
+    //                             $arr = [
+    //                                 'category' => 'category_name',
+    //                                 'customer' => 'customer_name',
+    //                                 'referance number' => 'ref_number',
+    //                             ];
+    //                             $relate = [
+    //                                 'category_name' => 'category',
+    //                                 'customer_name' => 'customer',
+    //                             ];
+
+    //                             foreach ($applied_conditions['conditions'] as $conditionGroup) {
+
+    //                                 if (in_array($conditionGroup['action'], ['send_email', 'send_notification', 'send_approval'])) {
+    //                                     $query = Invoice::where('id', $invoice->id);
+    //                                     foreach ($conditionGroup['conditions'] as $condition) {
+    //                                         $field = $condition['field'];
+    //                                         $operator = $condition['operator'];
+    //                                         $value = $condition['value'];
+    //                                         if (isset($arr[$field], $relate[$arr[$field]])) {
+    //                                             $relatedField = strpos($arr[$field], '_') !== false ? explode('_', $arr[$field], 2)[1] : $arr[$field];
+    //                                             $relation = $relate[$arr[$field]];
+
+    //                                             // Apply condition to the related model
+    //                                             $query->whereHas($relation, function ($relatedQuery) use ($relatedField, $operator, $value) {
+    //                                                 $relatedQuery->where($relatedField, $operator, $value);
+    //                                             });
+    //                                         } else {
+    //                                             // Apply condition directly to the contract model
+    //                                             $query->where($arr[$field], $operator, $value);
+    //                                         }
+    //                                     }
+    //                                     $result = $query->first();
+
+    //                                     if (!empty($result)) {
+    //                                         if ($conditionGroup['action'] === 'send_email') {
+    //                                             $us_mail = 'true';
+    //                                         } elseif ($conditionGroup['action'] === 'send_notification') {
+    //                                             $us_notify = 'true';
+    //                                         } elseif ($conditionGroup['action'] === 'send_approval') {
+    //                                             $us_approve = 'true';
+    //                                         }
+    //                                     }
+    //                                 }
+    //                             }
+    //                         }
+    //                         if ($us_mail == 'true') {
+    //                             // email send
+    //                         }
+    //                         if ($us_notify == 'true' || $us_approve == 'true') {
+    //                             // notification generate
+    //                             if (count($usr_Notification) > 0) {
+    //                                 $usr_Notification[] = Auth::user()->creatorId();
+    //                                 foreach ($usr_Notification as $usrLead) {
+    //                                     $data = [
+    //                                         "updated_by" => Auth::user()->id,
+    //                                         "data_id" => $invoice->id,
+    //                                         "name" => '',
+    //                                     ];
+    //                                     if ($us_notify == 'true') {
+    //                                         Utility::makeNotification($usrLead, 'create_invoice', $data, $invoice->id, 'create Invoice');
+    //                                     } elseif ($us_approve == 'true') {
+    //                                         Utility::makeNotification($usrLead, 'approve_invoice', $data, $invoice->id, 'For Approval Invoice');
+    //                                     }
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //             //Product Stock Report
+    //             // $type = 'invoice';
+    //             // $type_id = $invoice->id;
+    //             // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+    //             // $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+    //             // Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
+
+    //             //webhook
+    //             $module = 'New Invoice';
+    //             $webhook = Utility::webhookSetting($module);
+    //             if ($webhook) {
+    //                 $parameter = json_encode($invoice);
+    //                 $status = Utility::WebhookCall($webhook['url'], $parameter, $webhook['method']);
+    //                 if ($status == true) {
+    //                     // Log
+    //                     Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoiceProduct->id, 'Create Invoice', $invoiceProduct->description);
+    //                     \DB::commit();
+    //                     return redirect()->route('invoice.index', $invoice->id)->with('success', __('Invoice successfully created.'));
+    //                 } else {
+    //                     \DB::commit();
+    //                     return redirect()->back()->with('error', __('Webhook call failed.'));
+    //                 }
+    //             }
+    //             Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoiceProduct->id, 'Create Invoice', $invoiceProduct->description);
+    //             \DB::commit();
+    //             return redirect()->route('invoice.index', $invoice->id)->with('success', __('Invoice successfully created.'));
+    //         } else {
+    //             return redirect()->back()->with('error', __('Permission denied.'));
+    //         }
+    //     } catch (\Exception $e) {
+    //         \DB::rollBack();
+    //         dd($e);
+    //         return redirect()->back()->with('error', __($e->getMessage()));
+    //     }
+    // }
+
     public function store(Request $request)
     {
         \DB::beginTransaction();
         try {
             if (\Auth::user()->can('create invoice')) {
                 $validator = \Validator::make(
-                    $request->all(), [
+                    $request->all(),
+                    [
                         'customer_id' => 'required',
                         'issue_date' => 'required',
                         'due_date' => 'required',
-                        // 'category_id' => 'required',
                         'items' => 'required',
                     ]
                 );
+
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
                     return redirect()->back()->with('error', $messages->first());
                 }
-                $status = Invoice::$statues;
+
+                // Create Invoice
                 $invoice = new Invoice();
                 $invoice->invoice_id = $this->invoiceNumber();
                 $invoice->customer_id = $request->customer_id;
-                $invoice->status = 0;
+                $invoice->status = 0; // Draft by default
                 $invoice->issue_date = $request->issue_date;
                 $invoice->due_date = $request->due_date;
                 $invoice->category_id = $request->category_id ?? 1;
                 $invoice->ref_number = $request->ref_number;
-    //            $invoice->discount_apply = isset($request->discount_apply) ? 1 : 0;
                 $invoice->created_by = \Auth::user()->creatorId();
                 $invoice->owned_by = \Auth::user()->ownedId();
+                // $invoice->approval_status = 1; // 1 = Pending Approval
                 $invoice->save();
+
+                // Save Custom Fields
                 CustomField::saveData($invoice, $request->customField);
+
                 $products = $request->items;
                 $newitems = $request->items;
-                $reciveable = 0;    
-                for ($i = 0; $i < count($products); $i++) {
 
+                foreach ($products as $i => $prod) {
                     $invoiceProduct = new InvoiceProduct();
                     $invoiceProduct->invoice_id = $invoice->id;
-                    $invoiceProduct->product_id = $products[$i]['item'];
-                    $invoiceProduct->quantity = $products[$i]['quantity'];
-                    $invoiceProduct->tax = $products[$i]['tax'];
-                      // $invoiceProduct->discount    = isset($products[$i]['discount']) ? $products[$i]['discount'] : 0;
-                    $invoiceProduct->discount = $products[$i]['discount'];
-                    $invoiceProduct->price = $products[$i]['price'];
-                    $invoiceProduct->description = $products[$i]['description'];
+                    $invoiceProduct->product_id = $prod['item'];
+                    $invoiceProduct->quantity = $prod['quantity'];
+                    $invoiceProduct->tax = $prod['tax'];
+                    $invoiceProduct->discount = $prod['discount'];
+                    $invoiceProduct->price = $prod['price'];
+                    $invoiceProduct->description = $prod['description'];
                     $invoiceProduct->save();
-                    $newitems[$i]['prod_id'] = $invoiceProduct->id; // Add the key and value
-                    
 
-                    //inventory management (Quantity)
+                    $newitems[$i]['prod_id'] = $invoiceProduct->id;
+
+                    // inventory management
                     Utility::total_quantity('minus', $invoiceProduct->quantity, $invoiceProduct->product_id);
 
-                    //For Notification
-                    $setting = Utility::settings(\Auth::user()->creatorId());
-                    $customer = Customer::find($request->customer_id);
-                    $invoiceNotificationArr = [
-                        'invoice_number' => \Auth::user()->invoiceNumberFormat($invoice->invoice_id),
-                        'user_name' => \Auth::user()->name,
-                        'invoice_issue_date' => $invoice->issue_date,
-                        'invoice_due_date' => $invoice->due_date,
-                        'customer_name' => $customer->name,
-                    ];
-                    //Slack Notification
-                    if (isset($setting['invoice_notification']) && $setting['invoice_notification'] == 1) {
-                        Utility::send_slack_msg('new_invoice', $invoiceNotificationArr);
-                    }
-                    //Telegram Notification
-                    if (isset($setting['telegram_invoice_notification']) && $setting['telegram_invoice_notification'] == 1) {
-                        Utility::send_telegram_msg('new_invoice', $invoiceNotificationArr);
-                    }
-                    //Twilio Notification
-                    if (isset($setting['twilio_invoice_notification']) && $setting['twilio_invoice_notification'] == 1) {
-                        Utility::send_twilio_msg($customer->contact, 'new_invoice', $invoiceNotificationArr);
-                    }
-
+                    // Stock Log
                     $type = 'invoice';
                     $type_id = $invoice->id;
-                    $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                    $description = $invoiceProduct->quantity . ' ' . __(' quantity sold in invoice ') . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
                     Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
-
-
                 }
-                    $data['id'] = $invoice->id;
-                    $data['no'] = $invoice->invoice_id;
-                    $data['date'] = $invoice->issue_date;
-                    $data['created_at'] = date('Y-m-d', strtotime($invoice->issue_date)) . ' ' . date('h:i:s');
-                    $data['reference'] = $invoice->ref_number;
-                    $data['category'] = 'Invoice';
-                    $data['owned_by'] = $invoice->owned_by;
-                    $data['created_by'] = $invoice->created_by;
-                    $data['prod_id'] = $invoiceProduct->product_id;
-                    $data['items'] = $newitems;
-                    $dataret  = Utility::jrentry($data);
-                    $invoice->voucher_id = $dataret;
-                    $invoice->save();
 
+                // Notifications (Slack, Telegram, Twilio)
+                $setting = Utility::settings(\Auth::user()->creatorId());
+                $customer = Customer::find($request->customer_id);
+                $notifData = [
+                    'invoice_number' => \Auth::user()->invoiceNumberFormat($invoice->invoice_id),
+                    'user_name' => \Auth::user()->name,
+                    'invoice_issue_date' => $invoice->issue_date,
+                    'invoice_due_date' => $invoice->due_date,
+                    'customer_name' => $customer->name,
+                ];
+
+                if (isset($setting['invoice_notification']) && $setting['invoice_notification'] == 1) {
+                    Utility::send_slack_msg('new_invoice', $notifData);
+                }
+                if (isset($setting['telegram_invoice_notification']) && $setting['telegram_invoice_notification'] == 1) {
+                    Utility::send_telegram_msg('new_invoice', $notifData);
+                }
+                if (isset($setting['twilio_invoice_notification']) && $setting['twilio_invoice_notification'] == 1) {
+                    Utility::send_twilio_msg($customer->contact, 'new_invoice', $notifData);
+                }
                 $us_mail = 'false';
                 $us_notify = 'false';
                 $us_approve = 'false';
                 $usr_Notification = [];
-                $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=','crm')->where('status',1)->first();
-                if($workflow){
-                    $workflowaction = WorkFlowAction::where('workflow_id',$workflow->id)->where('status',1)->where('level_id',4)->get();
-                    foreach($workflowaction as $action){
+                $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'crm')->where('status', 1)->first();
+                if ($workflow) {
+                    $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)->where('status', 1)->where('level_id', 4)->get();
+                    foreach ($workflowaction as $action) {
                         $useraction = json_decode($action->assigned_users);
-                        if('create-invoice' == $action->node_id){
-                            if(@$useraction != ''){
+                        if ('create-invoice' == $action->node_id) {
+                            if (@$useraction != '') {
 
                                 $useraction = json_decode($useraction);
-                                foreach($useraction as $anyaction){
+                                foreach ($useraction as $anyaction) {
                                     // make new user array
-                                    if($anyaction->type == 'user'){
+                                    if ($anyaction->type == 'user') {
                                         $usr_Notification[] = $anyaction->id;
                                     }
                                 }
@@ -350,10 +564,14 @@ class InvoiceController extends Controller
                                             "data_id" => $invoice->id,
                                             "name" => '',
                                         ];
-                                        if($us_notify == 'true'){
-                                            Utility::makeNotification($usrLead,'create_invoice',$data,$invoice->id,'create Invoice');
-                                        }elseif($us_approve == 'true'){
-                                            Utility::makeNotification($usrLead,'approve_invoice',$data,$invoice->id,'For Approval Invoice');
+                                        if ($us_notify == 'true') {
+                                            Utility::makeNotification($usrLead, 'create_invoice', $data, $invoice->id, 'create Invoice');
+                                            $invoice->status = 6; // Under Approval
+                                            $invoice->save();
+                                        } elseif ($us_approve == 'true') {
+                                            Utility::makeNotification($usrLead, 'approve_invoice', $data, $invoice->id, 'For Approval Invoice');
+                                            $invoice->status = 6; // Under Approval
+                                            $invoice->save();
                                         }
                                     }
                                 }
@@ -368,34 +586,210 @@ class InvoiceController extends Controller
                 // $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
                 // Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
 
-                //webhook
+                // Webhook
                 $module = 'New Invoice';
                 $webhook = Utility::webhookSetting($module);
                 if ($webhook) {
                     $parameter = json_encode($invoice);
                     $status = Utility::WebhookCall($webhook['url'], $parameter, $webhook['method']);
-                    if ($status == true) {
-                        // Log
-                        Utility::makeActivityLog(\Auth::user()->id,'Invoice',$invoiceProduct->id,'Create Invoice',$invoiceProduct->description);
-                        \DB::commit();
-                        return redirect()->route('invoice.index', $invoice->id)->with('success', __('Invoice successfully created.'));
-                    } else {
+                    if (!$status) {
                         \DB::commit();
                         return redirect()->back()->with('error', __('Webhook call failed.'));
                     }
                 }
-                Utility::makeActivityLog(\Auth::user()->id,'Invoice',$invoiceProduct->id,'Create Invoice',$invoiceProduct->description);
+
+                Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Create Invoice', 'Invoice Created (Pending Approval)');
+
                 \DB::commit();
-                return redirect()->route('invoice.index', $invoice->id)->with('success', __('Invoice successfully created.'));
+                return redirect()->route('invoice.index', $invoice->id)->with('success', __('Invoice successfully created and waiting for approval.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
-            } catch (\Exception $e) {
-                \DB::rollBack();
-                dd($e);
-                return redirect()->back()->with('error', __($e->getMessage()));
-            }
+        } catch (\Exception $e) {
+            dd($e);
+            \DB::rollBack();
+            return redirect()->back()->with('error', __($e->getMessage()));
+        }
     }
+    private function createInvoiceJournalVoucher(Invoice $invoice)
+    {
+        $invoiceProducts = $invoice->items; // must have relation in Invoice model
+        $newitems = [];
+
+        foreach ($invoiceProducts as $product) {
+            $newitems[] = [
+                'prod_id' => $product->id,
+                'item' => $product->product_id,
+                'quantity' => $product->quantity,
+                'price' => $product->price,
+                'discount' => $product->discount,
+                'itemTaxPrice' => $product->tax,
+                'description' => $product->description,
+            ];
+        }
+
+        $data = [
+            'id' => $invoice->id,
+            'no' => $invoice->invoice_id,
+            'date' => $invoice->issue_date,
+            'created_at' => now()->format('Y-m-d h:i:s'),
+            'reference' => $invoice->ref_number,
+            'category' => 'Invoice',
+            'owned_by' => $invoice->owned_by,
+            'created_by' => $invoice->created_by,
+            'prod_id' => $invoiceProducts->first()->product_id ?? null,
+            'items' => $newitems,
+        ];
+
+        $voucherId = Utility::jrentry($data);
+        $invoice->voucher_id = $voucherId;
+        $invoice->save();
+
+        return $voucherId;
+    }
+    public function approveInvoice($id)
+    {
+        \DB::beginTransaction();
+        try {
+            $invoice = Invoice::findOrFail($id);
+
+            // Check if already approved
+            if ($invoice->status == 6) {
+                return redirect()->back()->with('error', __('Invoice already approved.'));
+            }
+
+            // Check if in pending approval status
+            if ($invoice->status != 5) {
+                return redirect()->back()->with('error', __('Invoice must be in pending approval status.'));
+            }
+
+            // Update status to Approved (6)
+            $invoice->status = 6;
+            // $invoice->approved_date = now();
+
+            // Create Journal Voucher
+            $this->createInvoiceJournalVoucher($invoice);
+
+            $invoice->save();
+
+            Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Approve Invoice', 'Invoice approved and JV posted');
+
+            // Send notification to invoice creator
+            $data = [
+                "updated_by" => \Auth::user()->id,
+                "data_id" => $invoice->id,
+                "name" => '',
+            ];
+            Utility::makeNotification($invoice->created_by, 'invoice_approved', $data, $invoice->id, 'Invoice Approved');
+
+            \DB::commit();
+            return redirect()->route('invoice.index')->with('success', __('Invoice approved successfully and JV posted.'));
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            dd($e);
+            \Log::error('Invoice Approval Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', __('Error approving invoice: ' . $e->getMessage()));
+        }
+    }
+
+    public function rejectInvoice($id)
+    {
+        \DB::beginTransaction();
+        try {
+            $invoice = Invoice::findOrFail($id);
+
+            // Check if already approved or rejected
+            if ($invoice->status == 6) {
+                return redirect()->back()->with('error', __('Cannot reject an approved invoice.'));
+            }
+
+            if ($invoice->status == 7) {
+                return redirect()->back()->with('error', __('Invoice already rejected.'));
+            }
+
+            // Check if in pending approval status
+            if ($invoice->status != 5) {
+                return redirect()->back()->with('error', __('Invoice must be in pending approval status.'));
+            }
+
+            // Update status to Rejected (7)
+            $invoice->status = 7;
+            $invoice->rejected_date = now();
+            $invoice->rejected_by = \Auth::user()->id;
+            $invoice->save();
+
+            Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Reject Invoice', 'Invoice rejected');
+
+            // Send notification to invoice creator
+            $data = [
+                "updated_by" => \Auth::user()->id,
+                "data_id" => $invoice->id,
+                "name" => '',
+            ];
+            Utility::makeNotification($invoice->created_by, 'invoice_rejected', $data, $invoice->id, 'Invoice Rejected');
+
+            \DB::commit();
+            return redirect()->route('invoice.index')->with('success', __('Invoice rejected successfully.'));
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Invoice Rejection Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', __('Error rejecting invoice: ' . $e->getMessage()));
+        }
+    }
+
+    public function requestApproval($id)
+    {
+        \DB::beginTransaction();
+        try {
+            $invoice = Invoice::findOrFail($id);
+
+            // Check if already approved
+            if ($invoice->status == 6) {
+                return redirect()->back()->with('error', __('Invoice already approved.'));
+            }
+
+            // Check if already in pending approval
+            if ($invoice->status == 5) {
+                return redirect()->back()->with('error', __('Invoice already sent for approval.'));
+            }
+
+            // Check if already sent
+            if (in_array($invoice->status, [1, 2, 3, 4])) {
+                return redirect()->back()->with('error', __('Cannot request approval for a sent or paid invoice.'));
+            }
+
+            // Update status to Pending Approval (5)
+            $invoice->status = 5;
+            $invoice->save();
+
+            Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Request Approval', 'Invoice sent for approval');
+
+            // Clear old notifications
+            Notification::where('data_id', $invoice->id)
+                ->where('type', 'approval_request_invoice')
+                ->where('is_read', 0)
+                ->delete();
+
+            // Send notification to approver (creator or designated approver)
+            $usrLead = \Auth::user()->creatorId();
+            $data = [
+                "updated_by" => \Auth::user()->id,
+                "data_id" => $invoice->id,
+                "name" => '',
+            ];
+            Utility::makeNotification($usrLead, 'approval_request_invoice', $data, $invoice->id, 'Invoice Approval Request');
+
+            \DB::commit();
+            return redirect()->back()->with('success', __('Invoice sent for approval successfully.'));
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            dd($e);
+            \Log::error('Request Approval Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', __('Error requesting approval: ' . $e->getMessage()));
+        }
+    }
+
 
     public function edit($ids)
     {
@@ -418,11 +812,276 @@ class InvoiceController extends Controller
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
+//     public function update(Request $request, Invoice $invoice)
+//     {
+
+//         if (\Auth::user()->can('edit invoice')) {
+//             if ($invoice->created_by == \Auth::user()->creatorId()) {
+//                 $validator = \Validator::make(
+//                     $request->all(),
+//                     [
+//                         'customer_id' => 'required',
+//                         'issue_date' => 'required',
+//                         'due_date' => 'required',
+//                         'category_id' => 'required',
+//                         'items' => 'required',
+//                     ]
+//                 );
+//                 if ($validator->fails()) {
+//                     $messages = $validator->getMessageBag();
+
+//                     return redirect()->route('invoice.index')->with('error', $messages->first());
+//                 }
+//                 $invoice->customer_id = $request->customer_id;
+//                 $invoice->issue_date = $request->issue_date;
+//                 $invoice->due_date = $request->due_date;
+//                 $invoice->ref_number = $request->ref_number;
+// //                $invoice->discount_apply = isset($request->discount_apply) ? 1 : 0;
+//                 $invoice->category_id = $request->category_id;
+//                 $invoice->save();
+
+//                 Utility::starting_number($invoice->invoice_id + 1, 'invoice');
+//                 CustomField::saveData($invoice, $request->customField);
+
+//                 $voucher = JournalEntry::where('category', 'Invoice')->where('reference_id', $invoice->id)->where('voucher_type', 'JV')->first();
+//                 $products = $request->items;
+//                 $reciveable = 0;
+//                 StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+//                 // dd('noman');
+//                 for ($i = 0; $i < count($products); $i++) {
+//                     $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
+//                     $tax = 0;
+//                     if ($invoiceProduct == null) {
+//                         $invoiceProduct = new InvoiceProduct();
+//                         $invoiceProduct->invoice_id = $invoice->id;
+//                         $invoiceProduct->product_id = $products[$i]['item'];
+//                         $invoiceProduct->quantity = $products[$i]['quantity'];
+//                         $invoiceProduct->tax = $products[$i]['tax'];
+//                         $invoiceProduct->discount = $products[$i]['discount'];
+//                         $invoiceProduct->price = $products[$i]['price'];
+//                         $invoiceProduct->description = $products[$i]['description'];
+//                         $invoiceProduct->save();
+//                         $invoiceProduct->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
+//                         $invoiceProduct->updated_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
+//                         $invoiceProduct->save();
+
+//                         $product = ProductService::where('id',$invoiceProduct->product_id)->first();
+
+//                         $journalItem              = new JournalItem();
+//                         $journalItem->journal     = $voucher->id;
+//                         $journalItem->account     = @$product->sale_chartaccount_id;
+//                         $journalItem->product_ids  = $invoiceProduct->id;
+//                         $journalItem->description  = $invoiceProduct->description;
+//                         $journalItem->credit       = ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount']));
+//                         $journalItem->debit        =  0;
+//                         $journalItem->save();
+//                         $journalItem->created_at   =  date('Y-m-d H:i:s', strtotime($invoice->created_at));
+//                         $journalItem->updated_at   =  date('Y-m-d H:i:s', strtotime($invoice->created_at));
+//                         $journalItem->save();
+//                         $tax += floatval($products[$i]['itemTaxPrice']);
+//                         $reciveable += ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount'])) + floatval($products[$i]['itemTaxPrice']);
+                        
+//                         $dataline = [
+//                             'account_id' => $product->sale_chartaccount_id,
+//                             'transaction_type' => 'Credit',
+//                             'transaction_amount' => $journalItem->credit,
+//                             'reference' => 'Invoice Journal',
+//                             'reference_id' => $voucher->id,
+//                             'reference_sub_id' => $journalItem->id,
+//                             'date' => $voucher->date,
+//                             'created_at' => date('Y-m-d H:i:s', strtotime($invoice->created_at)),
+//                             'product_id' => $invoice->id,
+//                             'product_type' => 'Invoice',
+//                             'product_item_id' => $invoiceProduct->id,
+//                         ];
+//                         Utility::addTransactionLines($dataline , 'create');
+
+//                         if($tax != 0){
+//                             $accounttax = Tax::where('id', $product->tax_id)->first();
+//                             $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
+//                             if(!$account_tax){
+//                                 $types_t = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Liabilities')->first();
+//                                 if ($types_t) {
+//                                     $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
+//                                     $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
+//                                     if(!$account_tax){
+//                                         $account_tax = ChartOfAccount::create([
+//                                             'name' => 'TAX',
+//                                             'code' => '10000',
+//                                             'type' => $types_t->id,
+//                                             'sub_type' => $sub_type_t->id,
+//                                             'is_enabled' => 1,
+//                                             'created_by' => $invoice->created_by,
+//                                         ]);
+//                                     }
+//                                 }
+//                             }
+                        
+//                             if($account_tax){
+//                                 $journalItem              = new JournalItem();
+//                                 $journalItem->journal     = $voucher->id;
+//                                 $journalItem->account     = @$account_tax->id;
+//                                 $journalItem->prod_tax_id  = $invoiceProduct->id;
+//                                 $journalItem->description = 'Tax on Invoice No : '.@$invoice->invoice_id;
+//                                 $journalItem->credit       =  $tax;
+//                                 $journalItem->debit        = 0;
+//                                 $journalItem->save();
+//                                 $journalItem->created_at   = date('Y-m-d H:i:s', strtotime($invoice->created_at));
+//                                 $journalItem->updated_at   = date('Y-m-d H:i:s', strtotime($invoice->created_at));
+//                                 $journalItem->save();
+
+//                                 $dataline = [
+//                                         'account_id' => $account_tax->id,
+//                                         'transaction_type' => 'Credit',
+//                                         'transaction_amount' => $journalItem->credit,
+//                                         'reference' => 'Invoice Journal',
+//                                         'reference_id' => $voucher->id,
+//                                         'reference_sub_id' => $journalItem->id,
+//                                         'date' => $voucher->date,
+//                                         'created_at' => date('Y-m-d H:i:s', strtotime($invoice->created_at)),
+//                                         'product_id' => $invoice->id,
+//                                         'product_type' => 'Invoice Tax',
+//                                         'product_item_id' => $invoiceProduct->id,
+//                                 ];
+//                                 Utility::addTransactionLines($dataline , 'create');
+//                             }
+//                         }
+                        
+//                         Utility::total_quantity('minus', $products[$i]['quantity'], $products[$i]['item']);
+//                          $type = 'invoice';
+//                         $type_id = $invoice->id;
+//                         // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+//                         $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+//                         if (empty($products[$i]['id'])) {
+//                             Utility::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
+//                         }
+//                         $updatePrice = ($products[$i]['price'] * $products[$i]['quantity']) + ($products[$i]['itemTaxPrice']) - ($products[$i]['discount']);
+//                         Utility::updateUserBalance('customer', $request->customer_id, $updatePrice, 'credit');
+
+//                     } else {
+                        
+//                         $invoiceProduct->quantity = $products[$i]['quantity'];
+//                         $invoiceProduct->tax = $products[$i]['tax'];
+//                         $invoiceProduct->discount = $products[$i]['discount'];
+//                         $invoiceProduct->price = $products[$i]['price'];
+//                         $invoiceProduct->description = $products[$i]['description'];
+//                         $invoiceProduct->save();
+//                         if($voucher){
+
+//                             $journalItem = JournalItem::where('journal', $voucher->id)->where('product_ids', $invoiceProduct->id)->first();
+//                             $journalItem->credit       = ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount']));
+//                             $journalItem->save(); 
+//                             // also update transaction lines
+//                             $transaction_line = TransactionLines::where('reference_id',$invoice->voucher_id)->where('product_id',$invoice->id)->where('reference','Invoice Journal')->where('product_item_id',$invoiceProduct->id)->where('product_type','Invoice')->first();
+//                             $transaction_line->credit = $journalItem->credit;
+//                             $transaction_line->save();
+//                         }
+
+//                         $tax += floatval($products[$i]['itemTaxPrice']);
+//                         $reciveable += ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount'])) + floatval($products[$i]['itemTaxPrice']);
+
+//                         if($tax != 0){
+//                             $journal_tax = JournalItem::where('journal', $voucher->id)->where('prod_tax_id', $invoiceProduct->id)->first();
+//                             $journal_tax->credit       = $tax;
+//                             $journal_tax->save(); 
+                             
+//                             // also update transaction lines
+//                             $transaction_tax = TransactionLines::where('reference_id',$invoice->voucher_id)->where('product_id',$invoice->id)->where('reference','Invoice Journal')->where('product_item_id',$invoiceProduct->id)->where('product_type','Invoice Tax')->first();
+//                             $transaction_tax->credit = $journal_tax->credit;
+//                             $transaction_tax->save();
+//                         }
+//                         Utility::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
+//                         //Product Stock Report
+//                         $type = 'invoice';
+//                         $type_id = $invoice->id;
+//                         $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+//                         Utility::addProductStock($invoiceProduct->product_id, $products[$i]['quantity'], $type, $description, $type_id);
+
+//                     }
+
+//                     $inv_receviable = TransactionLines::where('reference_id',$invoice->voucher_id)->where('reference','Invoice Journal')->where('product_type','Invoice Reciveable')->first();
+//                     $inv_receviable->debit = $reciveable;
+//                     $inv_receviable->save();
+
+//                     $types = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Assets')->first();
+//                     if ($types) {
+//                         $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
+//                         $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
+//                     }
+//                     if($account){
+//                         $item_last = JournalItem::where('journal', $voucher->id)->where('account', $account->id)->first();
+//                         $item_last->debit = $reciveable;
+//                         $item_last->save();
+//                     }else{
+//                         $item_last = JournalItem::where('journal', $voucher->id)->where('id', $inv_receviable->reference_sub_id)->first();
+//                         $item_last->debit = $reciveable;
+//                         $item_last->save();
+//                     }
+
+//                     if (isset($products[$i]['item'])) {
+//                         $invoiceProduct->product_id = $products[$i]['item'];
+//                     }
+
+                   
+
+//                     if ($products[$i]['id'] > 0) {
+//                         Utility::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
+//                     }
+
+//                     // //Product Stock Report
+//                     // $type = 'invoice';
+//                     // $type_id = $invoice->id;
+//                     // // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+//                     // $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+//                     // if (!empty($products[$i]['id'])) {
+//                     //     dd($products, $products[$i]);
+//                     //     Utility::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
+//                     // }
+
+
+//                 }
+
+//                 // TransactionLines::where('reference_id',$invoice->id)->where('reference','Invoice')->delete();
+
+//                 // $invoice_products = InvoiceProduct::where('invoice_id', $invoice->id)->get();
+//                 // foreach ($invoice_products as $invoice_product) {
+//                 //     $product = ProductService::find($invoice_product->product_id);
+//                 //     $totalTaxPrice = 0;
+//                 //     if($invoice_product->tax != null){
+//                 //         $taxes = \App\Models\Utility::tax($invoice_product->tax);
+//                 //         foreach ($taxes as $tax) {
+//                 //             $taxPrice = \App\Models\Utility::taxRate($tax->rate, $invoice_product->price, $invoice_product->quantity, $invoice_product->discount);
+//                 //             $totalTaxPrice += $taxPrice;
+//                 //         }
+//                 //     }
+
+//                 //     $itemAmount = ($invoice_product->price * $invoice_product->quantity) - ($invoice_product->discount) + $totalTaxPrice;
+
+//                 //     $data = [
+//                 //         'account_id' => $product->sale_chartaccount_id,
+//                 //         'transaction_type' => 'Credit',
+//                 //         'transaction_amount' => $itemAmount,
+//                 //         'reference' => 'Invoice',
+//                 //         'reference_id' => $invoice->id,
+//                 //         'reference_sub_id' => $product->id,
+//                 //         'date' => $invoice->issue_date,
+//                 //     ];
+//                 //     Utility::addTransactionLines($data , 'edit');
+//                 // }
+//                 //log
+//                 Utility::makeActivityLog(\Auth::user()->id,'Invoice',$invoice->id,'Update Invoice',$invoice->description);
+//                 return redirect()->route('invoice.index')->with('success', __('Invoice successfully updated.'));
+//             } else {
+//                 return redirect()->back()->with('error', __('Permission denied.'));
+//             }
+//         } else {
+//             return redirect()->back()->with('error', __('Permission denied.'));
+//         }
+//     }
 
     public function update(Request $request, Invoice $invoice)
     {
-
-        if (\Auth::user()->can('edit invoice')) {
+        if (\Auth::user()->can(abilities: 'edit invoice')) {
             if ($invoice->created_by == \Auth::user()->creatorId()) {
                 $validator = \Validator::make(
                     $request->all(),
@@ -434,249 +1093,43 @@ class InvoiceController extends Controller
                         'items' => 'required',
                     ]
                 );
+
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
-
                     return redirect()->route('invoice.index')->with('error', $messages->first());
                 }
+
+                // Update invoice basic details
                 $invoice->customer_id = $request->customer_id;
                 $invoice->issue_date = $request->issue_date;
                 $invoice->due_date = $request->due_date;
                 $invoice->ref_number = $request->ref_number;
-//                $invoice->discount_apply = isset($request->discount_apply) ? 1 : 0;
                 $invoice->category_id = $request->category_id;
                 $invoice->save();
 
                 Utility::starting_number($invoice->invoice_id + 1, 'invoice');
                 CustomField::saveData($invoice, $request->customField);
 
-                $voucher = JournalEntry::where('category', 'Invoice')->where('reference_id', $invoice->id)->where('voucher_type', 'JV')->first();
+                // Check if invoice has been approved (has voucher)
+                $voucher = JournalEntry::where('category', 'Invoice')
+                    ->where('reference_id', $invoice->id)
+                    ->where('voucher_type', 'JV')
+                    ->first();
+
                 $products = $request->items;
-                $reciveable = 0;
-                StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
-                // dd('noman');
-                for ($i = 0; $i < count($products); $i++) {
-                    $invoiceProduct = InvoiceProduct::find($products[$i]['id']);
-                    $tax = 0;
-                    if ($invoiceProduct == null) {
-                        $invoiceProduct = new InvoiceProduct();
-                        $invoiceProduct->invoice_id = $invoice->id;
-                        $invoiceProduct->product_id = $products[$i]['item'];
-                        $invoiceProduct->quantity = $products[$i]['quantity'];
-                        $invoiceProduct->tax = $products[$i]['tax'];
-                        $invoiceProduct->discount = $products[$i]['discount'];
-                        $invoiceProduct->price = $products[$i]['price'];
-                        $invoiceProduct->description = $products[$i]['description'];
-                        $invoiceProduct->save();
-                        $invoiceProduct->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
-                        $invoiceProduct->updated_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
-                        $invoiceProduct->save();
+                $isApproved = !is_null($voucher);
 
-                        $product = ProductService::where('id',$invoiceProduct->product_id)->first();
-
-                        $journalItem              = new JournalItem();
-                        $journalItem->journal     = $voucher->id;
-                        $journalItem->account     = @$product->sale_chartaccount_id;
-                        $journalItem->product_ids  = $invoiceProduct->id;
-                        $journalItem->description  = $invoiceProduct->description;
-                        $journalItem->credit       = ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount']));
-                        $journalItem->debit        =  0;
-                        $journalItem->save();
-                        $journalItem->created_at   =  date('Y-m-d H:i:s', strtotime($invoice->created_at));
-                        $journalItem->updated_at   =  date('Y-m-d H:i:s', strtotime($invoice->created_at));
-                        $journalItem->save();
-                        $tax += floatval($products[$i]['itemTaxPrice']);
-                        $reciveable += ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount'])) + floatval($products[$i]['itemTaxPrice']);
-                        
-                        $dataline = [
-                            'account_id' => $product->sale_chartaccount_id,
-                            'transaction_type' => 'Credit',
-                            'transaction_amount' => $journalItem->credit,
-                            'reference' => 'Invoice Journal',
-                            'reference_id' => $voucher->id,
-                            'reference_sub_id' => $journalItem->id,
-                            'date' => $voucher->date,
-                            'created_at' => date('Y-m-d H:i:s', strtotime($invoice->created_at)),
-                            'product_id' => $invoice->id,
-                            'product_type' => 'Invoice',
-                            'product_item_id' => $invoiceProduct->id,
-                        ];
-                        Utility::addTransactionLines($dataline , 'create');
-
-                        if($tax != 0){
-                            $accounttax = Tax::where('id', $product->tax_id)->first();
-                            $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
-                            if(!$account_tax){
-                                $types_t = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Liabilities')->first();
-                                if ($types_t) {
-                                    $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
-                                    $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
-                                    if(!$account_tax){
-                                        $account_tax = ChartOfAccount::create([
-                                            'name' => 'TAX',
-                                            'code' => '10000',
-                                            'type' => $types_t->id,
-                                            'sub_type' => $sub_type_t->id,
-                                            'is_enabled' => 1,
-                                            'created_by' => $invoice->created_by,
-                                        ]);
-                                    }
-                                }
-                            }
-                        
-                            if($account_tax){
-                                $journalItem              = new JournalItem();
-                                $journalItem->journal     = $voucher->id;
-                                $journalItem->account     = @$account_tax->id;
-                                $journalItem->prod_tax_id  = $invoiceProduct->id;
-                                $journalItem->description = 'Tax on Invoice No : '.@$invoice->invoice_id;
-                                $journalItem->credit       =  $tax;
-                                $journalItem->debit        = 0;
-                                $journalItem->save();
-                                $journalItem->created_at   = date('Y-m-d H:i:s', strtotime($invoice->created_at));
-                                $journalItem->updated_at   = date('Y-m-d H:i:s', strtotime($invoice->created_at));
-                                $journalItem->save();
-
-                                $dataline = [
-                                        'account_id' => $account_tax->id,
-                                        'transaction_type' => 'Credit',
-                                        'transaction_amount' => $journalItem->credit,
-                                        'reference' => 'Invoice Journal',
-                                        'reference_id' => $voucher->id,
-                                        'reference_sub_id' => $journalItem->id,
-                                        'date' => $voucher->date,
-                                        'created_at' => date('Y-m-d H:i:s', strtotime($invoice->created_at)),
-                                        'product_id' => $invoice->id,
-                                        'product_type' => 'Invoice Tax',
-                                        'product_item_id' => $invoiceProduct->id,
-                                ];
-                                Utility::addTransactionLines($dataline , 'create');
-                            }
-                        }
-                        
-                        Utility::total_quantity('minus', $products[$i]['quantity'], $products[$i]['item']);
-                         $type = 'invoice';
-                        $type_id = $invoice->id;
-                        // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
-                        $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
-                        if (empty($products[$i]['id'])) {
-                            Utility::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
-                        }
-                        $updatePrice = ($products[$i]['price'] * $products[$i]['quantity']) + ($products[$i]['itemTaxPrice']) - ($products[$i]['discount']);
-                        Utility::updateUserBalance('customer', $request->customer_id, $updatePrice, 'credit');
-
-                    } else {
-                        
-                        $invoiceProduct->quantity = $products[$i]['quantity'];
-                        $invoiceProduct->tax = $products[$i]['tax'];
-                        $invoiceProduct->discount = $products[$i]['discount'];
-                        $invoiceProduct->price = $products[$i]['price'];
-                        $invoiceProduct->description = $products[$i]['description'];
-                        $invoiceProduct->save();
-                        if($voucher){
-
-                            $journalItem = JournalItem::where('journal', $voucher->id)->where('product_ids', $invoiceProduct->id)->first();
-                            $journalItem->credit       = ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount']));
-                            $journalItem->save(); 
-                            // also update transaction lines
-                            $transaction_line = TransactionLines::where('reference_id',$invoice->voucher_id)->where('product_id',$invoice->id)->where('reference','Invoice Journal')->where('product_item_id',$invoiceProduct->id)->where('product_type','Invoice')->first();
-                            $transaction_line->credit = $journalItem->credit;
-                            $transaction_line->save();
-                        }
-
-                        $tax += floatval($products[$i]['itemTaxPrice']);
-                        $reciveable += ((floatval($products[$i]['quantity']) * floatval($products[$i]['price']))- floatval($products[$i]['discount'])) + floatval($products[$i]['itemTaxPrice']);
-
-                        if($tax != 0){
-                            $journal_tax = JournalItem::where('journal', $voucher->id)->where('prod_tax_id', $invoiceProduct->id)->first();
-                            $journal_tax->credit       = $tax;
-                            $journal_tax->save(); 
-                             
-                            // also update transaction lines
-                            $transaction_tax = TransactionLines::where('reference_id',$invoice->voucher_id)->where('product_id',$invoice->id)->where('reference','Invoice Journal')->where('product_item_id',$invoiceProduct->id)->where('product_type','Invoice Tax')->first();
-                            $transaction_tax->credit = $journal_tax->credit;
-                            $transaction_tax->save();
-                        }
-                        Utility::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
-                        //Product Stock Report
-                        $type = 'invoice';
-                        $type_id = $invoice->id;
-                        $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
-                        Utility::addProductStock($invoiceProduct->product_id, $products[$i]['quantity'], $type, $description, $type_id);
-
-                    }
-
-                    $inv_receviable = TransactionLines::where('reference_id',$invoice->voucher_id)->where('reference','Invoice Journal')->where('product_type','Invoice Reciveable')->first();
-                    $inv_receviable->debit = $reciveable;
-                    $inv_receviable->save();
-
-                    $types = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Assets')->first();
-                    if ($types) {
-                        $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
-                        $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
-                    }
-                    if($account){
-                        $item_last = JournalItem::where('journal', $voucher->id)->where('account', $account->id)->first();
-                        $item_last->debit = $reciveable;
-                        $item_last->save();
-                    }else{
-                        $item_last = JournalItem::where('journal', $voucher->id)->where('id', $inv_receviable->reference_sub_id)->first();
-                        $item_last->debit = $reciveable;
-                        $item_last->save();
-                    }
-
-                    if (isset($products[$i]['item'])) {
-                        $invoiceProduct->product_id = $products[$i]['item'];
-                    }
-
-                   
-
-                    if ($products[$i]['id'] > 0) {
-                        Utility::total_quantity('minus', $products[$i]['quantity'], $invoiceProduct->product_id);
-                    }
-
-                    // //Product Stock Report
-                    // $type = 'invoice';
-                    // $type_id = $invoice->id;
-                    // // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
-                    // $description = $products[$i]['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
-                    // if (!empty($products[$i]['id'])) {
-                    //     dd($products, $products[$i]);
-                    //     Utility::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
-                    // }
-
-
+                if ($isApproved) {
+                    // SCENARIO 1: Invoice is approved - Update journal entries
+                    $this->updateApprovedInvoice($invoice, $voucher, $products, $request);
+                } else {
+                    // SCENARIO 2: Invoice is not approved yet - Just update invoice products
+                    $this->updateDraftInvoice($invoice, $products);
                 }
 
-                // TransactionLines::where('reference_id',$invoice->id)->where('reference','Invoice')->delete();
+                // Log activity
+                Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Update Invoice', $invoice->description);
 
-                // $invoice_products = InvoiceProduct::where('invoice_id', $invoice->id)->get();
-                // foreach ($invoice_products as $invoice_product) {
-                //     $product = ProductService::find($invoice_product->product_id);
-                //     $totalTaxPrice = 0;
-                //     if($invoice_product->tax != null){
-                //         $taxes = \App\Models\Utility::tax($invoice_product->tax);
-                //         foreach ($taxes as $tax) {
-                //             $taxPrice = \App\Models\Utility::taxRate($tax->rate, $invoice_product->price, $invoice_product->quantity, $invoice_product->discount);
-                //             $totalTaxPrice += $taxPrice;
-                //         }
-                //     }
-
-                //     $itemAmount = ($invoice_product->price * $invoice_product->quantity) - ($invoice_product->discount) + $totalTaxPrice;
-
-                //     $data = [
-                //         'account_id' => $product->sale_chartaccount_id,
-                //         'transaction_type' => 'Credit',
-                //         'transaction_amount' => $itemAmount,
-                //         'reference' => 'Invoice',
-                //         'reference_id' => $invoice->id,
-                //         'reference_sub_id' => $product->id,
-                //         'date' => $invoice->issue_date,
-                //     ];
-                //     Utility::addTransactionLines($data , 'edit');
-                // }
-                //log
-                Utility::makeActivityLog(\Auth::user()->id,'Invoice',$invoice->id,'Update Invoice',$invoice->description);
                 return redirect()->route('invoice.index')->with('success', __('Invoice successfully updated.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
@@ -686,12 +1139,295 @@ class InvoiceController extends Controller
         }
     }
 
+    private function updateDraftInvoice($invoice, $products)
+    {
+        StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+
+        foreach ($products as $i => $prod) {
+            $invoiceProduct = InvoiceProduct::find($prod['id']);
+
+            if ($invoiceProduct == null) {
+                // New product - Create it
+                $invoiceProduct = new InvoiceProduct();
+                $invoiceProduct->invoice_id = $invoice->id;
+                $invoiceProduct->product_id = $prod['item'];
+                $invoiceProduct->quantity = $prod['quantity'];
+                $invoiceProduct->tax = $prod['tax'];
+                $invoiceProduct->discount = $prod['discount'];
+                $invoiceProduct->price = $prod['price'];
+                $invoiceProduct->description = $prod['description'];
+                $invoiceProduct->save();
+
+                // Update inventory (decrease stock)
+                Utility::total_quantity('minus', $prod['quantity'], $prod['item']);
+
+                // Add stock report
+                $type = 'invoice';
+                $type_id = $invoice->id;
+                $description = $prod['quantity'] . ' ' . __(' quantity sold in invoice ') . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                Utility::addProductStock($prod['item'], $prod['quantity'], $type, $description, $type_id);
+
+            } else {
+                // Existing product - Update it
+
+                // First, restore the old quantity to inventory
+                Utility::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
+
+                // Update product details
+                $invoiceProduct->product_id = isset($prod['item']) ? $prod['item'] : $invoiceProduct->product_id;
+                $invoiceProduct->quantity = $prod['quantity'];
+                $invoiceProduct->tax = $prod['tax'];
+                $invoiceProduct->discount = $prod['discount'];
+                $invoiceProduct->price = $prod['price'];
+                $invoiceProduct->description = $prod['description'];
+                $invoiceProduct->save();
+
+                // Deduct the new quantity from inventory
+                Utility::total_quantity('minus', $prod['quantity'], $invoiceProduct->product_id);
+
+                // Add stock report for new quantity
+                $type = 'invoice';
+                $type_id = $invoice->id;
+                $description = $prod['quantity'] . ' ' . __(' quantity sold in invoice ') . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                Utility::addProductStock($invoiceProduct->product_id, $prod['quantity'], $type, $description, $type_id);
+            }
+        }
+    }
+
+    private function updateApprovedInvoice($invoice, $voucher, $products, $request)
+    {
+        // Delete old stock reports for this invoice
+        StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+
+        $reciveable = 0;
+
+        foreach ($products as $i => $prod) {
+            $invoiceProduct = InvoiceProduct::find($prod['id']);
+            $tax = 0;
+
+            if ($invoiceProduct == null) {
+                // New product added after approval
+                $invoiceProduct = new InvoiceProduct();
+                $invoiceProduct->invoice_id = $invoice->id;
+                $invoiceProduct->product_id = $prod['item'];
+                $invoiceProduct->quantity = $prod['quantity'];
+                $invoiceProduct->tax = $prod['tax'];
+                $invoiceProduct->discount = $prod['discount'];
+                $invoiceProduct->price = $prod['price'];
+                $invoiceProduct->description = $prod['description'];
+                $invoiceProduct->save();
+                $invoiceProduct->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
+                $invoiceProduct->updated_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
+                $invoiceProduct->save();
+
+                $product = ProductService::where('id', $invoiceProduct->product_id)->first();
+
+                // Create journal item for product
+                $journalItem = new JournalItem();
+                $journalItem->journal = $voucher->id;
+                $journalItem->account = @$product->sale_chartaccount_id;
+                $journalItem->product_ids = $invoiceProduct->id;
+                $journalItem->description = $invoiceProduct->description;
+                $journalItem->credit = ((floatval($prod['quantity']) * floatval($prod['price'])) - floatval($prod['discount']));
+                $journalItem->debit = 0;
+                $journalItem->save();
+                $journalItem->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
+                $journalItem->updated_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
+                $journalItem->save();
+
+                $tax += floatval($prod['itemTaxPrice']);
+                $reciveable += ((floatval($prod['quantity']) * floatval($prod['price'])) - floatval($prod['discount'])) + floatval($prod['itemTaxPrice']);
+
+                // Create transaction line for product
+                $dataline = [
+                    'account_id' => $product->sale_chartaccount_id,
+                    'transaction_type' => 'Credit',
+                    'transaction_amount' => $journalItem->credit,
+                    'reference' => 'Invoice Journal',
+                    'reference_id' => $voucher->id,
+                    'reference_sub_id' => $journalItem->id,
+                    'date' => $voucher->date,
+                    'created_at' => date('Y-m-d H:i:s', strtotime($invoice->created_at)),
+                    'product_id' => $invoice->id,
+                    'product_type' => 'Invoice',
+                    'product_item_id' => $invoiceProduct->id,
+                ];
+                Utility::addTransactionLines($dataline, 'create');
+
+                // Handle tax if exists
+                if ($tax != 0) {
+                    $accounttax = Tax::where('id', $product->tax_id)->first();
+                    $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
+
+                    if (!$account_tax) {
+                        $types_t = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Liabilities')->first();
+                        if ($types_t) {
+                            $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
+                            $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
+                            if (!$account_tax) {
+                                $account_tax = ChartOfAccount::create([
+                                    'name' => 'TAX',
+                                    'code' => '10000',
+                                    'type' => $types_t->id,
+                                    'sub_type' => $sub_type_t->id,
+                                    'is_enabled' => 1,
+                                    'created_by' => $invoice->created_by,
+                                ]);
+                            }
+                        }
+                    }
+
+                    if ($account_tax) {
+                        $journalItem = new JournalItem();
+                        $journalItem->journal = $voucher->id;
+                        $journalItem->account = @$account_tax->id;
+                        $journalItem->prod_tax_id = $invoiceProduct->id;
+                        $journalItem->description = 'Tax on Invoice No : ' . @$invoice->invoice_id;
+                        $journalItem->credit = $tax;
+                        $journalItem->debit = 0;
+                        $journalItem->save();
+                        $journalItem->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
+                        $journalItem->updated_at = date('Y-m-d H:i:s', timestamp: strtotime($invoice->created_at));
+                        $journalItem->save();
+
+                        $dataline = [
+                            'account_id' => $account_tax->id,
+                            'transaction_type' => 'Credit',
+                            'transaction_amount' => $journalItem->credit,
+                            'reference' => 'Invoice Journal',
+                            'reference_id' => $voucher->id,
+                            'reference_sub_id' => $journalItem->id,
+                            'date' => $voucher->date,
+                            'created_at' => date('Y-m-d H:i:s', strtotime($invoice->created_at)),
+                            'product_id' => $invoice->id,
+                            'product_type' => 'Invoice Tax',
+                            'product_item_id' => $invoiceProduct->id,
+                        ];
+                        Utility::addTransactionLines($dataline, 'create');
+                    }
+                }
+
+                // Update inventory
+                Utility::total_quantity('minus', $prod['quantity'], $prod['item']);
+
+                // Add stock report
+                $type = 'invoice';
+                $type_id = $invoice->id;
+                $description = $prod['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                Utility::addProductStock($prod['item'], $prod['quantity'], $type, $description, $type_id);
+
+            } else {
+                // Existing product - Update it and its journal entries
+
+                // Restore old quantity to inventory
+                Utility::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
+
+                // Update product details
+                $invoiceProduct->quantity = $prod['quantity'];
+                $invoiceProduct->tax = $prod['tax'];
+                $invoiceProduct->discount = $prod['discount'];
+                $invoiceProduct->price = $prod['price'];
+                $invoiceProduct->description = $prod['description'];
+                $invoiceProduct->save();
+
+                // Update journal item for product
+                $journalItem = JournalItem::where('journal', $voucher->id)->where('product_ids', $invoiceProduct->id)->first();
+                if ($journalItem) {
+                    $journalItem->credit = ((floatval($prod['quantity']) * floatval($prod['price'])) - floatval($prod['discount']));
+                    $journalItem->save();
+
+                    // Update transaction line
+                    $transaction_line = TransactionLines::where('reference_id', $invoice->voucher_id)
+                        ->where('product_id', $invoice->id)
+                        ->where('reference', 'Invoice Journal')
+                        ->where('product_item_id', $invoiceProduct->id)
+                        ->where('product_type', 'Invoice')
+                        ->first();
+                    if ($transaction_line) {
+                        $transaction_line->credit = $journalItem->credit;
+                        $transaction_line->save();
+                    }
+                }
+
+                $tax += floatval($prod['itemTaxPrice']);
+                $reciveable += ((floatval($prod['quantity']) * floatval($prod['price'])) - floatval($prod['discount'])) + floatval($prod['itemTaxPrice']);
+
+                // Update tax journal item if exists
+                if ($tax != 0) {
+                    $journal_tax = JournalItem::where('journal', $voucher->id)->where('prod_tax_id', $invoiceProduct->id)->first();
+                    if ($journal_tax) {
+                        $journal_tax->credit = $tax;
+                        $journal_tax->save();
+
+                        // Update tax transaction line
+                        $transaction_tax = TransactionLines::where('reference_id', $invoice->voucher_id)
+                            ->where('product_id', $invoice->id)
+                            ->where('reference', 'Invoice Journal')
+                            ->where('product_item_id', $invoiceProduct->id)
+                            ->where('product_type', 'Invoice Tax')
+                            ->first();
+                        if ($transaction_tax) {
+                            $transaction_tax->credit = $journal_tax->credit;
+                            $transaction_tax->save();
+                        }
+                    }
+                }
+
+                // Update inventory with new quantity
+                if (isset($prod['item'])) {
+                    $invoiceProduct->product_id = $prod['item'];
+                    $invoiceProduct->save();
+                }
+
+                Utility::total_quantity('minus', $prod['quantity'], $invoiceProduct->product_id);
+
+                // Add stock report
+                $type = 'invoice';
+                $type_id = $invoice->id;
+                $description = $prod['quantity'] . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                Utility::addProductStock($invoiceProduct->product_id, $prod['quantity'], $type, $description, $type_id);
+            }
+        }
+
+        // Update receivable journal item and transaction line
+        $inv_receviable = TransactionLines::where('reference_id', $invoice->voucher_id)
+            ->where('reference', 'Invoice Journal')
+            ->where('product_type', 'Invoice Reciveable')
+            ->first();
+
+        if ($inv_receviable) {
+            $inv_receviable->credit = $reciveable;
+            $inv_receviable->save();
+        }
+
+        // Update Account Receivables journal item
+        $types = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Assets')->first();
+        if ($types) {
+            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
+            $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
+
+            if ($account) {
+                $item_last = JournalItem::where('journal', $voucher->id)->where('account', $account->id)->first();
+                if ($item_last) {
+                    $item_last->debit = $reciveable;
+                    $item_last->save();
+                }
+            } else if ($inv_receviable) {
+                $item_last = JournalItem::where('journal', $voucher->id)->where('id', $inv_receviable->reference_sub_id)->first();
+                if ($item_last) {
+                    $item_last->debit = $reciveable;
+                    $item_last->save();
+                }
+            }
+        }
+    }
+
     public function invoiceNumber()
     {
         $user = \Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
         $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
-        $latest = Invoice::where($column, '=',$ownerId)->latest()->first();
+        $latest = Invoice::where($column, '=', $ownerId)->latest()->first();
         if (!$latest) {
             return 1;
         }
@@ -701,7 +1437,6 @@ class InvoiceController extends Controller
 
     public function show($ids)
     {
-
         if (\Auth::user()->can('show invoice')) {
             try {
                 $id = Crypt::decrypt($ids);
@@ -709,7 +1444,7 @@ class InvoiceController extends Controller
                 return redirect()->back()->with('error', __('Invoice Not Found.'));
             }
             $id = Crypt::decrypt($ids);
-            $invoice = Invoice::with(['creditNote','payments.bankAccount','items.product.unit'])->find($id);
+            $invoice = Invoice::with(['creditNote', 'payments.bankAccount', 'items.product.unit'])->find($id);
 
             if (!empty($invoice->created_by) == \Auth::user()->creatorId()) {
                 $invoicePayment = InvoicePayment::where('invoice_id', $invoice->id)->first();
@@ -726,9 +1461,9 @@ class InvoiceController extends Controller
                 $invoice->customField = CustomField::getData($invoice, 'invoice');
                 $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'invoice')->get();
 
-                $creditnote = CreditNote::where('invoice',$invoice->id)->first();
+                $creditnote = CreditNote::where('invoice', $invoice->id)->first();
 
-                return view('invoice.view', compact('invoice', 'customer', 'iteams', 'invoicePayment', 'customFields', 'user', 'invoice_user', 'user_plan' , 'creditnote'));
+                return view('invoice.view', compact('invoice', 'customer', 'iteams', 'invoicePayment', 'customFields', 'user', 'invoice_user', 'user_plan', 'creditnote'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
@@ -747,9 +1482,9 @@ class InvoiceController extends Controller
                     $invoicepayment = InvoicePayment::find($invoices->id);
                     $invoices->delete();
                     $invoicepayment->delete();
-                    if(@$invoices->voucher_id != 0 || @$invoices->voucher_id != null){
-                        JournalEntry::where('id',$invoices->voucher_id)->where('category','Invoice')->delete();
-                        JournalItem::where('journal',$invoices->voucher_id)->delete();
+                    if (@$invoices->voucher_id != 0 || @$invoices->voucher_id != null) {
+                        JournalEntry::where('id', $invoices->voucher_id)->where('category', 'Invoice')->delete();
+                        JournalItem::where('journal', $invoices->voucher_id)->delete();
                     }
 
                 }
@@ -759,18 +1494,18 @@ class InvoiceController extends Controller
                 }
 
 
-                TransactionLines::where('product_id',$invoice->id)->where('reference','Invoice Journal')->delete();
-                TransactionLines::where('reference_id',$invoice->id)->where('reference','Invoice')->delete();
-                TransactionLines::where('reference_id',$invoice->id)->Where('reference','Invoice Payment')->delete();
+                TransactionLines::where('product_id', $invoice->id)->where('reference', 'Invoice Journal')->delete();
+                TransactionLines::where('reference_id', $invoice->id)->where('reference', 'Invoice')->delete();
+                TransactionLines::where('reference_id', $invoice->id)->Where('reference', 'Invoice Payment')->delete();
 
                 CreditNote::where('invoice', '=', $invoice->id)->delete();
 
                 InvoiceProduct::where('invoice_id', '=', $invoice->id)->delete();
                 // /log
-                Utility::makeActivityLog(\Auth::user()->id,'Invoice',$invoice->id,'Delete Invoice',$invoice->description);
-                if(@$invoice->voucher_id != 0 || @$invoice->voucher_id != null){
-                    JournalEntry::where('id',$invoice->voucher_id)->where('category','Invoice')->delete();
-                    JournalItem::where('journal',$invoice->voucher_id)->delete();
+                Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Delete Invoice', $invoice->description);
+                if (@$invoice->voucher_id != 0 || @$invoice->voucher_id != null) {
+                    JournalEntry::where('id', $invoice->voucher_id)->where('category', 'Invoice')->delete();
+                    JournalItem::where('journal', $invoice->voucher_id)->delete();
                 }
                 $invoice->delete();
                 return redirect()->route('invoice.index')->with('success', __('Invoice successfully deleted.'));
@@ -789,52 +1524,52 @@ class InvoiceController extends Controller
             if (\Auth::user()->can('delete invoice product')) {
                 $invoiceProduct = InvoiceProduct::find($request->id);
 
-                if($invoiceProduct)
-                {
+                if ($invoiceProduct) {
                     $invoice = Invoice::find($invoiceProduct->invoice_id);
                     $productService = ProductService::find($invoiceProduct->product_id);
                     StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->where('product_id', '=', $invoiceProduct->product_id)->delete();
                     Utility::total_quantity('plus', $invoiceProduct->quantity, $invoiceProduct->product_id);
 
                     Utility::updateUserBalance('customer', $invoice->customer_id, $request->amount, 'debit');
+                    if ($invoice->status != 0 && $invoice->status != 5 && $invoice->status != 7) {
+                        $prod_id = TransactionLines::where('reference_id', $invoice->voucher_id)->where('product_item_id', $invoiceProduct->id)->where('reference', 'Invoice Journal')->where('product_type', 'Invoice')->first();
+                        $prod_tax = TransactionLines::where('reference_id', $invoice->voucher_id)->where('product_item_id', $invoiceProduct->id)->where('reference', 'Invoice Journal')->where('product_type', 'Invoice Tax')->first();
+                        $inv_receviable = TransactionLines::where('reference_id', $invoice->voucher_id)->where('reference', 'Invoice Journal')->where('product_type', 'Invoice Reciveable')->first();
+                        // dd($inv_receviable);
+                        $inv_receviable->debit = $inv_receviable->debit - ($prod_id->credit + @$prod_tax->credit);
+                        $inv_receviable->save();
+                        @$prod_id->delete();
+                        if ($prod_tax) {
+                            @$prod_tax->delete();
+                        }
+                        TransactionLines::where('reference_sub_id', $productService->id)->where('reference', 'Invoice')->delete();
 
-                    $prod_id = TransactionLines::where('reference_id',$invoice->voucher_id)->where('product_item_id',$invoiceProduct->id)->where('reference','Invoice Journal')->where('product_type','Invoice')->first();
-                    $prod_tax = TransactionLines::where('reference_id',$invoice->voucher_id)->where('product_item_id',$invoiceProduct->id)->where('reference','Invoice Journal')->where('product_type','Invoice Tax')->first();
-                    $inv_receviable = TransactionLines::where('reference_id',$invoice->voucher_id)->where('reference','Invoice Journal')->where('product_type','Invoice Reciveable')->first();
-                    $inv_receviable->debit = $inv_receviable->debit - ( $prod_id->credit + @$prod_tax->credit);
-                    $inv_receviable->save();
-                    @$prod_id->delete();
-                    if($prod_tax){
-                        @$prod_tax->delete();
+                        $journal_item = JournalItem::where('journal', $invoice->voucher_id)->where('product_ids', $invoiceProduct->id)->first();
+                        $journal_tax = JournalItem::where('journal', $invoice->voucher_id)->where('prod_tax_id', $invoiceProduct->id)->first();
+                        $types = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Assets')->first();
+                        if ($types) {
+                            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
+                            $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
+                        }
+                        if ($account) {
+                            $item_last = JournalItem::where('journal', $invoice->voucher_id)->where('account', $account->id)->first();
+                            $item_last->debit = $item_last->debit - ($journal_item->credit + @$journal_tax->credit);
+                            $item_last->save();
+                        } else {
+                            $item_last = JournalItem::where('journal', $invoice->voucher_id)->where('id', $inv_receviable->reference_sub_id)->first();
+                            $item_last->debit = $item_last->debit - ($journal_item->credit + @$journal_tax->credit);
+                            $item_last->save();
+                        }
+                        @$journal_item->delete();
+                        if ($journal_tax) {
+                            @$journal_tax->delete();
+                        }
                     }
-                    TransactionLines::where('reference_sub_id',$productService->id)->where('reference','Invoice')->delete();
-                    
-                    $journal_item = JournalItem::where('journal',$invoice->voucher_id)->where('product_ids',$invoiceProduct->id)->first();
-                    $journal_tax = JournalItem::where('journal',$invoice->voucher_id)->where('prod_tax_id',$invoiceProduct->id)->first();
-                    $types = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Assets')->first();
-                    if ($types) {
-                        $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
-                        $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
-                    }
-                    if($account){
-                        $item_last = JournalItem::where('journal', $invoice->voucher_id)->where('account', $account->id)->first();
-                        $item_last->debit = $item_last->debit - ($journal_item->credit + @$journal_tax->credit);
-                        $item_last->save();
-                    }else{
-                        $item_last = JournalItem::where('journal', $invoice->voucher_id)->where('id', $inv_receviable->reference_sub_id)->first();
-                        $item_last->debit = $item_last->debit - ($journal_item->credit + @$journal_tax->credit);
-                        $item_last->save();
-                    }
-                    @$journal_item->delete();
-                    if($journal_tax){
-                        @$journal_tax->delete();
-                    }
-
                     InvoiceProduct::where('id', '=', $request->id)->delete();
                 }
 
                 // /log
-                Utility::makeActivityLog(\Auth::user()->id,'Invoice Product',$invoiceProduct->id,'Delete Invoice Product',$invoiceProduct->product->name);
+                Utility::makeActivityLog(\Auth::user()->id, 'Invoice Product', $invoiceProduct->id, 'Delete Invoice Product', $invoiceProduct->product->name);
                 \DB::commit();
                 return redirect()->back()->with('success', __('Invoice product successfully deleted.'));
             } else {
@@ -920,8 +1655,7 @@ class InvoiceController extends Controller
                 foreach ($invoice_products as $invoice_product) {
                     $product = ProductService::find($invoice_product->product_id);
                     $totalTaxPrice = 0;
-                    if($invoice_product->tax != null)
-                    {
+                    if ($invoice_product->tax != null) {
                         $taxes = \App\Models\Utility::tax($invoice_product->tax);
                         foreach ($taxes as $tax) {
                             $taxPrice = \App\Models\Utility::taxRate($tax->rate, $invoice_product->price, $invoice_product->quantity, $invoice_product->discount);
@@ -954,7 +1688,7 @@ class InvoiceController extends Controller
                 ];
                 $resp = Utility::sendEmailTemplate('customer_invoice_sent', [$customer->id => $customer->email], $customerArr);
                 //log
-                Utility::makeActivityLog(\Auth::user()->id,'Invoice',$invoice->id,'Send Invoice to Customer',$invoice->description);
+                Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Send Invoice to Customer', $invoice->description);
                 return redirect()->back()->with('success', __('Invoice successfully sent.') . (($resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
 
             }
@@ -986,7 +1720,7 @@ class InvoiceController extends Controller
             ];
             $resp = Utility::sendEmailTemplate('customer_invoice_sent', [$customer->id => $customer->email], $customerArr);
             //log
-            Utility::makeActivityLog(\Auth::user()->id,'Invoice',$invoice->id,'Resend Invoice to Customer',$invoice->description);
+            Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Resend Invoice to Customer', $invoice->description);
 
             return redirect()->back()->with('success', __('Invoice successfully sent.') . (($resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
 
@@ -1023,7 +1757,8 @@ class InvoiceController extends Controller
         try {
             if (\Auth::user()->can('create payment invoice')) {
                 $validator = \Validator::make(
-                    $request->all(), [
+                    $request->all(),
+                    [
                         'date' => 'required',
                         'amount' => 'required',
                         'account_id' => 'required',
@@ -1090,7 +1825,7 @@ class InvoiceController extends Controller
                 $payment->amount = \Auth::user()->priceFormat($request->amount);
                 $payment->invoice = 'invoice ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
                 $payment->dueAmount = \Auth::user()->priceFormat($invoice->getDue());
-                
+
 
                 Utility::updateUserBalance('customer', $invoice->customer_id, $request->amount, 'debit');
 
@@ -1111,35 +1846,35 @@ class InvoiceController extends Controller
                 //     ];
                 //     Utility::addTransactionLines($data , 'create');
                 // }
-                    $bankAccount = BankAccount::find($request->account_id);
-                    if($bankAccount && $bankAccount->chart_account_id != 0 || $bankAccount->chart_account_id != null){
-                        $data['account_id'] = $bankAccount->chart_account_id;
-                    }else{
-                        return redirect()->back()->with('error', __('Please select chart of account in bank account.'));
-                    }
+                $bankAccount = BankAccount::find($request->account_id);
+                if ($bankAccount && $bankAccount->chart_account_id != 0 || $bankAccount->chart_account_id != null) {
+                    $data['account_id'] = $bankAccount->chart_account_id;
+                } else {
+                    return redirect()->back()->with('error', __('Please select chart of account in bank account.'));
+                }
 
-                    $data['id'] = $invoice_id;
-                    $data['no'] = $invoice->invoice_id;
-                    $data['date'] = $invoicePayment->date;
-                    $data['reference'] = $invoicePayment->reference;
-                    $data['description'] = $invoicePayment->description;
-                    $data['amount'] = $invoicePayment->amount;
-                    $data['prod_id'] = $invoicePayment->id;
-                    // $data['result'] = $result;
-                    $data['category'] = 'Invoice';
-                    $data['owned_by'] = $invoicePayment->owned_by;
-                    $data['created_by'] = \Auth::user()->creatorId();
-                    $data['created_at'] = date('Y-m-d', strtotime($invoicePayment->date)) . ' ' . date('h:i:s');
+                $data['id'] = $invoice_id;
+                $data['no'] = $invoice->invoice_id;
+                $data['date'] = $invoicePayment->date;
+                $data['reference'] = $invoicePayment->reference;
+                $data['description'] = $invoicePayment->description;
+                $data['amount'] = $invoicePayment->amount;
+                $data['prod_id'] = $invoicePayment->id;
+                // $data['result'] = $result;
+                $data['category'] = 'Invoice';
+                $data['owned_by'] = $invoicePayment->owned_by;
+                $data['created_by'] = \Auth::user()->creatorId();
+                $data['created_at'] = date('Y-m-d', strtotime($invoicePayment->date)) . ' ' . date('h:i:s');
 
 
-                    if (preg_match('/\bcash\b/i', $bankAccount->bank_name) || preg_match('/\bcash\b/i', $bankAccount->holder_name)) {
-                        $dataret  = Utility::crv_entry($data);
-                    } else {
-                        $dataret  = Utility::brv_entry($data);
-                    }
-                    InvoicePayment::where('id', $invoicePayment->id)->update([
-                        'voucher_id' => $dataret,
-                    ]);
+                if (preg_match('/\bcash\b/i', $bankAccount->bank_name) || preg_match('/\bcash\b/i', $bankAccount->holder_name)) {
+                    $dataret = Utility::crv_entry($data);
+                } else {
+                    $dataret = Utility::brv_entry($data);
+                }
+                InvoicePayment::where('id', $invoicePayment->id)->update([
+                    'voucher_id' => $dataret,
+                ]);
 
 
 
@@ -1173,7 +1908,7 @@ class InvoiceController extends Controller
                     }
                 }
                 //activity log
-                Utility::makeActivityLog(\Auth::user()->id,'Invoice Payment',$invoicePayment->id,'Create Invoice Payment',$customer->name);
+                Utility::makeActivityLog(\Auth::user()->id, 'Invoice Payment', $invoicePayment->id, 'Create Invoice Payment', $customer->name);
                 \DB::commit();
                 return redirect()->back()->with('success', __('Payment successfully added.') . ((isset($result) && $result != 1) ? '<br> <span class="text-danger">' . $result . '</span>' : '') . (($resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
 
@@ -1185,20 +1920,20 @@ class InvoiceController extends Controller
 
     public function paymentDestroy(Request $request, $invoice_id, $payment_id)
     {
-//        dd($invoice_id,$payment_id);
+        //        dd($invoice_id,$payment_id);
 
         if (\Auth::user()->can('delete payment invoice')) {
             $payment = InvoicePayment::find($payment_id);
-            if(!$payment){
+            if (!$payment) {
                 return redirect()->back()->with('error', __('Payment not found.'));
             }
 
             InvoiceBankTransfer::where('id', '=', $payment_id)->delete();
 
-            TransactionLines::where('reference_sub_id',$payment_id)->where('reference','Invoice Payment')->delete();
-            if(@$payment->voucher_id != 0 || @$payment->voucher_id != null){
-                JournalEntry::where('id',$payment->voucher_id)->where('category','Invoice')->delete();
-                JournalItem::where('journal',$payment->voucher_id)->delete();
+            TransactionLines::where('reference_sub_id', $payment_id)->where('reference', 'Invoice Payment')->delete();
+            if (@$payment->voucher_id != 0 || @$payment->voucher_id != null) {
+                JournalEntry::where('id', $payment->voucher_id)->where('category', 'Invoice')->delete();
+                JournalItem::where('journal', $payment->voucher_id)->delete();
             }
             $invoice = Invoice::where('id', $invoice_id)->first();
             $due = $invoice->getDue();
@@ -1217,7 +1952,7 @@ class InvoiceController extends Controller
                 $result = Utility::changeStorageLimit(\Auth::user()->creatorId(), $file_path);
 
             }
-             InvoicePayment::where('id', '=', $payment_id)->delete();
+            InvoicePayment::where('id', '=', $payment_id)->delete();
             $invoice->save();
             $type = 'Partial';
             $user = 'Customer';
@@ -1228,7 +1963,7 @@ class InvoiceController extends Controller
             Utility::bankAccountBalance($payment->account_id, $payment->amount, 'debit');
             //log
             $customer = Customer::where('id', $invoice->customer_id)->first();
-            Utility::makeActivityLog(\Auth::user()->id,'Invoice Payment',$payment_id,'Delete Invoice Payment',$customer->name);
+            Utility::makeActivityLog(\Auth::user()->id, 'Invoice Payment', $payment_id, 'Delete Invoice Payment', $customer->name);
             return redirect()->back()->with('success', __('Payment successfully deleted.'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -1238,7 +1973,7 @@ class InvoiceController extends Controller
     public function paymentReminder($invoice_id)
     {
 
-//        dd($invoice_id);
+        //        dd($invoice_id);
         $invoice = Invoice::find($invoice_id);
         $customer = Customer::where('id', $invoice->customer_id)->first();
         $invoice->dueAmount = \Auth::user()->priceFormat($invoice->getDue());
@@ -1283,7 +2018,7 @@ class InvoiceController extends Controller
 
         }
         //log
-        Utility::makeActivityLog(\Auth::user()->id,'Invoice Payment',$invoice_id,'Send Payment Reminder',$customer->name);
+        Utility::makeActivityLog(\Auth::user()->id, 'Invoice Payment', $invoice_id, 'Send Payment Reminder', $customer->name);
         return redirect()->back()->with('success', __('Payment reminder successfully send.') . (($resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
     }
 
@@ -1295,7 +2030,8 @@ class InvoiceController extends Controller
     public function customerInvoiceSendMail(Request $request, $invoice_id)
     {
         $validator = \Validator::make(
-            $request->all(), [
+            $request->all(),
+            [
                 'email' => 'required|email',
             ]
         );
@@ -1315,14 +2051,13 @@ class InvoiceController extends Controller
         $invoiceId = Crypt::encrypt($invoice->id);
         $invoice->url = route('invoice.pdf', $invoiceId);
 
-        try
-        {
+        try {
             Mail::to($email)->send(new CustomerInvoiceSend($invoice));
         } catch (\Exception $e) {
             $smtp_error = __('E-Mail has been not sent due to SMTP configuration');
         }
         // /log
-        Utility::makeActivityLog(\Auth::user()->id,'Invoice Payment',$invoice_id,'Send Invoice Email',$customer->name);
+        Utility::makeActivityLog(\Auth::user()->id, 'Invoice Payment', $invoice_id, 'Send Invoice Email', $customer->name);
         return redirect()->back()->with('success', __('Invoice successfully sent.') . ((isset($smtp_error)) ? '<br> <span class="text-danger">' . $smtp_error . '</span>' : ''));
 
     }
@@ -1338,7 +2073,7 @@ class InvoiceController extends Controller
         }
         $invoice->save();
         //log
-        Utility::makeActivityLog(\Auth::user()->id,'Invoice Payment',$invoice_id,'Change Shipping Display Status',$invoice->customer->name);
+        Utility::makeActivityLog(\Auth::user()->id, 'Invoice Payment', $invoice_id, 'Change Shipping Display Status', $invoice->customer->name);
         return redirect()->back()->with('success', __('Shipping address status successfully changed.'));
     }
 
@@ -1373,7 +2108,7 @@ class InvoiceController extends Controller
                 }
             }
             //log
-            Utility::makeActivityLog(\Auth::user()->id,'Invoice Payment',$invoice_id,'Duplicate Invoice',$invoice->customer->name);
+            Utility::makeActivityLog(\Auth::user()->id, 'Invoice Payment', $invoice_id, 'Duplicate Invoice', $invoice->customer->name);
             return redirect()->back()->with('success', __('Invoice duplicate successfully.'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
@@ -1597,7 +2332,8 @@ class InvoiceController extends Controller
 
         foreach ($post as $key => $data) {
             \DB::insert(
-                'insert into settings (`value`, `name`,`created_by`) values (?, ?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`) ', [
+                'insert into settings (`value`, `name`,`created_by`) values (?, ?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`) ',
+                [
                     $data,
                     $key,
                     \Auth::user()->creatorId(),
@@ -1617,6 +2353,7 @@ class InvoiceController extends Controller
 
     public function invoiceLink($invoiceId)
     {
+        // dd('link');
         try {
             $id = Crypt::decrypt($invoiceId);
         } catch (\Throwable $th) {
@@ -1624,7 +2361,7 @@ class InvoiceController extends Controller
         }
 
         $id = Crypt::decrypt($invoiceId);
-        $invoice = Invoice::with(['creditNote','payments.bankAccount','items.product.unit'])->find($id);
+        $invoice = Invoice::with(['creditNote', 'payments.bankAccount', 'items.product.unit'])->find($id);
         $settings = Utility::settingsById($invoice->created_by);
 
         if (!empty($invoice)) {

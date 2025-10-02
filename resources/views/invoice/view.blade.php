@@ -251,7 +251,8 @@
                     <div class="card ">
                         <div class="card-body">
                             <div class="row timeline-wrapper">
-                                <div class="col-md-6 col-lg-4 col-xl-4 create_invoice">
+                                <!-- Create Invoice Section -->
+                                <div class="col-md-6 col-lg-3 col-xl-3 create_invoice">
                                     <div class="timeline-icons"><span class="timeline-dots"></span>
                                         <i class="ti ti-plus text-primary"></i>
                                     </div>
@@ -266,45 +267,155 @@
                                                 class="ti ti-pencil mr-2"></i>{{ __('Edit') }}</a>
                                     @endcan
                                 </div>
-                                <div class="col-md-6 col-lg-4 col-xl-4 send_invoice">
+
+                                <!-- Approval Invoice Section -->
+                                <div class="col-md-6 col-lg-3 col-xl-3 approval_invoice">
+                                    <div class="timeline-icons"><span class="timeline-dots"></span>
+                                        @if ($invoice->status == 6 || in_array($invoice->status, [1, 2, 3, 4]))
+                                            <i class="ti ti-check text-success"></i>
+                                        @elseif($invoice->status == 7)
+                                            <i class="ti ti-x text-danger"></i>
+                                        @elseif($invoice->status == 5)
+                                            <i class="ti ti-clock text-warning"></i>
+                                        @else
+                                            <i class="ti ti-file-text text-info"></i>
+                                        @endif
+                                    </div>
+
+                                    @if ($invoice->status == 6)
+                                        {{-- Approved --}}
+                                        <h6 class="text-success my-3">{{ __('Approved') }}</h6>
+                                        <p class="text-muted text-sm mb-3">
+                                            <i class="ti ti-check mr-2"></i>{{ __('Approved - Ready to send') }}
+                                        </p>
+                                    @elseif(in_array($invoice->status, [1, 2, 3, 4]))
+                                        {{-- Already Approved and Sent/Paid --}}
+                                        <h6 class="text-success my-3">{{ __('Approved') }}</h6>
+                                        <p class="text-muted text-sm mb-3">
+                                            <i class="ti ti-check mr-2"></i>{{ __('Approved') }}
+                                            @if ($invoice->approved_date)
+                                                {{ __('on') }} {{ \Auth::user()->dateFormat($invoice->approved_date) }}
+                                            @endif
+                                        </p>
+                                        <span class="badge bg-success">{{ __('Approved & Sent') }}</span>
+                                    @elseif($invoice->status == 7)
+                                        {{-- Rejected --}}
+                                        <h6 class="text-danger my-3">{{ __('Rejected') }}</h6>
+                                        <p class="text-muted text-sm mb-3">
+                                            <i class="ti ti-x mr-2"></i>{{ __('Rejected on') }}
+                                            {{ $invoice->rejected_date ? \Auth::user()->dateFormat($invoice->rejected_date) : __('N/A') }}
+                                        </p>
+                                        {{-- @can('request approval invoice') --}}
+                                        <a href="{{ route('invoice.request.approval', $invoice->id) }}"
+                                            class="btn btn-sm btn-warning" data-bs-toggle="tooltip"
+                                            data-original-title="{{ __('Request Approval') }}">
+                                            <i class="ti ti-send mr-2"></i>{{ __('Request Approval') }}
+                                        </a>
+                                        {{-- @endcan --}}
+                                    @elseif($invoice->status == 5)
+                                        {{-- Pending Approval --}}
+                                        <h6 class="text-warning my-3">{{ __('Pending Approval') }}</h6>
+                                        <p class="text-muted text-sm mb-3">
+                                            <i class="ti ti-clock mr-2"></i>{{ __('Waiting for approval') }}
+                                        </p>
+                                        <small class="text-muted">{{ __('Status: Under review') }}</small>
+                                    @else
+                                        {{-- Draft (0) or any other status --}}
+                                        @if ($invoice->status == 0)
+                                            <h6 class="text-info my-3">{{ __('Draft') }}</h6>
+                                            <p class="text-muted text-sm mb-3">
+                                                <i class="ti ti-file-text mr-2"></i>{{ __('Invoice is in draft') }}
+                                            </p>
+                                        @else
+                                            <h6 class="text-secondary my-3">{{ __('Approval Required') }}</h6>
+                                            <p class="text-muted text-sm mb-3">
+                                                <small>{{ __('Status: Not submitted for approval') }}</small>
+                                            </p>
+                                        @endif
+                                        {{-- @can('request approval invoice') --}}
+                                        <a href="{{ route('invoice.request.approval', $invoice->id) }}"
+                                            class="btn btn-sm btn-info" data-bs-toggle="tooltip"
+                                            data-original-title="{{ __('Send for Approval') }}">
+                                            <i class="ti ti-send mr-2"></i>{{ __('Send for Approval') }}
+                                        </a>
+                                        {{-- @endcan --}}
+                                    @endif
+                                </div>
+
+                                <!-- Send Invoice Section -->
+                                <div class="col-md-6 col-lg-3 col-xl-3 send_invoice">
                                     <div class="timeline-icons"><span class="timeline-dots"></span>
                                         <i class="ti ti-mail text-warning"></i>
                                     </div>
                                     <h6 class="text-warning my-3">{{ __('Send Invoice') }}</h6>
                                     <p class="text-muted text-sm mb-3">
-                                        @if ($invoice->status != 0)
-                                            <i class="ti ti-clock mr-2"></i>{{ __('Sent on') }}
-                                            {{ \Auth::user()->dateFormat($invoice->send_date) }}
+                                        @if (in_array($invoice->status, [1, 2, 3, 4]))
+                                            <i class="ti ti-check mr-2"></i>{{ __('Sent on') }}
+                                            {{ $invoice->send_date ? \Auth::user()->dateFormat($invoice->send_date) : __('N/A') }}
+                                        @elseif($invoice->status == 6)
+                                            <small>{{ __('Status') }} : {{ __('Ready to Send') }}</small>
                                         @else
-                                            @can('send invoice')
-                                                <small>{{ __('Status') }} : {{ __('Not Sent') }}</small>
-                                            @endcan
+                                            <small>{{ __('Status') }} : {{ __('Waiting for Approval') }}</small>
                                         @endif
                                     </p>
 
-                                    @if ($invoice->status == 0)
-                                        @can('send bill')
+                                    {{-- Only show send button if status is Approved (6) and not yet sent --}}
+                                    @if ($invoice->status == 6)
+                                        @can('send invoice')
                                             <a href="{{ route('invoice.sent', $invoice->id) }}" class="btn btn-sm btn-warning"
-                                                data-bs-toggle="tooltip" data-original-title="{{ __('Mark Sent') }}"><i
-                                                    class="ti ti-send mr-2"></i>{{ __('Send') }}</a>
+                                                data-bs-toggle="tooltip" data-original-title="{{ __('Mark Sent') }}">
+                                                <i class="ti ti-send mr-2"></i>{{ __('Send') }}
+                                            </a>
                                         @endcan
+                                    @elseif(in_array($invoice->status, [1, 2, 3, 4]))
+                                        {{-- Already sent, show status --}}
+                                        <span class="badge bg-success">{{ __('Sent') }}</span>
+                                    @else
+                                        {{-- Not approved yet or rejected/draft/pending --}}
+                                        <button class="btn btn-sm btn-secondary" disabled data-bs-toggle="tooltip"
+                                            data-original-title="{{ __('Approval required before sending') }}">
+                                            <i class="ti ti-send mr-2"></i>{{ __('Send') }}
+                                        </button>
                                     @endif
                                 </div>
-                                <div class="col-md-6 col-lg-4 col-xl-4 create_invoice">
+
+                                <!-- Payment Section -->
+                                <div class="col-md-6 col-lg-3 col-xl-3 get_paid_invoice">
                                     <div class="timeline-icons"><span class="timeline-dots"></span>
                                         <i class="ti ti-report-money text-info"></i>
                                     </div>
                                     <h6 class="text-info my-3">{{ __('Get Paid') }}</h6>
-                                    <p class="text-muted text-sm mb-3">{{ __('Status') }} : {{ __('Awaiting payment') }} </p>
-                                    @if ($invoice->status != 0)
+                                    <p class="text-muted text-sm mb-3">
+                                        @if ($invoice->status == 4)
+                                            {{ __('Status') }} : {{ __('Paid') }}
+                                        @elseif($invoice->status == 3)
+                                            {{ __('Status') }} : {{ __('Partially Paid') }}
+                                        @elseif($invoice->status == 2)
+                                            {{ __('Status') }} : {{ __('Unpaid') }}
+                                        @elseif($invoice->status == 1)
+                                            {{ __('Status') }} : {{ __('Sent - Awaiting payment') }}
+                                        @else
+                                            {{ __('Status') }} : {{ __('Not Available') }}
+                                        @endif
+                                    </p>
+
+                                    {{-- Only show payment button if invoice is Sent (1), Unpaid (2), or Partially Paid (3) --}}
+                                    @if (in_array($invoice->status, [1, 2, 3]))
                                         @can('create payment invoice')
                                             <a href="#" data-url="{{ route('invoice.payment', $invoice->id) }}"
                                                 data-ajax-popup="true" data-title="{{ __('Add Payment') }}"
-                                                class="btn btn-sm btn-info" data-original-title="{{ __('Add Payment') }}"><i
-                                                    class="ti ti-report-money mr-2"></i>{{ __('Receive Payment') }}</a> <br>
+                                                class="btn btn-sm btn-info" data-original-title="{{ __('Add Payment') }}">
+                                                <i class="ti ti-report-money mr-2"></i>{{ __('Receive Payment') }}
+                                            </a>
                                         @endcan
+                                    @elseif($invoice->status == 4)
+                                        <span class="badge bg-success">{{ __('Payment Completed') }}</span>
+                                    @else
+                                        <button class="btn btn-sm btn-secondary" disabled data-bs-toggle="tooltip"
+                                            data-original-title="{{ __('Invoice must be sent before receiving payment') }}">
+                                            <i class="ti ti-report-money mr-2"></i>{{ __('Receive Payment') }}
+                                        </button>
                                     @endif
-
                                 </div>
                             </div>
                         </div>
@@ -442,16 +553,16 @@
                                         @if ($invoice->status == 0)
                                             <span
                                                 class="badge bg-primary">{{ __(\App\Models\Invoice::$statues[$invoice->status]) }}</span>
-                                        @elseif($invoice->status == 1)
-                                            <span
-                                                class="badge bg-warning">{{ __(\App\Models\Invoice::$statues[$invoice->status]) }}</span>
                                         @elseif($invoice->status == 2)
                                             <span
-                                                class="badge bg-danger">{{ __(\App\Models\Invoice::$statues[$invoice->status]) }}</span>
+                                                class="badge bg-warning">{{ __(\App\Models\Invoice::$statues[$invoice->status]) }}</span>
                                         @elseif($invoice->status == 3)
                                             <span
-                                                class="badge bg-info">{{ __(\App\Models\Invoice::$statues[$invoice->status]) }}</span>
+                                                class="badge bg-danger">{{ __(\App\Models\Invoice::$statues[$invoice->status]) }}</span>
                                         @elseif($invoice->status == 4)
+                                            <span
+                                                class="badge bg-info">{{ __(\App\Models\Invoice::$statues[$invoice->status]) }}</span>
+                                        @elseif($invoice->status == 5)
                                             <span
                                                 class="badge bg-primary">{{ __(\App\Models\Invoice::$statues[$invoice->status]) }}</span>
                                         @endif
@@ -522,7 +633,8 @@
                                                         $totalDiscount += $iteam->discount;
                                                     @endphp
                                                     <td>{{ !empty($productName) ? $productName->name : '' }}</td>
-                                                    <td>{{ $iteam->quantity . ' (' . (isset($productName->unit) ? $productName->unit->name : 'No unit') . ')' }}</td>
+                                                    <td>{{ $iteam->quantity . ' (' . (isset($productName->unit) ? $productName->unit->name : 'No unit') . ')' }}
+                                                    </td>
                                                     <td>{{ \Auth::user()->priceFormat($iteam->price) }}</td>
                                                     <td>{{ \Auth::user()->priceFormat($iteam->discount) }}</td>
 
@@ -557,17 +669,35 @@
 
                                                                     if (!empty($iteam->tax)) {
                                                                         foreach (explode(',', $iteam->tax) as $tax) {
-                                                                            $taxPrice = \Utility::taxRate($getTaxData[$tax]['rate'], $iteam->price, $iteam->quantity);
+                                                                            $taxPrice = \Utility::taxRate(
+                                                                                $getTaxData[$tax]['rate'],
+                                                                                $iteam->price,
+                                                                                $iteam->quantity,
+                                                                            );
                                                                             $totalTaxPrice += $taxPrice;
-                                                                            $itemTax['name'] = $getTaxData[$tax]['name'];
-                                                                            $itemTax['rate'] = $getTaxData[$tax]['rate'] . '%';
-                                                                            $itemTax['price'] = \Auth::user()->priceFormat($taxPrice);
+                                                                            $itemTax['name'] =
+                                                                                $getTaxData[$tax]['name'];
+                                                                            $itemTax['rate'] =
+                                                                                $getTaxData[$tax]['rate'] . '%';
+                                                                            $itemTax[
+                                                                                'price'
+                                                                            ] = \Auth::user()->priceFormat($taxPrice);
 
                                                                             $itemTaxes[] = $itemTax;
-                                                                            if (array_key_exists($getTaxData[$tax]['name'], $taxesData)) {
-                                                                                $taxesData[$getTaxData[$tax]['name']] = $taxesData[$getTaxData[$tax]['name']] + $taxPrice;
+                                                                            if (
+                                                                                array_key_exists(
+                                                                                    $getTaxData[$tax]['name'],
+                                                                                    $taxesData,
+                                                                                )
+                                                                            ) {
+                                                                                $taxesData[$getTaxData[$tax]['name']] =
+                                                                                    $taxesData[
+                                                                                        $getTaxData[$tax]['name']
+                                                                                    ] + $taxPrice;
                                                                             } else {
-                                                                                $taxesData[$getTaxData[$tax]['name']] = $taxPrice;
+                                                                                $taxesData[
+                                                                                    $getTaxData[$tax]['name']
+                                                                                ] = $taxPrice;
                                                                             }
                                                                         }
                                                                         $iteam->itemTax = $itemTaxes;
@@ -576,11 +706,11 @@
                                                                     }
                                                                 @endphp
                                                                 @foreach ($iteam->itemTax as $tax)
-
-                                                                        <tr>
-                                                                            <td>{{$tax['name'] .' ('.$tax['rate'] .'%)'}}</td>
-                                                                            <td>{{ $tax['price']}}</td>
-                                                                        </tr>
+                                                                    <tr>
+                                                                        <td>{{ $tax['name'] . ' (' . $tax['rate'] . '%)' }}
+                                                                        </td>
+                                                                        <td>{{ $tax['price'] }}</td>
+                                                                    </tr>
                                                                 @endforeach
                                                             </table>
                                                         @else

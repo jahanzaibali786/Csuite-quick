@@ -120,12 +120,36 @@
                                     <td>{{ !empty($expense->category)?$expense->category->name:'-'}}</td>
                                     <td>{{ Auth::user()->dateFormat($expense->bill_date) }}</td>
                                     <td>
-                                        <span class="status_badge badge bg-primary p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
+                                        {{-- //colorful --}}
+                                        @if($expense->status == 0)
+                                            <span class="status_badge badge bg-secondary p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
+                                        @elseif($expense->status == 1)
+                                            <span class="status_badge badge bg-warning p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
+                                        @elseif($expense->status == 2)
+                                            <span class="status_badge badge bg-danger p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
+                                        @elseif($expense->status == 3)
+                                            <span class="status_badge badge bg-info p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
+                                        @elseif($expense->status == 4)
+                                            <span class="status_badge badge bg-primary p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
+                                        @elseif($expense->status == 5)
+                                            <span class="status_badge badge bg-primary p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
+                                        @elseif($expense->status == 6)
+                                            <span class="status_badge badge bg-success p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
+                                        @elseif($expense->status == 7)
+                                            <span class="status_badge badge bg-danger p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
+                                        @endif
                                     </td>
                                     @if(Gate::check('edit bill') || Gate::check('delete bill') || Gate::check('show bill'))
                                         <td class="Action">
                                             <span>
-
+                                                {{-- // request for approaval --}}
+                                                @if($expense->status == 0 || $expense->status == 7)
+                                                    <div class="action-btn bg-info ms-2">
+                                                        <a href="{{ route('expense.request.approval', $expense->id) }}" class="mx-3 btn btn-sm align-items-center" data-bs-toggle="tooltip" title="{{__('Send for Approval')}}" data-original-title="{{__('Send for Approval')}}">
+                                                            <i class="ti ti-send text-white"></i>
+                                                        </a>
+                                                    </div>
+                                                @endif
                                                 @can('show bill')
                                                     <div class="action-btn bg-info ms-2">
                                                         <a href="{{ route('expense.show',\Crypt::encrypt($expense->id)) }}" class="mx-3 btn btn-sm align-items-center" data-bs-toggle="tooltip" title="{{__('Show')}}" data-original-title="{{__('Detail')}}">
