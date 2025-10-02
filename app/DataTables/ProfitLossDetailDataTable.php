@@ -154,7 +154,7 @@ class ProfitLossDetailDataTable extends DataTable
                 // aggregated split account labels (code - name)
                 DB::raw('GROUP_CONCAT(DISTINCT CONCAT(COALESCE(split_accounts.code, ""), " - ", COALESCE(split_accounts.name, "")) SEPARATOR " || ") as splits'),
             ])
-            ->whereIn('chart_of_account_types.name', ['Income', 'Expenses', 'Cost of Sales', 'Other Income', 'Other Expense'])
+            ->whereIn('chart_of_account_types.name', ['Income', 'Expenses', 'Costs of Goods Sold', 'Other Income', 'Other Expense'])
             ->groupBy(
                 'chart_of_accounts.id',
                 'chart_of_accounts.name',
@@ -193,8 +193,7 @@ class ProfitLossDetailDataTable extends DataTable
 
         // ---------------- COGS ----------------
         $cogsAccounts = $accounts->filter(function ($acc) {
-            return $acc->account_type === 'Cost of Sales' ||
-                ($acc->account_type === 'Expenses' && $acc->sub_type_code === 'COGS');
+            return $acc->account_type === 'Costs of Goods Sold' || ($acc->sub_type === 'Costs of Goods Sold');
         })->map(function ($acc) {
             $acc->group_key = 'cogs';
             $acc->is_child = true;
@@ -204,7 +203,7 @@ class ProfitLossDetailDataTable extends DataTable
         $cogsTotal = $cogsAccounts->sum('amount');
 
         $report->push((object) [
-            'name' => 'Cost of Goods Sold',
+            'name' => 'Costs of Goods Sold',
             'is_section_header' => true,
             'group_key' => 'cogs',
             'has_children' => $cogsAccounts->count() > 0,
@@ -212,7 +211,7 @@ class ProfitLossDetailDataTable extends DataTable
         ]);
         $report = $report->merge($cogsAccounts);
         $report->push((object) [
-            'name' => 'Total Cost of Goods Sold',
+            'name' => 'Total Costs of Goods Sold',
             'account_type' => 'subtotal',
             'net' => $cogsTotal,
             'is_subtotal' => true,

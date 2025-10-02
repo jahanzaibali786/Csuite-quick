@@ -172,6 +172,381 @@ class ExpenseController extends Controller
         }
     }
 
+    // public function store(Request $request)
+    // {
+    //     \DB::beginTransaction();
+    //     try {
+    //         if (\Auth::user()->can('create bill')) {
+
+    //             $validator = \Validator::make(
+    //                 $request->all(),
+    //                 [
+    //                     //                    'vender_id' => 'required',
+    //                     'payment_date' => 'required',
+    //                 ]
+    //             );
+    //             if ($validator->fails()) {
+    //                 $messages3 = $validator->getMessageBag();
+    //                 return redirect()->back()->with('error', $messages3->first());
+    //             }
+
+    //             if (!empty($request->items) && empty($request->items[0]['item']) && empty($request->items[0]['chart_account_id']) && empty($request->items[0]['amount'])) {
+    //                 $itemValidator = \Validator::make(
+    //                     $request->all(),
+    //                     [
+    //                         'item' => 'required',
+    //                     ]
+    //                 );
+    //                 if ($itemValidator->fails()) {
+    //                     $messages1 = $itemValidator->getMessageBag();
+    //                     return redirect()->back()->with('error', $messages1->first());
+    //                 }
+    //             }
+
+    //             if (!empty($request->items) && empty($request->items[0]['chart_account_id']) && !empty($request->items[0]['amount'])) {
+    //                 $accountValidator = \Validator::make(
+    //                     $request->all(),
+    //                     [
+    //                         'chart_account_id' => 'required',
+    //                     ]
+    //                 );
+    //                 if ($accountValidator->fails()) {
+    //                     $messages2 = $accountValidator->getMessageBag();
+    //                     return redirect()->back()->with('error', $messages2->first());
+    //                 }
+    //             }
+
+    //             $expense = new Bill();
+    //             $expense->bill_id = $this->expenseNumber();
+    //             if ($request->type == 'employee') {
+    //                 $expense->vender_id = $request->employee_id;
+    //             } elseif ($request->type == 'customer') {
+    //                 $expense->vender_id = $request->customer_id;
+    //             } else {
+    //                 $expense->vender_id = $request->vender_id;
+    //             }
+    //             $expense->bill_date = $request->payment_date;
+    //             $expense->status = 4;
+    //             $expense->type = 'Expense';
+    //             $expense->user_type = $request->type;
+    //             $expense->due_date = $request->payment_date;
+    //             $expense->category_id = !empty($request->category_id) ? $request->category_id : 0;
+    //             $expense->order_number = 0;
+    //             $expense->created_by = \Auth::user()->creatorId();
+    //             $expense->owned_by = \Auth::user()->ownedId();
+    //             $expense->save();
+
+    //             $products = $request->items;
+    //             $newitems = $request->items;
+    //             $total_amount = 0;
+
+    //             for ($i = 0; $i < count($products); $i++) {
+    //                 if (!empty($products[$i]['item'])) {
+    //                     $expenseProduct = new BillProduct();
+    //                     $expenseProduct->bill_id = $expense->id;
+    //                     $expenseProduct->product_id = $products[$i]['item'];
+    //                     $expenseProduct->quantity = $products[$i]['quantity'];
+    //                     $expenseProduct->tax = $products[$i]['tax'];
+    //                     $expenseProduct->discount = $products[$i]['discount'];
+    //                     $expenseProduct->price = $products[$i]['price'];
+    //                     $expenseProduct->description = $products[$i]['description'];
+    //                     $expenseProduct->save();
+    //                     $newitems[$i]['prod_id'] = $expenseProduct->id;
+    //                 }
+
+    //                 $expenseTotal = 0;
+    //                 if (!empty($products[$i]['chart_account_id'])) {
+    //                     $expenseAccount = new BillAccount();
+    //                     $expenseAccount->chart_account_id = $products[$i]['chart_account_id'];
+    //                     $expenseAccount->price = $products[$i]['amount'] ? $products[$i]['amount'] : 0;
+    //                     $expenseAccount->description = $products[$i]['description'];
+    //                     $expenseAccount->type = 'Bill';
+    //                     $expenseAccount->ref_id = $expense->id;
+    //                     $expenseAccount->save();
+    //                     $expenseTotal = $expenseAccount->price;
+    //                     $newitems[$i]['bill_account_id'] = $expenseAccount->id;
+    //                 }
+
+    //                 //inventory management (Quantity)
+    //                 if (!empty($expenseProduct)) {
+    //                     Utility::total_quantity('plus', $expenseProduct->quantity, $expenseProduct->product_id);
+    //                 }
+
+    //                 //Product Stock Redashboardrt
+    //                 if (!empty($products[$i]['item'])) {
+    //                     $type = 'bill';
+    //                     $type_id = $expense->id;
+    //                     $description = $products[$i]['quantity'] . '  ' . __('quantity purchase in bill') . ' ' . \Auth::user()->expenseNumberFormat($expense->bill_id);
+    //                     Utility::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
+    //                     $total_amount += ($expenseProduct->quantity * $expenseProduct->price) + $expenseTotal;
+    //                 }
+    //             }
+    //             $bank = BankAccount::find($request->account_id);
+    //             if ($bank && $bank->chart_account_id != 0 || $bank->chart_account_id != null) {
+    //                 $data['account_id'] = $bank->chart_account_id;
+    //             } else {
+    //                 return redirect()->back()->with('error', __('Please select chart of account in bank account.'));
+    //             }
+
+    //             $expensePayment = new BillPayment();
+    //             $expensePayment->bill_id = $expense->id;
+    //             $expensePayment->date = $request->payment_date;
+    //             $expensePayment->amount = $request->totalAmount;
+    //             $expensePayment->account_id = $request->account_id;
+    //             $expensePayment->payment_method = 0;
+    //             $expensePayment->reference = 'NULL';
+    //             $expensePayment->description = 'NULL';
+    //             $expensePayment->add_receipt = 'NULL';
+    //             $expensePayment->save();
+
+    //             if (!empty($request->chart_account_id)) {
+
+    //                 $expenseaccount = ProductServiceCategory::find($request->category_id);
+    //                 $chart_account = ChartOfAccount::find($expenseaccount->chart_account_id);
+    //                 $expenseAccount = new BillAccount();
+    //                 $expenseAccount->chart_account_id = $chart_account['id'];
+    //                 $expenseAccount->price = $total_amount;
+    //                 $expenseAccount->description = $request->description;
+    //                 $expenseAccount->type = 'Bill Category';
+    //                 $expenseAccount->ref_id = $expense->id;
+    //                 $expenseAccount->save();
+    //             }
+
+    //             Utility::bankAccountBalance($request->account_id, $request->totalAmount, 'debit');
+
+    //             Utility::updateUserBalance('vendor', $expense->vender_id, $request->totalAmount, 'credit');
+
+    //             //For Notification
+    //             $setting = Utility::settings(\Auth::user()->creatorId());
+
+    //             if ($request->type == 'employee') {
+    //                 $user = Employee::find($request->employee_id);
+    //                 $contact = $user->phone;
+    //             } else if ($request->type == 'customer') {
+    //                 $user = Customer::find($request->customer_id);
+    //                 $contact = $user->contact;
+    //             } else {
+    //                 $user = Vender::find($request->vender_id);
+    //                 $contact = $user->contact;
+    //             }
+
+    //             $bill_products = BillProduct::where('bill_id', $expense->id)->get();
+    //             foreach ($bill_products as $bill_product) {
+    //                 $product = ProductService::find($bill_product->product_id);
+    //                 $totalTaxPrice = 0;
+    //                 if ($bill_product->tax != null) {
+    //                     $taxes = \App\Models\Utility::tax($bill_product->tax);
+    //                     foreach ($taxes as $tax) {
+    //                         $taxPrice = \App\Models\Utility::taxRate($tax->rate, $bill_product->price, $bill_product->quantity, $bill_product->discount);
+    //                         $totalTaxPrice += $taxPrice;
+    //                     }
+    //                 }
+
+    //                 $itemAmount = ($bill_product->price * $bill_product->quantity) - ($bill_product->discount) + $totalTaxPrice;
+
+    //                 // $data = [
+    //                 //     'account_id' => $product->expense_chartaccount_id,
+    //                 //     'transaction_type' => 'Debit',
+    //                 //     'transaction_amount' => $itemAmount,
+    //                 //     'reference' => 'Expense',
+    //                 //     'reference_id' => $expense->id,
+    //                 //     'reference_sub_id' => $product->id,
+    //                 //     'date' => $expense->bill_date,
+    //                 // ];
+    //                 // Utility::addTransactionLines($data , 'create');
+    //             }
+
+    //             $bill_accounts = BillAccount::where('ref_id', $expense->id)->get();
+    //             // foreach ($bill_accounts as $bill_product) {
+    //             //     $data = [
+    //             //         'account_id' => $bill_product->chart_account_id,
+    //             //         'transaction_type' => 'Debit',
+    //             //         'transaction_amount' => $bill_product->price,
+    //             //         'reference' => 'Expense Account',
+    //             //         'reference_id' => $bill_product->ref_id,
+    //             //         'reference_sub_id' => $bill_product->id,
+    //             //         'date' => $expense->bill_date,
+    //             //     ];
+    //             //     Utility::addTransactionLines($data , 'create');
+    //             // }
+
+    //             $billPayments = BillPayment::where('bill_id', $expense->id)->get();
+    //             // foreach ($billPayments as $billPayment) {
+    //             //     $accountId = BankAccount::find($billPayment->account_id);
+
+    //             //     $data = [
+    //             //         'account_id' => $accountId->chart_account_id,
+    //             //         'transaction_type' => 'Debit',
+    //             //         'transaction_amount' => $billPayment->amount,
+    //             //         'reference' => 'Expense Payment',
+    //             //         'reference_id' => $expense->id,
+    //             //         'reference_sub_id' => $billPayment->id,
+    //             //         'date' => $billPayment->date,
+    //             //     ];
+    //             //     Utility::addTransactionLines($data , 'create');
+    //             // }
+
+    //             // // WorkFlow get which is active
+    //             $us_mail = 'false';
+    //             $us_notify = 'false';
+    //             $us_approve = 'false';
+    //             $usr_Notification = [];
+    //             $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'accounts')->where('status', 1)->first();
+    //             if ($workflow) {
+    //                 $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)->where('status', 1)->get();
+    //                 foreach ($workflowaction as $action) {
+    //                     $useraction = json_decode($action->assigned_users);
+    //                     if (strtolower('create-expense') == $action->node_id) {
+    //                         // Pick that stage user assign or change on lead
+    //                         if (@$useraction != '') {
+    //                             $useraction = json_decode($useraction);
+    //                             foreach ($useraction as $anyaction) {
+    //                                 // make new user array
+    //                                 if ($anyaction->type == 'user') {
+    //                                     $usr_Notification[] = $anyaction->id;
+    //                                 }
+    //                             }
+    //                         }
+    //                         $raw_json = trim($action->applied_conditions, '"');
+    //                         $cleaned_json = stripslashes($raw_json);
+    //                         $applied_conditions = json_decode($cleaned_json, true);
+
+    //                         if (isset($applied_conditions['conditions']) && is_array($applied_conditions['conditions'])) {
+    //                             $arr = [
+    //                                 'bill_date' => 'bill_date',
+    //                                 'due_date' => 'due_date',
+    //                                 'order_number' => 'order_number',
+    //                             ];
+    //                             $relate = [];
+    //                             foreach ($applied_conditions['conditions'] as $conditionGroup) {
+
+    //                                 if (in_array($conditionGroup['action'], ['send_email', 'send_notification', 'send_approval'])) {
+    //                                     $query = Bill::where('id', $expense->id);
+    //                                     foreach ($conditionGroup['conditions'] as $condition) {
+    //                                         $field = $condition['field'];
+    //                                         $operator = $condition['operator'];
+    //                                         $value = $condition['value'];
+    //                                         if (isset($arr[$field], $relate[$arr[$field]])) {
+    //                                             $relatedField = strpos($arr[$field], '_') !== false ? explode('_', $arr[$field], 2)[1] : $arr[$field];
+    //                                             $relation = $relate[$arr[$field]];
+
+    //                                             // Apply condition to the related model
+    //                                             $query->whereHas($relation, function ($relatedQuery) use ($relatedField, $operator, $value) {
+    //                                                 $relatedQuery->where($relatedField, $operator, $value);
+    //                                             });
+    //                                         } else {
+    //                                             // Apply condition directly to the contract model
+    //                                             $query->where($arr[$field], $operator, $value);
+    //                                         }
+    //                                     }
+    //                                     $result = $query->first();
+
+    //                                     if (!empty($result)) {
+    //                                         if ($conditionGroup['action'] === 'send_email') {
+    //                                             $us_mail = 'true';
+    //                                         } elseif ($conditionGroup['action'] === 'send_notification') {
+    //                                             $us_notify = 'true';
+    //                                         } elseif ($conditionGroup['action'] === 'send_approval') {
+    //                                             $us_approve = 'true';
+    //                                         }
+    //                                     }
+    //                                 }
+    //                             }
+    //                         }
+    //                         if ($us_mail == 'true') {
+    //                             // email send
+    //                         }
+    //                         if ($us_notify == 'true' || $us_approve == 'true') {
+    //                             // notification generate
+    //                             if (count($usr_Notification) > 0) {
+    //                                 $usr_Notification[] = Auth::user()->creatorId();
+    //                                 foreach ($usr_Notification as $usrLead) {
+    //                                     $data = [
+    //                                         "updated_by" => Auth::user()->id,
+    //                                         "data_id" => $expense->id,
+    //                                         "name" => '',
+    //                                     ];
+    //                                     if ($us_notify == 'true') {
+    //                                         Utility::makeNotification($usrLead, 'create_expanse', $data, $expense->id, 'create Expanse');
+    //                                     } elseif ($us_approve == 'true') {
+    //                                         Utility::makeNotification($usrLead, 'approve_expanse', $data, $expense->id, 'For Approval Expanse');
+    //                                     }
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+
+    //             $expenseNotificationArr = [
+    //                 'expense_number' => \Auth::user()->expenseNumberFormat($expense->bill_id),
+    //                 'user_name' => \Auth::user()->name,
+    //                 'bill_date' => $expense->bill_date,
+    //                 'bill_due_date' => $expense->due_date,
+    //                 'vendor_name' => $user->name,
+    //             ];
+
+    //             //Slack Notification
+    //             if (isset($setting['bill_notification']) && $setting['bill_notification'] == 1) {
+    //                 Utility::send_slack_msg('new_bill', $expenseNotificationArr);
+    //             }
+    //             //Telegram Notification
+    //             if (isset($setting['telegram_bill_notification']) && $setting['telegram_bill_notification'] == 1) {
+    //                 Utility::send_telegram_msg('new_bill', $expenseNotificationArr);
+    //             }
+    //             //Twilio Notification
+    //             if (isset($setting['twilio_bill_notification']) && $setting['twilio_bill_notification'] == 1) {
+    //                 Utility::send_twilio_msg($contact, 'new_bill', $expenseNotificationArr);
+    //             }
+
+    //             $data['id'] = $expense->id;
+    //             $data['no'] = $expense->bill_id;
+    //             $data['date'] = $expense->bill_date;
+    //             $data['created_at'] = date('Y-m-d', strtotime($expense->bill_date)) . ' ' . date('h:i:s');
+    //             $data['reference'] = $expense->ref_number;
+    //             $data['category'] = 'Expanse';
+    //             $data['owned_by'] = $expense->owned_by;
+    //             $data['created_by'] = $expense->created_by;
+    //             $data['prod_id'] = $expensePayment->id;
+    //             $data['amount'] = $expensePayment->amount;
+    //             $data['items'] = $newitems;
+    //             $data['created_at'] = date('Y-m-d', strtotime($expense->bill_date)) . ' ' . date('h:i:s');
+    //             if (preg_match('/\bcash\b/i', $bank->bank_name) || preg_match('/\bcash\b/i', $bank->holder_name)) {
+    //                 $dataret  = Utility::cpv_entry($data); // Cash Payment Voucher (CPV)
+    //             } else {
+    //                 $dataret  = Utility::bpv_entry($data); // Bill Payment Voucher (BPV)
+    //             }
+    //             $billPayments = BillPayment::find($expensePayment->id);
+    //             $billPayments->voucher_id = $dataret;
+    //             $billPayments->save();
+    //             $expense->voucher_id = $dataret;
+    //             $expense->save();
+
+    //             //webhook
+    //             $module = 'New Bill';
+    //             $webhook = Utility::webhookSetting($module);
+    //             if ($webhook) {
+    //                 $parameter = json_encode($expense);
+    //                 $status = Utility::WebhookCall($webhook['url'], $parameter, $webhook['method']);
+
+    //                 if ($status == true) {
+    //                     \DB::commit();
+    //                     return redirect()->route('expense.index', $expense->id)->with('success', __('Expense successfully created.'));
+    //                 } else {
+    //                     \DB::commit();
+    //                     return redirect()->back()->with('error', __('Webhook call failed.'));
+    //                 }
+    //             }
+    //             \DB::commit();
+    //             return redirect()->route('expense.index', $expense->id)->with('success', __('Expense successfully created.'));
+    //         } else {
+    //             return redirect()->back()->with('error', __('Permission denied.'));
+    //         }
+    //     } catch (\Exception $e) {
+    //         \DB::rollback();
+    //         return redirect()->back()->with('error', $e);
+    //     }
+    // }
     public function store(Request $request)
     {
         \DB::beginTransaction();
@@ -181,7 +556,6 @@ class ExpenseController extends Controller
                 $validator = \Validator::make(
                     $request->all(),
                     [
-                        //                    'vender_id' => 'required',
                         'payment_date' => 'required',
                     ]
                 );
@@ -226,7 +600,7 @@ class ExpenseController extends Controller
                     $expense->vender_id = $request->vender_id;
                 }
                 $expense->bill_date = $request->payment_date;
-                $expense->status = 4;
+                $expense->status = 0; // Draft status
                 $expense->type = 'Expense';
                 $expense->user_type = $request->type;
                 $expense->due_date = $request->payment_date;
@@ -267,12 +641,12 @@ class ExpenseController extends Controller
                         $newitems[$i]['bill_account_id'] = $expenseAccount->id;
                     }
 
-                    //inventory management (Quantity)
+                    // Inventory management (Quantity)
                     if (!empty($expenseProduct)) {
                         Utility::total_quantity('plus', $expenseProduct->quantity, $expenseProduct->product_id);
                     }
 
-                    //Product Stock Redashboardrt
+                    // Product Stock Report
                     if (!empty($products[$i]['item'])) {
                         $type = 'bill';
                         $type_id = $expense->id;
@@ -281,6 +655,7 @@ class ExpenseController extends Controller
                         $total_amount += ($expenseProduct->quantity * $expenseProduct->price) + $expenseTotal;
                     }
                 }
+
                 $bank = BankAccount::find($request->account_id);
                 if ($bank && $bank->chart_account_id != 0 || $bank->chart_account_id != null) {
                     $data['account_id'] = $bank->chart_account_id;
@@ -288,6 +663,7 @@ class ExpenseController extends Controller
                     return redirect()->back()->with('error', __('Please select chart of account in bank account.'));
                 }
 
+                // Store payment details but don't process yet
                 $expensePayment = new BillPayment();
                 $expensePayment->bill_id = $expense->id;
                 $expensePayment->date = $request->payment_date;
@@ -300,7 +676,6 @@ class ExpenseController extends Controller
                 $expensePayment->save();
 
                 if (!empty($request->chart_account_id)) {
-
                     $expenseaccount = ProductServiceCategory::find($request->category_id);
                     $chart_account = ChartOfAccount::find($expenseaccount->chart_account_id);
                     $expenseAccount = new BillAccount();
@@ -312,11 +687,11 @@ class ExpenseController extends Controller
                     $expenseAccount->save();
                 }
 
-                Utility::bankAccountBalance($request->account_id, $request->totalAmount, 'debit');
+                // DON'T process bank balance and user balance yet - wait for approval
+                // Utility::bankAccountBalance($request->account_id, $request->totalAmount, 'debit');
+                // Utility::updateUserBalance('vendor', $expense->vender_id, $request->totalAmount, 'credit');
 
-                Utility::updateUserBalance('vendor', $expense->vender_id, $request->totalAmount, 'credit');
-
-                //For Notification
+                // For Notification
                 $setting = Utility::settings(\Auth::user()->creatorId());
 
                 if ($request->type == 'employee') {
@@ -330,83 +705,39 @@ class ExpenseController extends Controller
                     $contact = $user->contact;
                 }
 
-                $bill_products = BillProduct::where('bill_id', $expense->id)->get();
-                foreach ($bill_products as $bill_product) {
-                    $product = ProductService::find($bill_product->product_id);
-                    $totalTaxPrice = 0;
-                    if ($bill_product->tax != null) {
-                        $taxes = \App\Models\Utility::tax($bill_product->tax);
-                        foreach ($taxes as $tax) {
-                            $taxPrice = \App\Models\Utility::taxRate($tax->rate, $bill_product->price, $bill_product->quantity, $bill_product->discount);
-                            $totalTaxPrice += $taxPrice;
-                        }
-                    }
-
-                    $itemAmount = ($bill_product->price * $bill_product->quantity) - ($bill_product->discount) + $totalTaxPrice;
-
-                    // $data = [
-                    //     'account_id' => $product->expense_chartaccount_id,
-                    //     'transaction_type' => 'Debit',
-                    //     'transaction_amount' => $itemAmount,
-                    //     'reference' => 'Expense',
-                    //     'reference_id' => $expense->id,
-                    //     'reference_sub_id' => $product->id,
-                    //     'date' => $expense->bill_date,
-                    // ];
-                    // Utility::addTransactionLines($data , 'create');
-                }
-
-                $bill_accounts = BillAccount::where('ref_id', $expense->id)->get();
-                // foreach ($bill_accounts as $bill_product) {
-                //     $data = [
-                //         'account_id' => $bill_product->chart_account_id,
-                //         'transaction_type' => 'Debit',
-                //         'transaction_amount' => $bill_product->price,
-                //         'reference' => 'Expense Account',
-                //         'reference_id' => $bill_product->ref_id,
-                //         'reference_sub_id' => $bill_product->id,
-                //         'date' => $expense->bill_date,
-                //     ];
-                //     Utility::addTransactionLines($data , 'create');
+                // DON'T create transaction lines yet - wait for approval
+                // $bill_products = BillProduct::where('bill_id', $expense->id)->get();
+                // foreach ($bill_products as $bill_product) {
+                //     ... transaction line code
                 // }
 
-                $billPayments = BillPayment::where('bill_id', $expense->id)->get();
-                // foreach ($billPayments as $billPayment) {
-                //     $accountId = BankAccount::find($billPayment->account_id);
-
-                //     $data = [
-                //         'account_id' => $accountId->chart_account_id,
-                //         'transaction_type' => 'Debit',
-                //         'transaction_amount' => $billPayment->amount,
-                //         'reference' => 'Expense Payment',
-                //         'reference_id' => $expense->id,
-                //         'reference_sub_id' => $billPayment->id,
-                //         'date' => $billPayment->date,
-                //     ];
-                //     Utility::addTransactionLines($data , 'create');
-                // }
-
-                // // WorkFlow get which is active
+                // WorkFlow - Check if approval is required
                 $us_mail = 'false';
                 $us_notify = 'false';
                 $us_approve = 'false';
                 $usr_Notification = [];
-                $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'accounts')->where('status', 1)->first();
+                $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())
+                    ->where('module', '=', 'accounts')
+                    ->where('status', 1)
+                    ->first();
+
                 if ($workflow) {
-                    $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)->where('status', 1)->get();
+                    $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)
+                        ->where('status', 1)
+                        ->get();
+
                     foreach ($workflowaction as $action) {
                         $useraction = json_decode($action->assigned_users);
                         if (strtolower('create-expense') == $action->node_id) {
-                            // Pick that stage user assign or change on lead
                             if (@$useraction != '') {
                                 $useraction = json_decode($useraction);
                                 foreach ($useraction as $anyaction) {
-                                    // make new user array
                                     if ($anyaction->type == 'user') {
                                         $usr_Notification[] = $anyaction->id;
                                     }
                                 }
                             }
+
                             $raw_json = trim($action->applied_conditions, '"');
                             $cleaned_json = stripslashes($raw_json);
                             $applied_conditions = json_decode($cleaned_json, true);
@@ -418,8 +749,8 @@ class ExpenseController extends Controller
                                     'order_number' => 'order_number',
                                 ];
                                 $relate = [];
-                                foreach ($applied_conditions['conditions'] as $conditionGroup) {
 
+                                foreach ($applied_conditions['conditions'] as $conditionGroup) {
                                     if (in_array($conditionGroup['action'], ['send_email', 'send_notification', 'send_approval'])) {
                                         $query = Bill::where('id', $expense->id);
                                         foreach ($conditionGroup['conditions'] as $condition) {
@@ -430,12 +761,10 @@ class ExpenseController extends Controller
                                                 $relatedField = strpos($arr[$field], '_') !== false ? explode('_', $arr[$field], 2)[1] : $arr[$field];
                                                 $relation = $relate[$arr[$field]];
 
-                                                // Apply condition to the related model
                                                 $query->whereHas($relation, function ($relatedQuery) use ($relatedField, $operator, $value) {
                                                     $relatedQuery->where($relatedField, $operator, $value);
                                                 });
                                             } else {
-                                                // Apply condition directly to the contract model
                                                 $query->where($arr[$field], $operator, $value);
                                             }
                                         }
@@ -453,11 +782,12 @@ class ExpenseController extends Controller
                                     }
                                 }
                             }
+
                             if ($us_mail == 'true') {
                                 // email send
                             }
+
                             if ($us_notify == 'true' || $us_approve == 'true') {
-                                // notification generate
                                 if (count($usr_Notification) > 0) {
                                     $usr_Notification[] = Auth::user()->creatorId();
                                     foreach ($usr_Notification as $usrLead) {
@@ -468,8 +798,12 @@ class ExpenseController extends Controller
                                         ];
                                         if ($us_notify == 'true') {
                                             Utility::makeNotification($usrLead, 'create_expanse', $data, $expense->id, 'create Expanse');
+                                            $expense->status = 5; // Under Approval
+                                            $expense->save();
                                         } elseif ($us_approve == 'true') {
                                             Utility::makeNotification($usrLead, 'approve_expanse', $data, $expense->id, 'For Approval Expanse');
+                                            $expense->status = 5; // Under Approval
+                                            $expense->save();
                                         }
                                     }
                                 }
@@ -486,43 +820,23 @@ class ExpenseController extends Controller
                     'vendor_name' => $user->name,
                 ];
 
-                //Slack Notification
+                // Slack Notification
                 if (isset($setting['bill_notification']) && $setting['bill_notification'] == 1) {
                     Utility::send_slack_msg('new_bill', $expenseNotificationArr);
                 }
-                //Telegram Notification
+                // Telegram Notification
                 if (isset($setting['telegram_bill_notification']) && $setting['telegram_bill_notification'] == 1) {
                     Utility::send_telegram_msg('new_bill', $expenseNotificationArr);
                 }
-                //Twilio Notification
+                // Twilio Notification
                 if (isset($setting['twilio_bill_notification']) && $setting['twilio_bill_notification'] == 1) {
                     Utility::send_twilio_msg($contact, 'new_bill', $expenseNotificationArr);
                 }
 
-                $data['id'] = $expense->id;
-                $data['no'] = $expense->bill_id;
-                $data['date'] = $expense->bill_date;
-                $data['created_at'] = date('Y-m-d', strtotime($expense->bill_date)) . ' ' . date('h:i:s');
-                $data['reference'] = $expense->ref_number;
-                $data['category'] = 'Expanse';
-                $data['owned_by'] = $expense->owned_by;
-                $data['created_by'] = $expense->created_by;
-                $data['prod_id'] = $expensePayment->id;
-                $data['amount'] = $expensePayment->amount;
-                $data['items'] = $newitems;
-                $data['created_at'] = date('Y-m-d', strtotime($expense->bill_date)) . ' ' . date('h:i:s');
-                if (preg_match('/\bcash\b/i', $bank->bank_name) || preg_match('/\bcash\b/i', $bank->holder_name)) {
-                    $dataret  = Utility::cpv_entry($data); // Cash Payment Voucher (CPV)
-                } else {
-                    $dataret  = Utility::bpv_entry($data); // Bill Payment Voucher (BPV)
-                }
-                $billPayments = BillPayment::find($expensePayment->id);
-                $billPayments->voucher_id = $dataret;
-                $billPayments->save();
-                $expense->voucher_id = $dataret;
-                $expense->save();
+                // DON'T create voucher yet - wait for approval
+                // The voucher (CPV/BPV) will be created in the approveExpense method
 
-                //webhook
+                // Webhook
                 $module = 'New Bill';
                 $webhook = Utility::webhookSetting($module);
                 if ($webhook) {
@@ -531,23 +845,269 @@ class ExpenseController extends Controller
 
                     if ($status == true) {
                         \DB::commit();
-                        return redirect()->route('expense.index', $expense->id)->with('success', __('Expense successfully created.'));
+                        return redirect()->route('expense.index', $expense->id)->with('success', __('Expense successfully created and waiting for approval.'));
                     } else {
                         \DB::commit();
                         return redirect()->back()->with('error', __('Webhook call failed.'));
                     }
                 }
+
+                Utility::makeActivityLog(\Auth::user()->id, 'Expense', $expense->id, 'Create Expense', 'Expense Created (Pending Approval)');
+
                 \DB::commit();
-                return redirect()->route('expense.index', $expense->id)->with('success', __('Expense successfully created.'));
+                return redirect()->route('expense.index', $expense->id)->with('success', __('Expense successfully created and waiting for approval.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
         } catch (\Exception $e) {
             \DB::rollback();
-            return redirect()->back()->with('error', $e);
+            return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
+    private function createExpenseVoucher(Bill $expense)
+    {
+        $expenseProducts = BillProduct::where('bill_id', $expense->id)->get();
+        $expensePayment = BillPayment::where('bill_id', $expense->id)->first();
+        $bank = BankAccount::find($expensePayment->account_id);
+
+        $newitems = [];
+        foreach ($expenseProducts as $product) {
+            $newitems[] = [
+                'prod_id' => $product->id,
+                'item' => $product->product_id,
+                'quantity' => $product->quantity,
+                'price' => $product->price,
+                'discount' => $product->discount,
+                'itemTaxPrice' => $product->tax,
+                'description' => $product->description,
+            ];
+        }
+
+        $data = [
+            'id' => $expense->id,
+            'no' => $expense->bill_id,
+            'date' => $expense->bill_date,
+            'created_at' => date('Y-m-d H:i:s', strtotime($expense->bill_date)),
+            'reference' => $expense->ref_number,
+            'category' => 'Expanse',
+            'owned_by' => $expense->owned_by,
+            'created_by' => $expense->created_by,
+            'prod_id' => $expensePayment->id,
+            'amount' => $expensePayment->amount,
+            'items' => $newitems,
+            'account_id' => $bank->chart_account_id,
+        ];
+
+        // Create CPV or BPV based on bank account
+        if (preg_match('/\bcash\b/i', $bank->bank_name) || preg_match('/\bcash\b/i', $bank->holder_name)) {
+            $voucherId = Utility::cpv_entry($data); // Cash Payment Voucher (CPV)
+        } else {
+            $voucherId = Utility::bpv_entry($data); // Bank Payment Voucher (BPV)
+        }
+
+        // Update payment with voucher ID
+        $expensePayment->voucher_id = $voucherId;
+        $expensePayment->save();
+
+        // Update expense with voucher ID
+        $expense->voucher_id = $voucherId;
+        $expense->save();
+
+        return $voucherId;
+    }
+
+    public function approveExpense($id)
+    {
+        \DB::beginTransaction();
+        try {
+            $expense = Bill::findOrFail($id);
+
+            // Check if already approved
+            if ($expense->status == 4) {
+                return redirect()->back()->with('error', __('Expense already approved.'));
+            }
+
+            // Check if in pending approval status
+            if ($expense->status != 5 && $expense->status != 0) {
+                return redirect()->back()->with('error', __('Expense must be in pending approval status.'));
+            }
+
+            // Get payment details
+            $expensePayment = BillPayment::where('bill_id', $expense->id)->first();
+            if (!$expensePayment) {
+                return redirect()->back()->with('error', __('Expense payment not found.'));
+            }
+
+            // Update bank balance (deduct from bank)
+            Utility::bankAccountBalance($expensePayment->account_id, $expensePayment->amount, 'debit');
+
+            // Update vendor balance
+            Utility::updateUserBalance('vendor', $expense->vender_id, $expensePayment->amount, 'credit');
+
+            // Create transaction lines
+            $bill_products = BillProduct::where('bill_id', $expense->id)->get();
+            foreach ($bill_products as $bill_product) {
+                $product = ProductService::find($bill_product->product_id);
+                $totalTaxPrice = 0;
+                if ($bill_product->tax != null) {
+                    $taxes = \App\Models\Utility::tax($bill_product->tax);
+                    foreach ($taxes as $tax) {
+                        $taxPrice = \App\Models\Utility::taxRate($tax->rate, $bill_product->price, $bill_product->quantity, $bill_product->discount);
+                        $totalTaxPrice += $taxPrice;
+                    }
+                }
+
+                $itemAmount = ($bill_product->price * $bill_product->quantity) - ($bill_product->discount) + $totalTaxPrice;
+
+                $data = [
+                    'account_id' => $product->expense_chartaccount_id,
+                    'transaction_type' => 'Debit',
+                    'transaction_amount' => $itemAmount,
+                    'reference' => 'Expense',
+                    'reference_id' => $expense->id,
+                    'reference_sub_id' => $product->id,
+                    'date' => $expense->bill_date,
+                ];
+                Utility::addTransactionLines($data, 'create');
+            }
+
+            // Create transaction lines for bill accounts
+            $bill_accounts = BillAccount::where('ref_id', $expense->id)->get();
+            foreach ($bill_accounts as $bill_account) {
+                $data = [
+                    'account_id' => $bill_account->chart_account_id,
+                    'transaction_type' => 'Debit',
+                    'transaction_amount' => $bill_account->price,
+                    'reference' => 'Expense Account',
+                    'reference_id' => $bill_account->ref_id,
+                    'reference_sub_id' => $bill_account->id,
+                    'date' => $expense->bill_date,
+                ];
+                Utility::addTransactionLines($data, 'create');
+            }
+
+            // Create transaction lines for payment
+            $accountId = BankAccount::find($expensePayment->account_id);
+            $data = [
+                'account_id' => $accountId->chart_account_id,
+                'transaction_type' => 'Credit',
+                'transaction_amount' => $expensePayment->amount,
+                'reference' => 'Expense Payment',
+                'reference_id' => $expense->id,
+                'reference_sub_id' => $expensePayment->id,
+                'date' => $expensePayment->date,
+            ];
+            Utility::addTransactionLines($data, 'create');
+            if($expense->voucher_id != null){
+                return redirect()->route('expense.index')->with('success', __('Expense approved successfully and voucher posted.'));   
+            }
+            // Create voucher (CPV or BPV)
+            $this->createExpenseVoucher($expense);
+
+            // Update status to Approved
+            $expense->status = 4;
+            $expense->save();
+
+            Utility::makeActivityLog(\Auth::user()->id, 'Expense', $expense->id, 'Approve Expense', 'Expense approved and voucher posted');
+
+            // Send notification to expense creator
+            $data = [
+                "updated_by" => \Auth::user()->id,
+                "data_id" => $expense->id,
+                "name" => '',
+            ];
+            Utility::makeNotification($expense->created_by, 'expense_approved', $data, $expense->id, 'Expense Approved');
+
+            \DB::commit();
+            return redirect()->route('expense.index')->with('success', __('Expense approved successfully and voucher posted.'));
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            dd($e);
+            \Log::error('Expense Approval Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', __('Error approving expense: ' . $e->getMessage()));
+        }
+    }
+    // send for approval
+    public function requestApproval($id)
+    {
+        \DB::beginTransaction();
+        try {
+            $expense = Bill::findOrFail($id);
+
+            // Check if already approved
+            if ($expense->status == 4) {
+                return redirect()->back()->with('error', __('Expense already approved.'));
+            }
+
+            // Check if already in pending approval
+            if ($expense->status == 5) {
+                return redirect()->back()->with('error', __('Expense already sent for approval.'));
+            }
+
+            // Update status to Pending Approval (5)
+            $expense->status = 5;   // Pending Approval
+            $expense->save();
+
+            Utility::makeActivityLog(\Auth::user()->id, 'Expense', $expense->id, 'Request Approval', 'Expense sent for approval');
+
+            // Clear old notifications
+            Notification::where('data_id', $expense->id)
+                ->where('type', 'create_expanse')
+                ->where('is_read', 0)
+                ->delete();
+
+            // Send notification to approver (creator or designated approver)
+            $usrLead = \Auth::user()->creatorId();
+            $data = [
+                "updated_by" => \Auth::user()->id,
+                "data_id" => $expense->id,
+                "name" => '',
+            ];
+            Utility::makeNotification($usrLead, 'create_expanse', $data, $expense->id, 'create Expanse');
+
+            \DB::commit();
+            return redirect()->route('expense.index')->with('success', __('Expense sent for approval successfully.'));
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Request Approval Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', __('Error requesting approval: ' . $e->getMessage()));
+        }
+    }
+    public function rejectExpense($id)
+    {
+        \DB::beginTransaction();
+        try {
+            $expense = Bill::findOrFail($id);
+
+            // Check if already approved or rejected
+            if ($expense->status == 4) {
+                return redirect()->back()->with('error', __('Cannot reject an approved expense.'));
+            }
+
+            if ($expense->status == 7) {
+                return redirect()->back()->with('error', __('Expense already rejected.'));
+            }
+
+            // Check if in pending approval status
+            if ($expense->status != 5 && $expense->status != 0) {
+                return redirect()->back()->with('error', __('Expense must be in pending approval status.'));
+            }
+
+            // Update status to Rejected (7)
+            $expense->status = 7;   // Rejected
+            $expense->save();
+
+            Utility::makeActivityLog(\Auth::user()->id, 'Expense', $expense->id, 'Reject Expense', 'Expense rejected');
+
+            \DB::commit();
+            return redirect()->route('expense.index')->with('success', __('Expense rejected successfully.'));
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Expense Rejection Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', __('Error rejecting expense: ' . $e->getMessage()));
+        }
+    }
     public function show($ids)
     {
 
@@ -842,12 +1402,12 @@ class ExpenseController extends Controller
                     }
 
                     $voucher = JournalEntry::where('id', $expensePayment->voucher_id)->where('reference_id', $expense->id)->first();
-                    if($voucher){
-                        JournalItem::where('journal',$voucher->id)->delete();
-                        $prod_id = TransactionLines::where('reference_id',$expensePayment->voucher_id)->where('reference','Expense Journal')->where('product_type','Expense Product')->delete();
-                        $prod_tax = TransactionLines::where('reference_id',$expensePayment->voucher_id)->where('reference','Expense Journal')->where('product_type','Expense Tax')->delete();
-                        $prod_account = TransactionLines::where('reference_id',$expensePayment->voucher_id)->where('reference','Expense Journal')->where('product_type','Expense Account')->delete();
-                        $inv_receviable = TransactionLines::where('reference_id',$expensePayment->voucher_id)->where('reference','Expense Journal')->where('product_type','Expense Payable')->delete();
+                    if ($voucher) {
+                        JournalItem::where('journal', $voucher->id)->delete();
+                        $prod_id = TransactionLines::where('reference_id', $expensePayment->voucher_id)->where('reference', 'Expense Journal')->where('product_type', 'Expense Product')->delete();
+                        $prod_tax = TransactionLines::where('reference_id', $expensePayment->voucher_id)->where('reference', 'Expense Journal')->where('product_type', 'Expense Tax')->delete();
+                        $prod_account = TransactionLines::where('reference_id', $expensePayment->voucher_id)->where('reference', 'Expense Journal')->where('product_type', 'Expense Account')->delete();
+                        $inv_receviable = TransactionLines::where('reference_id', $expensePayment->voucher_id)->where('reference', 'Expense Journal')->where('product_type', 'Expense Payable')->delete();
                     }
                     $bill_products = BillProduct::where('bill_id', $expense->id)->get();
                     $tax = 0;
@@ -877,26 +1437,26 @@ class ExpenseController extends Controller
                         // ];
                         // Utility::addTransactionLines($data, 'edit');
 
-                        $journalItem              = new JournalItem();
-                        $journalItem->journal     = $voucher->id;
-                        $journalItem->account     = @$product->expense_chartaccount_id;
-                        $journalItem->product_ids  = @$bill_product->id;
-                        $journalItem->description  = @$bill_product->description;
-                        $journalItem->debit       = (($bill_product->quantity * $bill_product->price)- $bill_product->discount);
-                        $journalItem->credit        =  0;
+                        $journalItem = new JournalItem();
+                        $journalItem->journal = $voucher->id;
+                        $journalItem->account = @$product->expense_chartaccount_id;
+                        $journalItem->product_ids = @$bill_product->id;
+                        $journalItem->description = @$bill_product->description;
+                        $journalItem->debit = (($bill_product->quantity * $bill_product->price) - $bill_product->discount);
+                        $journalItem->credit = 0;
                         $journalItem->save();
-                        $journalItem->created_at   =  date('Y-m-d H:i:s', strtotime($expense->created_at));
-                        $journalItem->updated_at   =  date('Y-m-d H:i:s', strtotime($expense->created_at));
+                        $journalItem->created_at = date('Y-m-d H:i:s', strtotime($expense->created_at));
+                        $journalItem->updated_at = date('Y-m-d H:i:s', strtotime($expense->created_at));
                         $journalItem->save();
                         // calculate tax manul function
-                        $tax_rate = Tax::where('id',$bill_product->tax)->first();
-                        if($tax_rate){
-                            $tax = ($tax_rate->rate / 100) * (($bill_product->price * $bill_product->quantity) - $bill_product->discount) ;
-                        }else{
+                        $tax_rate = Tax::where('id', $bill_product->tax)->first();
+                        if ($tax_rate) {
+                            $tax = ($tax_rate->rate / 100) * (($bill_product->price * $bill_product->quantity) - $bill_product->discount);
+                        } else {
                             $tax = 0;
                         }
-                        $payable += ((floatval($bill_product->quantity) * floatval($bill_product->price))- floatval($bill_product->discount)) + floatval($tax);
-                        
+                        $payable += ((floatval($bill_product->quantity) * floatval($bill_product->price)) - floatval($bill_product->discount)) + floatval($tax);
+
                         $dataline = [
                             'account_id' => $product->expense_chartaccount_id,
                             'transaction_type' => 'Debit',
@@ -910,17 +1470,17 @@ class ExpenseController extends Controller
                             'product_type' => 'Expense Product',
                             'product_item_id' => $bill_product->id,
                         ];
-                        Utility::addTransactionLines($dataline , 'create');
-    
-                        if($tax != 0){
+                        Utility::addTransactionLines($dataline, 'create');
+
+                        if ($tax != 0) {
                             $accounttax = Tax::where('id', $product->tax_id)->first();
                             $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
-                            if(!$account_tax){
+                            if (!$account_tax) {
                                 $types_t = ChartOfAccountType::where('created_by', '=', $expense->created_by)->where('name', 'Liabilities')->first();
                                 if ($types_t) {
                                     $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
                                     $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
-                                    if(!$account_tax){
+                                    if (!$account_tax) {
                                         $account_tax = ChartOfAccount::create([
                                             'name' => 'TAX',
                                             'code' => '10000',
@@ -932,34 +1492,34 @@ class ExpenseController extends Controller
                                     }
                                 }
                             }
-                        
-                            if($account_tax){
-                                $journalItem              = new JournalItem();
-                                $journalItem->journal     = $voucher->id;
-                                $journalItem->account     = @$account_tax->id;
-                                $journalItem->prod_tax_id  = $bill_product->id;
-                                $journalItem->description = 'Tax on Bill No : '.@$expense->bill_no;
-                                $journalItem->debit       =  $tax;
-                                $journalItem->credit        = 0;
+
+                            if ($account_tax) {
+                                $journalItem = new JournalItem();
+                                $journalItem->journal = $voucher->id;
+                                $journalItem->account = @$account_tax->id;
+                                $journalItem->prod_tax_id = $bill_product->id;
+                                $journalItem->description = 'Tax on Bill No : ' . @$expense->bill_no;
+                                $journalItem->debit = $tax;
+                                $journalItem->credit = 0;
                                 $journalItem->save();
-                                $journalItem->created_at   = date('Y-m-d H:i:s', strtotime($expense->created_at));
-                                $journalItem->updated_at   = date('Y-m-d H:i:s', strtotime($expense->created_at));
+                                $journalItem->created_at = date('Y-m-d H:i:s', strtotime($expense->created_at));
+                                $journalItem->updated_at = date('Y-m-d H:i:s', strtotime($expense->created_at));
                                 $journalItem->save();
 
                                 $dataline = [
-                                        'account_id' => $account_tax->id,
-                                        'transaction_type' => 'Debit',
-                                        'transaction_amount' => $journalItem->debit,
-                                        'reference' => 'Expense Journal',
-                                        'reference_id' => $expensePayment->voucher_id,
-                                        'reference_sub_id' => $journalItem->id,
-                                        'date' => $expense->bill_date,
-                                        'created_at' => date('Y-m-d H:i:s', strtotime($expense->created_at)),
-                                        'product_id' => $expense->id,
-                                        'product_type' => 'Expense Tax',
-                                        'product_item_id' => $bill_product->id,
+                                    'account_id' => $account_tax->id,
+                                    'transaction_type' => 'Debit',
+                                    'transaction_amount' => $journalItem->debit,
+                                    'reference' => 'Expense Journal',
+                                    'reference_id' => $expensePayment->voucher_id,
+                                    'reference_sub_id' => $journalItem->id,
+                                    'date' => $expense->bill_date,
+                                    'created_at' => date('Y-m-d H:i:s', strtotime($expense->created_at)),
+                                    'product_id' => $expense->id,
+                                    'product_type' => 'Expense Tax',
+                                    'product_item_id' => $bill_product->id,
                                 ];
-                                Utility::addTransactionLines($dataline , 'create');
+                                Utility::addTransactionLines($dataline, 'create');
                             }
                         }
 
@@ -977,16 +1537,16 @@ class ExpenseController extends Controller
                         //     'date' => $expense->bill_date,
                         // ];
                         // Utility::addTransactionLines($data, 'edit');
-                        $journalItem              = new JournalItem();
-                        $journalItem->journal     = $voucher->id;
-                        $journalItem->account     = $bill_product->chart_account_id;
-                        $journalItem->product_ids  = $bill_product->id;
-                        $journalItem->description  = $bill_product->description;
-                        $journalItem->debit       = $bill_product->price;
-                        $journalItem->credit        =  0;
+                        $journalItem = new JournalItem();
+                        $journalItem->journal = $voucher->id;
+                        $journalItem->account = $bill_product->chart_account_id;
+                        $journalItem->product_ids = $bill_product->id;
+                        $journalItem->description = $bill_product->description;
+                        $journalItem->debit = $bill_product->price;
+                        $journalItem->credit = 0;
                         $journalItem->save();
-                        $journalItem->created_at   = date('Y-m-d H:i:s', strtotime($expense->created_at));
-                        $journalItem->updated_at   = date('Y-m-d H:i:s', strtotime($expense->created_at));
+                        $journalItem->created_at = date('Y-m-d H:i:s', strtotime($expense->created_at));
+                        $journalItem->updated_at = date('Y-m-d H:i:s', strtotime($expense->created_at));
                         $journalItem->save();
                         $dataline = [
                             'account_id' => $journalItem->account,
@@ -1001,7 +1561,7 @@ class ExpenseController extends Controller
                             'product_type' => 'Expense Account',
                             'product_item_id' => $bill_product->id,
                         ];
-                        Utility::addTransactionLines($dataline , 'create');
+                        Utility::addTransactionLines($dataline, 'create');
                         $payable += $bill_product->price;
                     }
 
@@ -1020,38 +1580,38 @@ class ExpenseController extends Controller
                         // ];
                         // Utility::addTransactionLines($data, 'edit');
                         $types = ChartOfAccountType::where('created_by', '=', $expense->created_by)->where('name', 'Liabilities')->first();
-                            if ($types) {
-                                $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
-                                $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
-                            }
-                                $journalItem = new JournalItem();
-                                $journalItem->journal = $voucher->id;
-                                $journalItem->account = $account->id;
-                                $journalItem->description = 'Account Payable on Expense No : '.$expense->bill_no;
-                                $journalItem->debit = 0;
-                                $journalItem->credit = $payable;
-                                $journalItem->save();
-                                $journalItem->created_at   = date('Y-m-d H:i:s', strtotime($expense->created_at));
-                                $journalItem->updated_at   = date('Y-m-d H:i:s', strtotime($expense->created_at));
-                                $journalItem->save();
+                        if ($types) {
+                            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
+                            $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
+                        }
+                        $journalItem = new JournalItem();
+                        $journalItem->journal = $voucher->id;
+                        $journalItem->account = $account->id;
+                        $journalItem->description = 'Account Payable on Expense No : ' . $expense->bill_no;
+                        $journalItem->debit = 0;
+                        $journalItem->credit = $payable;
+                        $journalItem->save();
+                        $journalItem->created_at = date('Y-m-d H:i:s', strtotime($expense->created_at));
+                        $journalItem->updated_at = date('Y-m-d H:i:s', strtotime($expense->created_at));
+                        $journalItem->save();
 
-                                $dataline = [
-                                    'account_id' => $account->id,
-                                    'transaction_type' => 'Credit',
-                                    'transaction_amount' => $journalItem->credit,
-                                    'reference' => 'Expense Journal',
-                                    'reference_id' => $voucher->id,
-                                    'reference_sub_id' => $journalItem->id,
-                                    'date' => $expense->bill_date,
-                                    'created_at' => date('Y-m-d H:i:s', strtotime($expense->created_at)),
-                                    'product_id' => $expense->id,
-                                    'product_type' => 'Expense Payable',
-                                    'product_item_id' => 0,
-                                ];
-                                Utility::addTransactionLines($dataline , 'create');
+                        $dataline = [
+                            'account_id' => $account->id,
+                            'transaction_type' => 'Credit',
+                            'transaction_amount' => $journalItem->credit,
+                            'reference' => 'Expense Journal',
+                            'reference_id' => $voucher->id,
+                            'reference_sub_id' => $journalItem->id,
+                            'date' => $expense->bill_date,
+                            'created_at' => date('Y-m-d H:i:s', strtotime($expense->created_at)),
+                            'product_id' => $expense->id,
+                            'product_type' => 'Expense Payable',
+                            'product_item_id' => 0,
+                        ];
+                        Utility::addTransactionLines($dataline, 'create');
                     }
 
-                    Utility::makeActivityLog(\Auth::user()->id,'Expense',$expense->id,'Update Expense',$expense->type);
+                    Utility::makeActivityLog(\Auth::user()->id, 'Expense', $expense->id, 'Update Expense', $expense->type);
                     \DB::commit();
                     return redirect()->route('expense.index')->with('success', __('Expense successfully updated.'));
                 } else {

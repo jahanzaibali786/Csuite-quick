@@ -958,7 +958,7 @@
             }
 
             // Handle date changes
-            $('#start-date, #end-date').on('apply.daterangepicker', function() {
+            $('#filter-start-date, #filter-end-date').on('apply.daterangepicker', function() {
                 updateDateDisplay();
                 refreshData();
             });
@@ -975,8 +975,9 @@
 
             // Setup DataTable ajax parameters
             $('#ledger-table').on('preXhr.dt', function(e, settings, data) {
-                data.startDate = moment($('#start-date').val(), 'MM/DD/YYYY').format('YYYY-MM-DD');
-                data.endDate = moment($('#end-date').val(), 'MM/DD/YYYY').format('YYYY-MM-DD');
+                data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
+                data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
+                
                 data.account_id = $('#filter-account').val();
                 data.accounting_method = $('#accounting-method').val();
 

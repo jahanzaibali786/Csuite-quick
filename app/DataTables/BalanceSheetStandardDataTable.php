@@ -138,7 +138,7 @@ class BalanceSheetStandardDataTable extends DataTable
             ->leftJoin('journal_entries', function($join) {
                 $join->on('journal_items.journal', '=', 'journal_entries.id')
                     ->where("journal_entries.{$this->owner}", $this->companyId)
-                    ->where('journal_entries.date', '<=', $this->asOfDate);
+                    ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate))); // Convert to date format for MySQL compatibility
                     // ->where('journal_entries.status', 'draft');
             })
             ->select([
@@ -181,7 +181,7 @@ class BalanceSheetStandardDataTable extends DataTable
         $totalLiabilities = 0;
         $totalEquity = 0;
 
-        foreach (['Asset', 'Liability', 'Equity'] as $typeName) {
+        foreach (['Assets', 'Liabilities', 'Equity'] as $typeName) {
             $typeAccounts = $types->get($typeName, collect());
 
             if ($typeAccounts->isEmpty() && $typeName !== 'Equity') {
@@ -235,9 +235,9 @@ class BalanceSheetStandardDataTable extends DataTable
 
             // Type Total
             $typeTotal = $typeAccounts->sum('balance');
-            if ($typeName === 'Asset') {
+            if ($typeName === 'Assets') {
                 $totalAssets = $typeTotal;
-            } elseif ($typeName === 'Liability') {
+            } elseif ($typeName === 'Liabilities') {
                 $totalLiabilities = $typeTotal;
             } elseif ($typeName === 'Equity') {
                 $totalEquity = $typeTotal;
@@ -259,8 +259,8 @@ class BalanceSheetStandardDataTable extends DataTable
             ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
             ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
             ->where("journal_entries.{$this->owner}", $this->companyId)
-            ->where('journal_entries.date', '<=', $this->asOfDate)
-            ->whereIn('chart_of_account_types.name', ['Income', 'Expense'])
+            ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate))) // Convert to date format for MySQL compatibility
+            ->whereIn('chart_of_account_types.name', ['Income', 'Expenses', 'Costs of Goods Sold'])
             ->selectRaw('SUM(journal_items.credit - journal_items.debit) as net_profit')
             ->value('net_profit') ?? 0;
 

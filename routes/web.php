@@ -451,22 +451,22 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('productservice/estimates-by-customer', [ProductServiceController::class, 'estimatesByCustomer'])->name('productservice.estimatesByCustomer');
 
     Route::get('sales-Tax-Liability-Report', [ProductServiceController::class, 'SalesTaxLiabilityReport'])->name('SalesTaxLiabilityReport');
-    
+
     // Test route for estimates by customer report
-    Route::get('/test-estimates-query', function() {
+    Route::get('/test-estimates-query', function () {
         try {
             $user = Auth::user();
             if (!$user) {
                 return response()->json(['error' => 'Not authenticated'], 401);
             }
-            
+
             $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            
+
             // Test the actual DataTable query
             $dataTable = new \App\DataTables\ProposalsByCustomerDataTable();
             $query = $dataTable->query(new \App\Models\Proposal());
             $results = $query->limit(5)->get();
-            
+
             return response()->json([
                 'status' => 'success',
                 'user' => $user->name,
@@ -475,7 +475,7 @@ Route::group(['middleware' => ['verified']], function () {
                 'query_class' => get_class($query),
                 'results' => $results->toArray()
             ]);
-            
+
         } catch (Exception $e) {
             return response()->json([
                 'error' => $e->getMessage(),
@@ -535,6 +535,10 @@ Route::group(['middleware' => ['verified']], function () {
             ],
         ],
         function () {
+            Route::post('/invoice/{id}/approve', [InvoiceController::class, 'approveInvoice'])->name('invoice.approve');
+            Route::post('/invoice/{id}/reject', [InvoiceController::class, 'rejectInvoice'])->name('invoice.reject');
+            // invoice.request.approval
+            Route::get('invoice/{id}/request/approval', [InvoiceController::class, 'requestApproval'])->name('invoice.request.approval');
             Route::get('invoice/{id}/duplicate', [InvoiceController::class, 'duplicate'])->name('invoice.duplicate');
             Route::get('invoice/{id}/shipping/print', [InvoiceController::class, 'shippingDisplay'])->name('invoice.shipping.print');
             Route::get('invoice/{id}/payment/reminder', [InvoiceController::class, 'paymentReminder'])->name('invoice.payment.reminder');
@@ -618,6 +622,9 @@ Route::group(['middleware' => ['verified']], function () {
             ],
         ],
         function () {
+            Route::post('bill/send-for-approval/{id}', 'BillController@sendForApproval')->name('bill.send-for-approval');
+            Route::post('bill/approve/{id}', 'BillController@approveBill')->name('bill.approve');
+            Route::post('bill/reject/{id}', 'BillController@rejectBill')->name('bill.reject');
             Route::get('bill/{id}/duplicate', [BillController::class, 'duplicate'])->name('bill.duplicate');
             Route::get('bill/{id}/shipping/print', [BillController::class, 'shippingDisplay'])->name('bill.shipping.print');
             Route::get('bill/index', [BillController::class, 'index'])->name('bill.index');
@@ -634,9 +641,9 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('bill/create/{cid}', [BillController::class, 'create'])->name('bill.create');
         }
     );
-
+    Route::post('customer/customer-contact-list', [CustomerController::class, 'customerContactList'])->name('customer.contact.list');
+    Route::post('customer/customer-contact-list-phone-numbers', [CustomerController::class, 'customerContactListPhoneNumbers'])->name('customer.contact.list.phone.numbers');
     Route::get('payment/index', [PaymentController::class, 'index'])->name('payment.index')->middleware(['auth', 'XSS', 'revalidate']);
-
     Route::resource('payment', PaymentController::class)->middleware(['auth', 'XSS', 'revalidate']);
 
     Route::group([
@@ -676,10 +683,10 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('report/expense-summary', [ReportController::class, 'expenseSummary'])->name('report.expense.summary');
             Route::get('report/income-vs-expense-summary', [ReportController::class, 'incomeVsExpenseSummary'])->name('report.income.vs.expense.summary');
             Route::get('report/tax-summary', [ReportController::class, 'taxSummary'])->name('report.tax.summary');
-Route::get('report/taxable-sales-summary', [ReportController::class, 'taxableSalesSummary'])->name('report.taxableSalesSummary');
-Route::get('report/taxable-sales-detail', [ReportController::class, 'taxableSalesDetail'])->name('report.taxableSalesDetail');
-//        Route::get('report/profit-loss-summary', [ReportController::class, 'profitLossSummary'])->name('report.profit.loss.summary');
-Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary'])->name('report.invoice.summary');
+            Route::get('report/taxable-sales-summary', [ReportController::class, 'taxableSalesSummary'])->name('report.taxableSalesSummary');
+            Route::get('report/taxable-sales-detail', [ReportController::class, 'taxableSalesDetail'])->name('report.taxableSalesDetail');
+            //        Route::get('report/profit-loss-summary', [ReportController::class, 'profitLossSummary'])->name('report.profit.loss.summary');
+            Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary'])->name('report.invoice.summary');
             Route::get('report/bill-summary', [ReportController::class, 'billSummary'])->name('report.bill.summary');
             Route::get('report/product-stock-report', [ReportController::class, 'productStock'])->name('report.product.stock.report');
             Route::get('report/invoice-report', [ReportController::class, 'invoiceReport'])->name('report.invoice');
@@ -747,6 +754,39 @@ Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary']
     Route::resource('custom-field', CustomFieldController::class)->middleware(['auth', 'XSS', 'revalidate']);
 
     Route::post('chart-of-account/subtype', [ChartOfAccountController::class, 'getSubType'])->name('charofAccount.subType')->middleware(['auth', 'XSS', 'revalidate']);
+
+    //Product Stock
+    Route::resource('productstock', ProductStockController::class)->middleware(['auth', 'XSS']);
+
+    //Customer
+    Route::group(
+        [
+            'middleware' => [
+                'auth',
+                'XSS',
+                'revalidate',
+            ],
+        ],
+        function () {
+            Route::get('customer/{id}/show', [CustomerController::class, 'show'])->name('customer.show');
+            Route::resource('customer', CustomerController::class);
+        }
+    );
+
+    //Vendor
+    Route::group(
+        [
+            'middleware' => [
+                'auth',
+                'XSS',
+                'revalidate',
+            ],
+        ],
+        function () {
+            Route::get('vender/{id}/show', [VenderController::class, 'show'])->name('vender.show');
+            Route::resource('vender', VenderController::class);
+        }
+    );
 
     Route::group(
         [
@@ -1052,7 +1092,7 @@ Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary']
 
     // Notification
     Route::get('notifications', [NotificationController::class, 'getUserNotifications'])->name('get_notification');
-    Route::post('has_Seen/{id}', [NotificationController::class, 'hasSeen'])->name('has_seen');
+    Route::post('/has_Seen/{id}', [NotificationController::class, 'hasSeen'])->name('has_seen');
 
 
     // Hrm EmployeeController
@@ -1670,7 +1710,38 @@ Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary']
     //QR Code Module
 
     // Import/Export Data Route
+    //Product Stock
+    Route::resource('productstock', ProductStockController::class)->middleware(['auth', 'XSS']);
 
+    //Customer
+    Route::group(
+        [
+            'middleware' => [
+                'auth',
+                'XSS',
+                'revalidate',
+            ],
+        ],
+        function () {
+            Route::get('customer/{id}/show', [CustomerController::class, 'show'])->name('customer.show');
+            Route::resource('customer', CustomerController::class);
+        }
+    );
+
+    //Vendor
+    Route::group(
+        [
+            'middleware' => [
+                'auth',
+                'XSS',
+                'revalidate',
+            ],
+        ],
+        function () {
+            Route::get('vender/{id}/show', [VenderController::class, 'show'])->name('vender.show');
+            Route::resource('vender', VenderController::class);
+        }
+    );
     Route::get('export/productservice', [ProductServiceController::class, 'export'])->name('productservice.export');
     Route::get('import/productservice/file', [ProductServiceController::class, 'importFile'])->name('productservice.file.import');
     Route::get('productservice/inventory-valuation-detail', [ProductServiceController::class, 'inventoryValuationDetail'])->name('productservice.inventoryValuationDetail');
@@ -1929,6 +2000,11 @@ Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary']
             ],
         ],
         function () {
+            // expense.request.approval
+            Route::get('expense/request/approval/{id}', [ExpenseController::class, 'requestApproval'])->name('expense.request.approval');
+            //approveExpense or reject
+            Route::post('expense/approve/{id}', [ExpenseController::class, 'approveExpense'])->name('expense.approve');
+            Route::post('expense/reject/{id}', [ExpenseController::class, 'rejectExpense'])->name('expense.reject');
             Route::get('expense/index', [ExpenseController::class, 'index'])->name('expense.index');
             Route::any('expense/customer', [ExpenseController::class, 'customer'])->name('expense.customer');
             Route::post('expense/vender', [ExpenseController::class, 'vender'])->name('expense.vender');
