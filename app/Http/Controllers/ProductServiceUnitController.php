@@ -50,6 +50,12 @@ class ProductServiceUnitController extends Controller
             );
             if($validator->fails())
             {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'errors' => $validator->errors()->all(),
+                    ], 422);
+                }
                 $messages = $validator->getMessageBag();
 
                 return redirect()->back()->with('error', $messages->first());
@@ -61,10 +67,23 @@ class ProductServiceUnitController extends Controller
             $category->owned_by = \Auth::user()->ownedId();
             $category->save();
             Utility::makeActivityLog(\Auth::user()->id,'Product Service Unit',$category->id,'Create Product Service Unit',$category->name);
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'data'    => $category,
+                    'message' => __('Unit successfully created.'),
+                ]);
+            }
             return redirect()->route('product-unit.index')->with('success', __('Unit successfully created.'));
         }
         else
         {
+            if ($request->ajax()) {
+            return response()->json([
+                'success' => false,
+                'message' => __('Permission denied.'),
+            ], 403);
+        }
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }

@@ -698,6 +698,18 @@ class VoucherController extends Controller
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
         ]);
     }
+    public function balanceSheetComparison(\App\DataTables\BalanceSheetComparisonDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Balance Sheet - Comparison';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.balance-sheet-comparison.index', $this->data, [
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
 
     public function purchaselist(\App\DataTables\PurchaseList $dataTable, Request $request)
     {
