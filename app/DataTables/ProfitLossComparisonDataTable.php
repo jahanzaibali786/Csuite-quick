@@ -8,13 +8,14 @@ use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 
-class ProfitLossDataTable extends DataTable
+class ProfitLossComparisonDataTable extends DataTable
 {
     protected $startDate;
     protected $endDate;
+    protected $prevStartDate;
+    protected $prevEndDate;
 
     protected $companyId;
-
     protected $owner;
 
     public function __construct()
@@ -29,8 +30,17 @@ class ProfitLossDataTable extends DataTable
             ? Carbon::parse(request('endDate'))->endOfDay()->format('Y-m-d')
             : Carbon::now()->endOfDay()->format('Y-m-d');
 
-        $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
-        $this->owner = \Auth::user()->type === 'company' ? 'created_by' : 'owned_by';
+        // Previous year same period
+        $this->prevStartDate = Carbon::parse($this->startDate)->subYear()->format('Y-m-d');
+        $this->prevEndDate = Carbon::parse($this->endDate)->subYear()->format('Y-m-d');
+
+        $this->companyId = \Auth::user()->type === 'company'
+            ? \Auth::user()->creatorId()
+            : \Auth::user()->ownedId();
+
+        $this->owner = \Auth::user()->type === 'company'
+            ? 'created_by'
+            : 'owned_by';
     }
 
     public function dataTable($query)
@@ -38,13 +48,12 @@ class ProfitLossDataTable extends DataTable
         return datatables()
             ->collection($query)
             ->addColumn('account_name', function ($row) {
-                // Section header with conditional chevron
+                // Section header
                 if ($row->is_section_header ?? false) {
-                    $chevronHtml = '';
-                    if ($row->has_children ?? false) {
-                        $chevronHtml = '<i class="fas fa-chevron-down toggle-chevron mr-2"></i>';
-                    }
-                    
+                    $chevronHtml = $row->has_children
+                        ? '<i class="fas fa-chevron-down toggle-chevron mr-2"></i>'
+                        : '';
+
                     return '<span class="toggle-section" data-group="' . $row->group_key . '" style="cursor: ' . ($row->has_children ? 'pointer' : 'default') . ';">
                         ' . $chevronHtml . '
                         <strong class="section-header">' . e($row->name) . '</strong>
@@ -62,81 +71,67 @@ class ProfitLossDataTable extends DataTable
                     return '<strong class="subtotal-label">' . e($row->name) . '</strong>';
                 }
 
-                // Child account row with code + name
+                // Child row
                 return ($row->is_child ? '&nbsp;&nbsp;&nbsp;&nbsp;' : '')
                     . ($row->code ? '<span class="account-code">' . e($row->code) . ' - </span> ' : '')
                     . e($row->name);
             })
-            ->addColumn('amount', function ($row) {
+            ->addColumn('current_amount', function ($row) {
                 if ($row->is_section_header ?? false) {
-                    // Show section total when collapsed, empty when expanded
-                    if ($row->has_children ?? false) {
-                        return '<span class="section-total-amount" data-group="' . $row->group_key . '" style="display: none; font-weight: bold; color: #6c757d;">
-                            ' . number_format($row->section_total ?? 0, 2) . '
-                        </span>';
-                    }
                     return '';
                 }
-
                 if ($row->is_total ?? false || $row->is_subtotal ?? false) {
-                    return '<strong class="total-amount">' . number_format($row->net, 2) . '</strong>';
+                    return '<strong class="total-amount">' . number_format($row->net ?? 0, 2) . '</strong>';
                 }
-
-                $net = $row->amount ?? ($row->total_credit - $row->total_debit);
-                if ($net == 0) {
+                return '<span class="amount-cell">' . number_format($row->current_amount ?? 0, 2) . '</span>';
+            })
+            ->addColumn('previous_amount', function ($row) {
+                if ($row->is_section_header ?? false) {
                     return '';
                 }
-
-                return '<span class="amount-cell">' . number_format($net, 2) . '</span>';
+                if ($row->is_total ?? false || $row->is_subtotal ?? false) {
+                    return '<strong class="total-amount">' . number_format($row->prev_net ?? 0, 2) . '</strong>';
+                }
+                return '<span class="amount-cell">' . number_format($row->previous_amount ?? 0, 2) . '</span>';
             })
             ->setRowAttr([
                 'class' => function ($row) {
-                    if ($row->is_section_header ?? false) {
-                        return 'section-row';
-                    }
-                    if ($row->is_child ?? false) {
-                        return 'child-row group-' . $row->group_key;
-                    }
-                    if ($row->is_total ?? false) {
-                        return 'total-row group-' . ($row->group_key ?? '');
-                    }
-                    if ($row->is_subtotal ?? false) {
-                        return 'subtotal-row group-' . ($row->group_key ?? '');
-                    }
+                    if ($row->is_section_header ?? false) return 'section-row';
+                    if ($row->is_child ?? false) return 'child-row group-' . $row->group_key;
+                    if ($row->is_total ?? false) return 'total-row group-' . ($row->group_key ?? '');
+                    if ($row->is_subtotal ?? false) return 'subtotal-row group-' . ($row->group_key ?? '');
                     return '';
                 }
             ])
-            ->rawColumns(['account_name', 'amount']);
+            ->rawColumns(['account_name', 'current_amount', 'previous_amount']);
     }
 
     public function query()
     {
-        // dd($this->startDate, $this->endDate);
         $accounts = ChartOfAccount::where('chart_of_accounts.created_by', $this->companyId)
             ->leftJoin('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
             ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
             ->leftJoin('journal_items', 'chart_of_accounts.id', '=', 'journal_items.account')
             ->leftJoin('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
             ->where("journal_entries.{$this->owner}", $this->companyId)
-            ->whereBetween('journal_items.created_at', [$this->startDate, $this->endDate])
             ->select([
                 'chart_of_accounts.id',
                 'chart_of_accounts.name',
                 'chart_of_accounts.code',
                 'chart_of_account_types.name as account_type',
-                DB::raw('COALESCE(SUM(journal_items.debit), 0) as total_debit'),
-                DB::raw('COALESCE(SUM(journal_items.credit), 0) as total_credit'),
+                DB::raw("COALESCE(SUM(CASE WHEN journal_entries.date BETWEEN '{$this->startDate}' AND '{$this->endDate}' THEN journal_items.debit ELSE 0 END),0) as total_debit"),
+                DB::raw("COALESCE(SUM(CASE WHEN journal_entries.date BETWEEN '{$this->startDate}' AND '{$this->endDate}' THEN journal_items.credit ELSE 0 END),0) as total_credit"),
+                DB::raw("COALESCE(SUM(CASE WHEN journal_entries.date BETWEEN '{$this->prevStartDate}' AND '{$this->prevEndDate}' THEN journal_items.debit ELSE 0 END),0) as prev_total_debit"),
+                DB::raw("COALESCE(SUM(CASE WHEN journal_entries.date BETWEEN '{$this->prevStartDate}' AND '{$this->prevEndDate}' THEN journal_items.credit ELSE 0 END),0) as prev_total_credit"),
             ])
             ->whereIn('chart_of_account_types.name', ['Income', 'Expenses', 'Costs of Goods Sold'])
             ->groupBy(
                 'chart_of_accounts.id',
                 'chart_of_accounts.name',
                 'chart_of_accounts.code',
-                'chart_of_account_types.name',
-                // 'chart_of_account_sub_types.code'
+                'chart_of_account_types.name'
             )
             ->orderBy('chart_of_account_types.name')
-            // ->orderBy('chart_of_accounts.code')
             ->get();
 
         $report = collect();
@@ -145,12 +140,14 @@ class ProfitLossDataTable extends DataTable
         $incomeAccounts = $accounts->where('account_type', 'Income')->map(function ($acc) {
             $acc->group_key = 'income';
             $acc->is_child = true;
-            $acc->amount = $acc->total_credit - $acc->total_debit;
+            $acc->current_amount = $acc->total_credit - $acc->total_debit;
+            $acc->previous_amount = $acc->prev_total_credit - $acc->prev_total_debit;
             return $acc;
         });
-        $incomeTotal = $incomeAccounts->sum('amount');
+        $incomeTotal = $incomeAccounts->sum('current_amount');
+        $incomePrevTotal = $incomeAccounts->sum('previous_amount');
 
-        $report->push((object) [
+        $report->push((object)[
             'name' => 'Income',
             'is_section_header' => true,
             'group_key' => 'income',
@@ -158,26 +155,27 @@ class ProfitLossDataTable extends DataTable
             'section_total' => $incomeTotal
         ]);
         $report = $report->merge($incomeAccounts);
-        $report->push((object) [
+        $report->push((object)[
             'name' => 'Total Income',
-            'account_type' => 'subtotal',
-            'net' => $incomeTotal,
             'is_subtotal' => true,
-            'group_key' => 'income'
+            'group_key' => 'income',
+            'net' => $incomeTotal,
+            'prev_net' => $incomePrevTotal
         ]);
 
         // ---------------- COGS ----------------
-        $cogsAccounts = $accounts->filter(function ($acc) {
-            return $acc->account_type === 'Costs of Goods Sold' || ($acc->sub_type === 'Costs of Goods Sold');
-        })->map(function ($acc) {
-            $acc->group_key = 'cogs';
-            $acc->is_child = true;
-            $acc->amount = $acc->total_debit - $acc->total_credit;
-            return $acc;
-        });
-        $cogsTotal = $cogsAccounts->sum('amount');
+        $cogsAccounts = $accounts->filter(fn($acc) => $acc->account_type === 'Costs of Goods Sold')
+            ->map(function ($acc) {
+                $acc->group_key = 'cogs';
+                $acc->is_child = true;
+                $acc->current_amount = $acc->total_debit - $acc->total_credit;
+                $acc->previous_amount = $acc->prev_total_debit - $acc->prev_total_credit;
+                return $acc;
+            });
+        $cogsTotal = $cogsAccounts->sum('current_amount');
+        $cogsPrevTotal = $cogsAccounts->sum('previous_amount');
 
-        $report->push((object) [
+        $report->push((object)[
             'name' => 'Costs of Goods Sold',
             'is_section_header' => true,
             'group_key' => 'cogs',
@@ -185,35 +183,36 @@ class ProfitLossDataTable extends DataTable
             'section_total' => $cogsTotal
         ]);
         $report = $report->merge($cogsAccounts);
-        $report->push((object) [
+        $report->push((object)[
             'name' => 'Total Costs of Goods Sold',
-            'account_type' => 'subtotal',
-            'net' => $cogsTotal,
             'is_subtotal' => true,
-            'group_key' => 'cogs'
+            'group_key' => 'cogs',
+            'net' => $cogsTotal,
+            'prev_net' => $cogsPrevTotal
         ]);
 
         // ---------------- GROSS PROFIT ----------------
-        $report->push((object) [
+        $report->push((object)[
             'name' => 'Gross Profit',
-            'account_type' => 'gross_profit',
+            'is_total' => true,
+            'group_key' => 'gross_profit',
             'net' => $incomeTotal - $cogsTotal,
-            'is_total' => true
+            'prev_net' => $incomePrevTotal - $cogsPrevTotal
         ]);
 
         // ---------------- EXPENSES ----------------
-        $expenseAccounts = $accounts->filter(function ($acc) {
-            return $acc->account_type === 'Expenses' &&
-                ($acc->sub_type_code !== 'COGS' || is_null($acc->sub_type_code));
-        })->map(function ($acc) {
-            $acc->group_key = 'expenses';
-            $acc->is_child = true;
-            $acc->amount = $acc->total_debit - $acc->total_credit;
-            return $acc;
-        });
-        $expenseTotal = $expenseAccounts->sum('amount');
+        $expenseAccounts = $accounts->filter(fn($acc) => $acc->account_type === 'Expenses')
+            ->map(function ($acc) {
+                $acc->group_key = 'expenses';
+                $acc->is_child = true;
+                $acc->current_amount = $acc->total_debit - $acc->total_credit;
+                $acc->previous_amount = $acc->prev_total_debit - $acc->prev_total_credit;
+                return $acc;
+            });
+        $expenseTotal = $expenseAccounts->sum('current_amount');
+        $expensePrevTotal = $expenseAccounts->sum('previous_amount');
 
-        $report->push((object) [
+        $report->push((object)[
             'name' => 'Expenses',
             'is_section_header' => true,
             'group_key' => 'expenses',
@@ -221,44 +220,30 @@ class ProfitLossDataTable extends DataTable
             'section_total' => $expenseTotal
         ]);
         $report = $report->merge($expenseAccounts);
-        $report->push((object) [
+        $report->push((object)[
             'name' => 'Total Expenses',
-            'account_type' => 'subtotal',
-            'net' => $expenseTotal,
             'is_subtotal' => true,
-            'group_key' => 'expenses'
+            'group_key' => 'expenses',
+            'net' => $expenseTotal,
+            'prev_net' => $expensePrevTotal
         ]);
 
         // ---------------- NET OPERATING INCOME ----------------
-        $report->push((object) [
+        $report->push((object)[
             'name' => 'Net Operating Income',
-            'account_type' => 'net_operating_income',
+            'is_total' => true,
+            'group_key' => 'net_operating_income',
             'net' => ($incomeTotal - $cogsTotal) - $expenseTotal,
-            'is_total' => true
+            'prev_net' => ($incomePrevTotal - $cogsPrevTotal) - $expensePrevTotal
         ]);
 
-        // // ---------------- OTHER INCOME / EXPENSES ----------------
-        // $report->push((object) [
-        //     'name' => 'Other Income',
-        //     'is_section_header' => true,
-        //     'group_key' => 'other_income',
-        //     'has_children' => false,
-        //     'section_total' => 0
-        // ]);
-        // $report->push((object) [
-        //     'name' => 'Other Expenses',
-        //     'is_section_header' => true,
-        //     'group_key' => 'other_expenses',
-        //     'has_children' => false,
-        //     'section_total' => 0
-        // ]);
-
         // ---------------- NET INCOME ----------------
-        $report->push((object) [
+        $report->push((object)[
             'name' => 'NET INCOME',
-            'account_type' => 'net_income',
+            'is_total' => true,
+            'group_key' => 'net_income',
             'net' => ($incomeTotal - $cogsTotal) - $expenseTotal,
-            'is_total' => true
+            'prev_net' => ($incomePrevTotal - $cogsPrevTotal) - $expensePrevTotal
         ]);
 
         return $report;
@@ -270,7 +255,6 @@ class ProfitLossDataTable extends DataTable
             ->setTableId('profit-loss-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            // ->dom('Bfrtip')
             ->parameters([
                 'paging' => false,
                 'searching' => false,
@@ -282,8 +266,9 @@ class ProfitLossDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            Column::make('account_name')->title('Account')->width('70%'),
-            Column::make('amount')->title('Amount')->width('30%')->addClass('text-right'),
+            Column::make('account_name')->title('Account')->width('50%'),
+            Column::make('current_amount')->title('Current (' . date('d-m-Y', strtotime($this->startDate)) . ' to ' . date('d-m-Y', strtotime($this->endDate)) . ')')->width('25%')->addClass('text-right'),
+            Column::make('previous_amount')->title('Previous (' . date('d-m-Y', strtotime($this->prevStartDate)) . ' to ' . date('d-m-Y', strtotime($this->prevEndDate)) . ')')->width('25%')->addClass('text-right'),
         ];
     }
 }

@@ -274,7 +274,36 @@ class VoucherController extends Controller
 
         return $dataTable->render('sync.profit_loss.index', $this->data);
     }
+    public function profitLossByMonth(\App\DataTables\ProfitLossByMonth $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Profit & Loss By Month';
 
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.profit_loss.by_month', $this->data);
+    }
+    public function profitLossComparison(\App\DataTables\ProfitLossComparisonDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Profit & Loss Comparison';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.profit_loss.comparison', $this->data);
+    }
+    public function profitLossQuaterly(\App\DataTables\ProfitLossQuaterlyDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Profit & Loss Quaterly';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.profit_loss.quaterly', $this->data);
+    }
     public function profitLossDetail(\App\DataTables\ProfitLossDetailDataTable $dataTable, Request $request)
     {
         $this->pageTitle = 'Profit and Loss - Detail';
