@@ -64,74 +64,104 @@ use App\Models\WarehouseProduct;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
 
     public function RecurringInvoices(Request $request)
     {
-        $customer = Customer::where('created_by', \Auth::user()->creatorId())
-            ->pluck('name', 'id')
-            ->prepend('Select Customer', '');
+        $creatorId = \Auth::user()->creatorId();
 
-        $account = BankAccount::where('created_by', \Auth::user()->creatorId())
-            ->pluck('holder_name', 'id')
-            ->prepend('Select Account', '');
+        // Filters UI data (unchanged)
+        $customer = Customer::where('created_by', $creatorId)
+            ->pluck('name', 'id')->prepend('Select Customer', '');
+        $account = BankAccount::where('created_by', $creatorId)
+            ->pluck('holder_name', 'id')->prepend('Select Account', '');
+        $category = ProductServiceCategory::where('created_by', $creatorId)
+            ->where('type', 'income')->pluck('name', 'id')->prepend('Select Category', '');
 
-        $category = ProductServiceCategory::where('created_by', \Auth::user()->creatorId())
-            ->where('type', 'income')
-            ->pluck('name', 'id')
-            ->prepend('Select Category', '');
+        // -----------------------------
+        // Subquery: last payment date per recurring series (parent + children)
+        // series_id = COALESCE(recurring_parent_id, id)
+        // -----------------------------
+        $seriesLast = DB::table('invoices as s')
+            ->leftJoin('invoice_payments as sp', 'sp.invoice_id', '=', 's.id')
+            ->where('s.created_by', $creatorId)
+            ->where(function ($w) {
+                $w->where('s.is_recurring', true)
+                    ->orWhereNotNull('s.recurring_parent_id');
+            })
+            ->groupBy(DB::raw('COALESCE(s.recurring_parent_id, s.id)'))
+            ->selectRaw('COALESCE(s.recurring_parent_id, s.id) as series_id, MAX(sp.date) as last_payment_date');
 
-        // Default: last 2 months
-        $startDate = now()->subMonths(2)->startOfDay();
-        $endDate   = now()->endOfDay();
+        // Base: invoices (masters + children), optional LEFT join to payments (kept for totals)
+        $q = DB::table('invoices')
+            ->leftJoin('invoice_payments as ip', 'ip.invoice_id', '=', 'invoices.id')
+            // join the per-series last payment date
+            ->joinSub($seriesLast, 'sl', function ($join) {
+                $join->on('sl.series_id', '=', DB::raw('COALESCE(invoices.recurring_parent_id, invoices.id)'));
+            })
+            ->where('invoices.created_by', $creatorId)
+            ->where(function ($w) {
+                $w->where('invoices.is_recurring', true)           // masters
+                    ->orWhereNotNull('invoices.recurring_parent_id'); // children
+            });
 
-        $invquery = InvoicePayment::join('invoices', 'invoices.id', '=', 'invoice_payments.invoice_id')
-            ->where('invoices.created_by', \Auth::user()->creatorId());
-        // ->whereBetween('invoice_payments.date', [$startDate, $endDate]);
-        // dd($invquery->get());
-        // Apply filters
+        // -----------------------------
+        // Filters
+        // -----------------------------
+        // Date filter: apply on the SERIES last payment date (sl.last_payment_date),
+        // since that's what you're displaying in the "Last Payment Date" column.
         if (!empty($request->date)) {
-            if (str_contains($request->date, 'to')) {
-                $date_range = explode(' to ', $request->date);
-                $invquery->whereBetween('invoice_payments.date', $date_range);
+            if (str_contains($request->date, ' to ')) {
+                [$from, $to] = explode(' to ', $request->date);
+                $q->whereBetween('sl.last_payment_date', [$from, $to]);
             } else {
-                $invquery->whereDate('invoice_payments.date', $request->date);
+                $q->whereDate('sl.last_payment_date', $request->date);
             }
         }
 
         if (!empty($request->customer)) {
-            $invquery->where('invoices.customer_id', $request->customer);
+            $q->where('invoices.customer_id', $request->customer);
         }
-
         if (!empty($request->account)) {
-            $invquery->where('invoice_payments.account_id', $request->account);
+            $q->where('ip.account_id', $request->account);
         }
-
         if (!empty($request->category)) {
-            $invquery->where('invoices.category_id', $request->category);
+            $q->where('invoices.category_id', $request->category);
         }
-
         if (!empty($request->payment)) {
-            $invquery->where('invoice_payments.payment_method', $request->payment);
+            $q->where('ip.payment_method', $request->payment);
         }
 
-        // Get invoice payments and group by customer + invoice
-        $Invoicerevenues = $invquery
-            ->select(
-                'invoice_payments.*',
-                'invoices.customer_id',
-                'invoices.category_id'
-            )
-            ->get()
-            ->groupBy(function ($item) {
-                return $item->customer_id . '-' . $item->invoice_id; // group by same invoice of same customer
-            });
+        // -----------------------------
+        // Select for Blade
+        //  - alias "date" = series last payment date so Blade's max('date') works as-is
+        //  - inv_pk for getDue() per row
+        // -----------------------------
+        $rows = $q->select([
+            'ip.id as payment_row_id',
+            DB::raw('COALESCE(ip.amount, 0) as amount'),
+            'ip.account_id',
+            'ip.payment_method',
 
-        // Only keep customers with multiple payments (recurring-like)
-        $recurring = $Invoicerevenues->filter(function ($group) {
-            return $group->count() > 1;
+            'invoices.id as inv_pk',
+            'invoices.customer_id',
+            'invoices.category_id',
+            DB::raw('invoices.invoice_id as invoice_id'),
+
+            // What Blade calls "Last Payment Date"
+            DB::raw('sl.last_payment_date as date'),
+
+            // keep raw payment date if you need it somewhere else
+            'ip.date as payment_date',
+        ])
+            ->get();
+
+        // Group exactly like your Blade expects
+        $recurring = $rows->groupBy(function ($item) {
+            return $item->customer_id . '-' . $item->invoice_id;
         });
 
         return view('transaction.recurringinvoice', compact('recurring', 'customer', 'account', 'category'));
@@ -1801,58 +1831,55 @@ class ReportController extends Controller
     //     }
     // }
 
-        public function ledgerSummary(Request $request, $account = '')
-        {
+    public function ledgerSummary(Request $request, $account = '')
+    {
 
-            if (\Auth::user()->can('ledger report')) {
+        if (\Auth::user()->can('ledger report')) {
 
 
-                if (!empty($request->start_date) && !empty($request->end_date)) {
-                    $start = $request->start_date;
-                    $end = $request->end_date;
-                } else {
-                    $start = date('Y-m-01');
-                    $end = date('Y-m-t');
-                }
-                if (!empty($request->account)) {
-                    $chart_accounts = ChartOfAccount::where('id', $request->account)->where('created_by', \Auth::user()->creatorId())->get();
-                    // $accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-                    $accounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_accounts.parent')
-                        ->where('parent', '=', 0)
-                        ->where('created_by', \Auth::user()->creatorId())->get()
-                        ->toarray();
-
-                } else {
-                    $chart_accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get();
-                    // $accounts = $chart_accounts->pluck('name', 'id');
-                    $accounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_accounts.parent')
-                        ->where('parent', '=', 0)
-                        ->where('created_by', \Auth::user()->creatorId())->get()
-                        ->toarray();
-                }
-
-                $subAccounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_account_parents.account');
-                $subAccounts->leftjoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id');
-                $subAccounts->where('chart_of_accounts.parent', '!=', 0);
-                $subAccounts->where('chart_of_accounts.created_by', \Auth::user()->creatorId());
-                $subAccounts = $subAccounts->get()->toArray();
-
-                $balance = 0;
-                $debit = 0;
-                $credit = 0;
-                $filter['balance'] = $balance;
-                $filter['credit'] = $credit;
-                $filter['debit'] = $debit;
-                $filter['startDateRange'] = $start;
-                $filter['endDateRange'] = $end;
-
-                return view('report.ledger_summary', compact('filter', 'chart_accounts', 'accounts', 'subAccounts'));
-
+            if (!empty($request->start_date) && !empty($request->end_date)) {
+                $start = $request->start_date;
+                $end = $request->end_date;
             } else {
-                return redirect()->back()->with('error', __('Permission Denied.'));
+                $start = date('Y-m-01');
+                $end = date('Y-m-t');
+            }
+            if (!empty($request->account)) {
+                $chart_accounts = ChartOfAccount::where('id', $request->account)->where('created_by', \Auth::user()->creatorId())->get();
+                // $accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+                $accounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_accounts.parent')
+                    ->where('parent', '=', 0)
+                    ->where('created_by', \Auth::user()->creatorId())->get()
+                    ->toarray();
+            } else {
+                $chart_accounts = ChartOfAccount::where('created_by', \Auth::user()->creatorId())->get();
+                // $accounts = $chart_accounts->pluck('name', 'id');
+                $accounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_accounts.parent')
+                    ->where('parent', '=', 0)
+                    ->where('created_by', \Auth::user()->creatorId())->get()
+                    ->toarray();
             }
 
+            $subAccounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_account_parents.account');
+            $subAccounts->leftjoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id');
+            $subAccounts->where('chart_of_accounts.parent', '!=', 0);
+            $subAccounts->where('chart_of_accounts.created_by', \Auth::user()->creatorId());
+            $subAccounts = $subAccounts->get()->toArray();
+
+            $balance = 0;
+            $debit = 0;
+            $credit = 0;
+            $filter['balance'] = $balance;
+            $filter['credit'] = $credit;
+            $filter['debit'] = $debit;
+            $filter['startDateRange'] = $start;
+            $filter['endDateRange'] = $end;
+
+            return view('report.ledger_summary', compact('filter', 'chart_accounts', 'accounts', 'subAccounts'));
+        } else {
+            return redirect()->back()->with('error', __('Permission Denied.'));
         }
+    }
 
     public function general_ledger_list(GeneralLedgerListDataTable $dataTable, Request $request, $account = '', $account_id = '')
     {
@@ -5176,11 +5203,11 @@ class ReportController extends Controller
         if (!\Auth::user()->can('manage invoice')) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-    
+
         $user    = \Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
         $column  = ($user->type === 'company') ? 'created_by' : 'owned_by';
-    
+
         // Resolve date range (default = Jan 1 current year .. today)
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $start = $request->start_date;
@@ -5189,9 +5216,9 @@ class ReportController extends Controller
             $start = date('Y-01-01');
             $end   = date('Y-m-d');
         }
-    
+
         $pageTitle = __('Sales by Customer Summary');
-    
+
         $filter = [
             'startDateRange' => $start,
             'endDateRange'   => $end,
@@ -5208,7 +5235,7 @@ class ReportController extends Controller
         $debugInfo = [
             'customers_count' => Customer::where('created_by', $ownerId)->count(),
             'invoices_count' => Invoice::where('created_by', $ownerId)->count(),
-            'invoice_products_count' => InvoiceProduct::whereHas('invoice', function($q) use ($ownerId) {
+            'invoice_products_count' => InvoiceProduct::whereHas('invoice', function ($q) use ($ownerId) {
                 $q->where('created_by', $ownerId);
             })->count(),
             'sample_customers' => Customer::where('created_by', $ownerId)->limit(3)->pluck('name'),
@@ -5216,7 +5243,7 @@ class ReportController extends Controller
                 ->whereBetween('issue_date', [$start, $end])
                 ->limit(3)->pluck('id'),
         ];
-    
+
         // Debug: Log request details
         \Log::info('SalesByCustomerSummary Controller Debug', [
             'user_id' => $user->id,
@@ -5229,19 +5256,19 @@ class ReportController extends Controller
             'request_params' => $request->all(),
             'debug_info' => $debugInfo
         ]);
-        
+
         // Pass filters to the DataTable ajax so query() can read request('...')
         $dataTable = $dataTable->with([
             'start_date' => $start,
             'end_date'   => $end,
         ]);
-    
+
         // Make ownership available to the DT via request() too
         request()->merge([
             'owner_id'    => $ownerId,
-            'owner_column'=> $column,
+            'owner_column' => $column,
         ]);
-    
+
         return $dataTable->render(
             'report.salesByCustomerSummary',
             compact('pageTitle', 'filter', 'customers')
@@ -5255,11 +5282,11 @@ class ReportController extends Controller
         if (!\Auth::user()->can('manage invoice')) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-    
+
         $user    = \Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
         $column  = ($user->type === 'company') ? 'created_by' : 'owned_by';
-    
+
         // Resolve date range (default = Jan 1 current year .. today)
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $start = $request->start_date;
@@ -5268,9 +5295,9 @@ class ReportController extends Controller
             $start = date('Y-01-01');
             $end   = date('Y-m-d');
         }
-    
+
         $pageTitle = __('Sales by Customer Detail');
-    
+
         $filter = [
             'startDateRange' => $start,
             'endDateRange'   => $end,
@@ -5289,7 +5316,7 @@ class ReportController extends Controller
         $debugInfo = [
             'customers_count' => Customer::where('created_by', $ownerId)->count(),
             'invoices_count' => Invoice::where('created_by', $ownerId)->count(),
-            'invoice_products_count' => InvoiceProduct::whereHas('invoice', function($q) use ($ownerId) {
+            'invoice_products_count' => InvoiceProduct::whereHas('invoice', function ($q) use ($ownerId) {
                 $q->where('created_by', $ownerId);
             })->count(),
             'sample_customers' => Customer::where('created_by', $ownerId)->limit(3)->pluck('name'),
@@ -5297,7 +5324,7 @@ class ReportController extends Controller
                 ->whereBetween('issue_date', [$start, $end])
                 ->limit(3)->pluck('id'),
         ];
-    
+
         // Debug: Log request details
         \Log::info('SalesByCustomerDetail Controller Debug', [
             'user_id' => $user->id,
@@ -5310,19 +5337,19 @@ class ReportController extends Controller
             'request_params' => $request->all(),
             'debug_info' => $debugInfo
         ]);
-        
+
         // Pass filters to the DataTable ajax so query() can read request('...')
         $dataTable = $dataTable->with([
             'start_date' => $start,
             'end_date'   => $end,
         ]);
-    
+
         // Make ownership available to the DT via request() too
         request()->merge([
             'owner_id'    => $ownerId,
-            'owner_column'=> $column,
+            'owner_column' => $column,
         ]);
-    
+
         return $dataTable->render(
             'report.salesByCustomerDetail',
             compact('pageTitle', 'filter', 'customers')
@@ -5336,11 +5363,11 @@ class ReportController extends Controller
         if (!\Auth::user()->can('manage invoice')) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-    
+
         $user    = \Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
         $column  = ($user->type === 'company') ? 'created_by' : 'owned_by';
-    
+
         // Resolve date range (default = Jan 1 current year .. today)
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $start = $request->start_date;
@@ -5349,9 +5376,9 @@ class ReportController extends Controller
             $start = date('Y-01-01');
             $end   = date('Y-m-d');
         }
-    
+
         $pageTitle = __('Deposit Detail');
-    
+
         $filter = [
             'startDateRange' => $start,
             'endDateRange'   => $end,
@@ -5378,13 +5405,13 @@ class ReportController extends Controller
         $debugInfo = [
             'customers_count' => Customer::where('created_by', $ownerId)->count(),
             'vendors_count' => Vender::where('created_by', $ownerId)->count(),
-            'invoice_payments_count' => InvoicePayment::whereHas('invoice', function($q) use ($ownerId) {
+            'invoice_payments_count' => InvoicePayment::whereHas('invoice', function ($q) use ($ownerId) {
                 $q->where('created_by', $ownerId);
             })->count(),
             'revenues_count' => Revenue::where('created_by', $ownerId)->count(),
             'sample_customers' => Customer::where('created_by', $ownerId)->limit(3)->pluck('name'),
         ];
-    
+
         // Debug: Log request details
         \Log::info('DepositDetail Controller Debug', [
             'user_id' => $user->id,
@@ -5398,19 +5425,19 @@ class ReportController extends Controller
             'request_params' => $request->all(),
             'debug_info' => $debugInfo
         ]);
-        
+
         // Pass filters to the DataTable ajax so query() can read request('...')
         $dataTable = $dataTable->with([
             'start_date' => $start,
             'end_date'   => $end,
         ]);
-    
+
         // Make ownership available to the DT via request() too
         request()->merge([
             'owner_id'    => $ownerId,
-            'owner_column'=> $column,
+            'owner_column' => $column,
         ]);
-    
+
         return $dataTable->render(
             'report.depositDetail',
             compact('pageTitle', 'filter', 'customers', 'vendors')
@@ -5969,49 +5996,54 @@ class ReportController extends Controller
      * This report shows the total sales of taxable products and services
      * with a breakdown by product/service name.
      */
-public function taxableSalesSummary(TaxableSalesSummaryDataTable $dataTable, Request $request)
-{
-    if (!\Auth::user()->can('manage product & service')) {
-        return redirect()->back()->with('error', __('Permission denied.'));
+    public function taxableSalesSummary(TaxableSalesSummaryDataTable $dataTable, Request $request)
+    {
+        if (!\Auth::user()->can('manage product & service')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+
+        $user    = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+        $pageTitle = __('Taxable Sales Summary');
+
+        $customers = Customer::where($column, $ownerId)
+            ->where('is_active', 1)
+            ->whereNotNull('name')
+            ->orderBy('name')
+            ->pluck('name')
+            ->unique()
+            ->values();
+
+        $categories = ProductServiceCategory::where($column, $ownerId)
+            ->where('type', 'product & service')
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->prepend(__('All Categories'), '');
+
+        $types = array_merge(['' => __('All Types')], ProductService::$types);
+
+        $filter = [
+            'selectedCustomerName' => $request->get('customer_name', ''),
+            'selectedCategory'     => $request->get('category', ''),
+            'selectedType'         => $request->get('type', ''),
+            'selectedProductName'  => $request->get('product_name', ''),
+            'reportPeriod'         => $request->get('report_period', 'all_dates'),
+            'startDateRange'       => $request->get('start_date', ''),
+            'endDateRange'         => $request->get('end_date', ''),
+            'accountingMethod'     => $request->get('accounting_method', 'accrual'),
+        ];
+
+        return $dataTable->render('report.taxable_sales_summary', compact(
+            'pageTitle',
+            'customers',
+            'categories',
+            'types',
+            'user',
+            'filter'
+        ));
     }
-
-    $user    = \Auth::user();
-    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-    $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
-
-    $pageTitle = __('Taxable Sales Summary');
-
-    $customers = Customer::where($column, $ownerId)
-        ->where('is_active', 1)
-        ->whereNotNull('name')
-        ->orderBy('name')
-        ->pluck('name')
-        ->unique()
-        ->values();
-
-    $categories = ProductServiceCategory::where($column, $ownerId)
-        ->where('type', 'product & service')
-        ->orderBy('name')
-        ->pluck('name', 'id')
-        ->prepend(__('All Categories'), '');
-
-    $types = array_merge(['' => __('All Types')], ProductService::$types);
-
-    $filter = [
-        'selectedCustomerName' => $request->get('customer_name', ''),
-        'selectedCategory'     => $request->get('category', ''),
-        'selectedType'         => $request->get('type', ''),
-        'selectedProductName'  => $request->get('product_name', ''),
-        'reportPeriod'         => $request->get('report_period', 'all_dates'),
-        'startDateRange'       => $request->get('start_date', ''),
-        'endDateRange'         => $request->get('end_date', ''),
-        'accountingMethod'     => $request->get('accounting_method', 'accrual'),
-    ];
-
-    return $dataTable->render('report.taxable_sales_summary', compact(
-        'pageTitle', 'customers', 'categories', 'types', 'user', 'filter'
-    ));
-}
 
     /**
      * Taxable Sales Summary Report
@@ -6019,47 +6051,52 @@ public function taxableSalesSummary(TaxableSalesSummaryDataTable $dataTable, Req
      * This report shows the total sales of taxable products and services
      * with a breakdown by product/service name.
      */
-public function taxableSalesDetail(TaxableSalesDetailDataTable $dataTable, Request $request)
-{
-    if (!\Auth::user()->can('manage product & service')) {
-        return redirect()->back()->with('error', __('Permission denied.'));
+    public function taxableSalesDetail(TaxableSalesDetailDataTable $dataTable, Request $request)
+    {
+        if (!\Auth::user()->can('manage product & service')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+
+        $user    = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+        $pageTitle = __('Taxable Sales Detail');
+
+        $customers = Customer::where($column, $ownerId)
+            ->where('is_active', 1)
+            ->whereNotNull('name')
+            ->orderBy('name')
+            ->pluck('name')
+            ->unique()
+            ->values();
+
+        $categories = ProductServiceCategory::where($column, $ownerId)
+            ->where('type', 'product & service')
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->prepend(__('All Categories'), '');
+
+        $types = array_merge(['' => __('All Types')], ProductService::$types);
+
+        $filter = [
+            'selectedCustomerName' => $request->get('customer_name', ''),
+            'selectedCategory'     => $request->get('category', ''),
+            'selectedType'         => $request->get('type', ''),
+            'selectedProductName'  => $request->get('product_name', ''),
+            'reportPeriod'         => $request->get('report_period', 'all_dates'),
+            'startDateRange'       => $request->get('start_date', ''),
+            'endDateRange'         => $request->get('end_date', ''),
+            'accountingMethod'     => $request->get('accounting_method', 'accrual'),
+        ];
+
+        return $dataTable->render('report.taxable_sales_detail', compact(
+            'pageTitle',
+            'customers',
+            'categories',
+            'types',
+            'user',
+            'filter'
+        ));
     }
-
-    $user    = \Auth::user();
-    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-    $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
-
-    $pageTitle = __('Taxable Sales Detail');
-
-    $customers = Customer::where($column, $ownerId)
-        ->where('is_active', 1)
-        ->whereNotNull('name')
-        ->orderBy('name')
-        ->pluck('name')
-        ->unique()
-        ->values();
-
-    $categories = ProductServiceCategory::where($column, $ownerId)
-        ->where('type', 'product & service')
-        ->orderBy('name')
-        ->pluck('name', 'id')
-        ->prepend(__('All Categories'), '');
-
-    $types = array_merge(['' => __('All Types')], ProductService::$types);
-
-    $filter = [
-        'selectedCustomerName' => $request->get('customer_name', ''),
-        'selectedCategory'     => $request->get('category', ''),
-        'selectedType'         => $request->get('type', ''),
-        'selectedProductName'  => $request->get('product_name', ''),
-        'reportPeriod'         => $request->get('report_period', 'all_dates'),
-        'startDateRange'       => $request->get('start_date', ''),
-        'endDateRange'         => $request->get('end_date', ''),
-        'accountingMethod'     => $request->get('accounting_method', 'accrual'),
-    ];
-
-    return $dataTable->render('report.taxable_sales_detail', compact(
-        'pageTitle', 'customers', 'categories', 'types', 'user', 'filter'
-    ));
-}
 }

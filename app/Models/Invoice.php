@@ -15,7 +15,26 @@ class Invoice extends Model
         'status',
         'category_id',
         'created_by',
+                'is_recurring',
+        'recurring_repeat',
+        'recurring_every_n',
+        'recurring_end_type',
+        'recurring_start_date',
+        'recurring_end_date',
+        'next_run_at',
+        'recurring_parent_id',
     ];
+
+    
+    public function parent()
+    {
+        return $this->belongsTo(self::class, 'recurring_parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(self::class, 'recurring_parent_id');
+    }
 
     public static $statues = [
         'Draft', // 0
