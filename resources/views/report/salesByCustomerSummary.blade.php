@@ -555,13 +555,156 @@
                 <span class="last-updated">Last updated just now</span>
                 <div class="actions">
                     <button class="btn btn-icon" title="Refresh" id="btn-refresh"><i class="fa fa-sync"></i></button>
-                    <button class="btn btn-icon" title="Print" id="btn-print"><i class="fa fa-print"></i></button>
+                    <button class="btn btn-icon"
+                        onclick="exportDataTable('sales-by-customer-table', '{{ __('Sales by Customer Summary') }}', 'print')"><i
+                            class="fa fa-print"></i></button>
                     <button class="btn btn-icon" title="Export" id="btn-export"><i
                             class="fa fa-external-link-alt"></i></button>
                     <button class="btn btn-success btn-save" id="btn-save">Save As</button>
                 </div>
             </div>
         </div>
+
+        <!-- Bootstrap Modal -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content p-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Choose Export Format</h5> <button type="button" class="btn-close"
+                            data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center row">
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('sales-by-customer-table', '{{ __('Sales by Customer Summary') }}')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="excel">Export to
+                                Excel</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button
+                                onclick="exportDataTable('sales-by-customer-table', '{{ __('Sales by Customer Summary') }}', 'pdf')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="pdf">Export to
+                                PDF</button>
+                        </div>
+                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Show modal on export button click
+            $('.btn-icon[title="Export"]').on('click', function() {
+                $('#exportModal').modal('show');
+            });
+
+            // Handle export actions
+            $('#exportModal button[data-action]').on('click', function() {
+                // Hide modal after action
+                $('#exportModal').modal('hide');
+            });
+        </script>
+
+        <script>
+            let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            {{-- console.log([window.Header, window.footerAlignment]) --}}
+
+            function exportDataTable(tableId, pageTitle, format = 'excel') {
+                let table = $('#' + tableId).DataTable();
+
+                // Only get visible columns (skip auto-index)
+                let columns = [];
+                $('#' + tableId + ' thead th:visible').each(function() {
+                    columns.push($(this).text().trim());
+                });
+
+                // Get visible data rows
+                let data = [];
+
+                const getRealtimeTableData = () => {
+
+                    let data = [];
+
+
+                    table.rows({
+                        search: 'applied'
+                    }).every(function() {
+                        let rowData = this.data();
+
+                        if (typeof rowData === 'object') {
+                            // Only keep values for visible columns
+                            let rowArray = [];
+                            table.columns(':visible').every(function(colIdx) {
+                                let val = rowData[this.dataSrc()] ?? '-';
+                                rowArray.push(val);
+                            });
+                            rowData = rowArray;
+                        }
+                        data.push(rowData);
+                    });
+
+                    return data
+
+                }
+
+                // Get visible data rows (rendered DOM text, not raw data)
+                $('#' + tableId + ' tbody tr:visible').each(function() {
+                    let rowArray = [];
+                    $(this).find('td:visible').each(function() {
+                        rowArray.push($(this).text().trim());
+                    });
+                    data.push(rowArray);
+                });
+
+
+
+                // Send to universal export route
+                $.ajax({
+                    url: '{{ route('export.datatable') }}',
+                    method: 'POST',
+                    data: {
+                        columns: columns,
+                        data: data,
+                        pageTitle: pageTitle,
+                        ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
+                            .textContent : "",
+                        HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
+                            .footerAlignment
+                        ],
+                        format: format,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function(blob, status, xhr) {
+                        let filename = xhr.getResponseHeader('Content-Disposition')
+                            .split('filename=')[1]
+                            .replace(/"/g, ''); //"
+
+                        if (format === "print") {
+                            let fileURL = URL.createObjectURL(blob);
+                            let printWindow = window.open(fileURL);
+                            printWindow.onload = function() {
+                                printWindow.focus();
+                                printWindow.print();
+                            };
+                        } else {
+                            let link = document.createElement('a');
+                            link.href = window.URL.createObjectURL(blob);
+                            link.download = filename;
+                            link.click();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Export failed:', xhr.responseText);
+                        alert('Export failed! Check console.');
+                    }
+                });
+            }
+        </script>
 
         <!-- Controls -->
         <div class="controls-bar">
@@ -599,7 +742,8 @@
                     </div>
 
                     <!-- View options button sits here -->
-                    <button class="btn btn-qb-option mt-4" style="border-left: 2px solid #d1d5db" id="view-options-btn"><i class="fa fa-eye"></i> View options</button>
+                    <button class="btn btn-qb-option mt-4" style="border-left: 2px solid #d1d5db" id="view-options-btn"><i
+                            class="fa fa-eye"></i> View options</button>
                 </div>
 
                 <div class="right-controls mt-4">
@@ -872,11 +1016,11 @@
             });
 
             /* ===== Header actions ===== */
-            $('#btn-print').on('click', () => window.print());
-            $('#btn-export').on('click', () => alert('Export action triggered'));
+            // $('#btn-print').on('click', () => window.print());
+            // $('#btn-export').on('click', () => alert('Export action triggered'));
             $('#btn-save').on('click', function() {
                 const name = prompt('Enter report name:', '{{ $pageTitle }} - ' + new Date()
-                .toISOString().slice(0, 10));
+                    .toISOString().slice(0, 10));
                 if (name) alert('Report "' + name + '" would be saved with current settings.');
             });
             $('#btn-refresh').on('click', function() {

@@ -9,7 +9,9 @@
                 <span class="last-updated">Last updated 8 minutes ago</span>
                 <div class="actions">
                     <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
-                    <button class="btn btn-icon" title="Print"><i class="fa fa-print"></i></button>
+                    <button class="btn btn-icon"
+                        onclick="exportDataTable('product-service-table', '{{ __('Product/Service List') }}', 'print')"><i
+                            class="fa fa-print"></i></button>
                     <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
                     <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
                     <button class="btn btn-success btn-save">Save As</button>
@@ -17,12 +19,154 @@
             </div>
         </div>
 
+        <!-- Bootstrap Modal -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content p-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Choose Export Format</h5> <button type="button" class="btn-close"
+                            data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center row">
+                        <div class="col-md-6">
+                            <button
+                                onclick="exportDataTable('product-service-table', '{{ __('Product/Service List') }}')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="excel">Export to
+                                Excel</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button
+                                onclick="exportDataTable('product-service-table', '{{ __('Product/Service List') }}', 'pdf')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="pdf">Export to
+                                PDF</button>
+                        </div>
+                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Show modal on export button click
+            $('.btn-icon[title="Export"]').on('click', function() {
+                $('#exportModal').modal('show');
+            });
+
+            // Handle export actions
+            $('#exportModal button[data-action]').on('click', function() {
+                // Hide modal after action
+                $('#exportModal').modal('hide');
+            });
+        </script>
+
+        <script>
+            let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            {{-- console.log([window.Header, window.footerAlignment]) --}}
+
+            function exportDataTable(tableId, pageTitle, format = 'excel') {
+                let table = $('#' + tableId).DataTable();
+
+                // Only get visible columns (skip auto-index)
+                let columns = [];
+                $('#' + tableId + ' thead th:visible').each(function() {
+                    columns.push($(this).text().trim());
+                });
+
+                // Get visible data rows
+                let data = [];
+
+                const getRealtimeTableData = () => {
+
+                    let data = [];
+
+
+                    table.rows({
+                        search: 'applied'
+                    }).every(function() {
+                        let rowData = this.data();
+
+                        if (typeof rowData === 'object') {
+                            // Only keep values for visible columns
+                            let rowArray = [];
+                            table.columns(':visible').every(function(colIdx) {
+                                let val = rowData[this.dataSrc()] ?? '-';
+                                rowArray.push(val);
+                            });
+                            rowData = rowArray;
+                        }
+                        data.push(rowData);
+                    });
+
+                    return data
+
+                }
+
+                // Get visible data rows (rendered DOM text, not raw data)
+                $('#' + tableId + ' tbody tr:visible').each(function() {
+                    let rowArray = [];
+                    $(this).find('td:visible').each(function() {
+                        rowArray.push($(this).text().trim());
+                    });
+                    data.push(rowArray);
+                });
+
+
+
+                // Send to universal export route
+                $.ajax({
+                    url: '{{ route('export.datatable') }}',
+                    method: 'POST',
+                    data: {
+                        columns: columns,
+                        data: data,
+                        pageTitle: pageTitle,
+                        ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
+                            .textContent : "",
+                        HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
+                            .footerAlignment
+                        ],
+                        format: format,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function(blob, status, xhr) {
+                        let filename = xhr.getResponseHeader('Content-Disposition')
+                            .split('filename=')[1]
+                            .replace(/"/g, ''); //"
+
+                        if (format === "print") {
+                            let fileURL = URL.createObjectURL(blob);
+                            let printWindow = window.open(fileURL);
+                            printWindow.onload = function() {
+                                printWindow.focus();
+                                printWindow.print();
+                            };
+                        } else {
+                            let link = document.createElement('a');
+                            link.href = window.URL.createObjectURL(blob);
+                            link.download = filename;
+                            link.click();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Export failed:', xhr.responseText);
+                        alert('Export failed! Check console.');
+                    }
+                });
+            }
+        </script>
+
         <!-- Filter Controls -->
         <div class="filter-controls">
             <div class="filter-row">
                 <div class="filter-group row mb-2 align-items-end">
 
-                    
+
                     <div class="filter-item col-lg-8 col-md-8 mt-4">
                         <button class="btn btn-view-options" id="view-options-btn"
                             style="border: none !important; width: 20% !important; border-radius: 0px !important; ">
@@ -225,14 +369,14 @@
                     <label class="filter-label">Category</label>
                     <select id="filter-category-modal" class="form-control">
                         <option value="">All Categories</option>
-                        @if(isset($categories))
-                            @foreach($categories as $category)
+                        @if (isset($categories))
+                            @foreach ($categories as $category)
                                 <option value="{{ $category->id }}">{{ $category->name }}</option>
                             @endforeach
                         @endif
                     </select>
                 </div>
-                
+
                 <div class="filter-item">
                     <label class="filter-label">Type</label>
                     <select id="filter-type-modal" class="form-control">
@@ -911,16 +1055,17 @@
             }
 
             // Handle filter changes
-            $('#filter-category, #filter-type, #filter-category-modal, #filter-type-modal').on('change', function() {
-                // Sync filter values between controls
-                if ($(this).attr('id').includes('modal')) {
-                    const baseId = $(this).attr('id').replace('-modal', '');
-                    $('#' + baseId).val($(this).val());
-                } else {
-                    $('#' + $(this).attr('id') + '-modal').val($(this).val());
-                }
-                refreshData();
-            });
+            $('#filter-category, #filter-type, #filter-category-modal, #filter-type-modal').on('change',
+                function() {
+                    // Sync filter values between controls
+                    if ($(this).attr('id').includes('modal')) {
+                        const baseId = $(this).attr('id').replace('-modal', '');
+                        $('#' + baseId).val($(this).val());
+                    } else {
+                        $('#' + $(this).attr('id') + '-modal').val($(this).val());
+                    }
+                    refreshData();
+                });
 
             // Setup DataTable ajax parameters
             $('#product-service-table').on('preXhr.dt', function(e, settings, data) {
@@ -1159,12 +1304,13 @@
                         savedAt: new Date().toISOString()
                     };
 
-                    localStorage.setItem('saved-product-service-report-' + Date.now(), JSON.stringify(settings));
+                    localStorage.setItem('saved-product-service-report-' + Date.now(), JSON.stringify(
+                        settings));
                 }
             });
 
             // Export functionality
-            $('.btn-icon[title="Export"]').on('click', function() {
+            /*$('.btn-icon[title="Export"]').on('click', function() {
                 // Create export menu
                 const exportOptions = [{
                         text: 'Export to Excel',
@@ -1196,7 +1342,7 @@
                     default:
                         alert('Invalid option');
                 }
-            });
+            });*/
 
             // View options functionality
             $('#view-options-btn').on('click', function() {
@@ -1244,14 +1390,17 @@
 
                 // Borders
                 if ($('#opt-borders').prop('checked')) {
-                    customCSS += '.product-service-table th, .product-service-table td { border: 1px solid #e5e7eb; }';
+                    customCSS +=
+                        '.product-service-table th, .product-service-table td { border: 1px solid #e5e7eb; }';
                 } else {
-                    customCSS += '.product-service-table th, .product-service-table td { border: none; border-bottom: 1px solid #f3f4f6; }';
+                    customCSS +=
+                        '.product-service-table th, .product-service-table td { border: none; border-bottom: 1px solid #f3f4f6; }';
                 }
 
                 // Text wrapping
                 if ($('#opt-wrap').prop('checked')) {
-                    customCSS += '.product-service-table th, .product-service-table td { white-space: normal; word-wrap: break-word; }';
+                    customCSS +=
+                        '.product-service-table th, .product-service-table td { white-space: normal; word-wrap: break-word; }';
                 } else {
                     customCSS += '.product-service-table th, .product-service-table td { white-space: nowrap; }';
                 }
@@ -1270,7 +1419,9 @@
 
                 // Font size
                 const fontSize = $('#font-size').val();
-                customCSS += '.product-service-table, .product-service-table th, .product-service-table td { font-size: ' + fontSize + '; }';
+                customCSS +=
+                    '.product-service-table, .product-service-table th, .product-service-table td { font-size: ' +
+                    fontSize + '; }';
 
                 customCSS += '</style>';
                 $('head').append(customCSS);
