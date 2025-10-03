@@ -68,53 +68,53 @@
 @section('content')
     {{-- tabs --}}
     @include('transaction.transactions-tabs')
-    <div class="row justify-content-center">
-        
-        <div class="row card">
-            {{-- Chart of Account Date Filter Dropdown --}}
-            <div class="dropdown card-header">
-                <button class="btn btn-outline-primary dropdown-toggle" type="button" id="chartAccountDateFilterDropdown"
-                    data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="ti ti-calendar"></i> {{ __('Date Filter') }}
-                </button>
-                <div class="dropdown-menu p-3" style="min-width: 350px;">
-                    <div class="card shadow-none border-0">
-                        <div class="card-body p-0">
-                            {{ Form::open(['route' => ['chart-of-account.index'], 'method' => 'GET', 'id' => 'report_bill_summary']) }}
-                            <div class="row">
 
-                                {{-- Start Date --}}
-                                <div class="col-12 mb-3">
-                                    {{ Form::label('start_date', __('Start Date'), ['class' => 'form-label']) }}
-                                    {{ Form::date('start_date', $filter['startDateRange'], ['class' => 'form-control']) }}
-                                </div>
+    {{-- Chart of Account Date Filter Dropdown --}}
+    <div class="dropdown card-header mt-4 mb-2">
+        <button class="btn btn-outline-primary dropdown-toggle" type="button" id="chartAccountDateFilterDropdown"
+            data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="ti ti-calendar"></i> {{ __('Date Filter') }}
+        </button>
+        <div class="dropdown-menu p-3" style="min-width: 350px;">
+            <div class="card shadow-none border-0">
+                <div class="card-body p-0">
+                    {{ Form::open(['route' => ['chart-of-account.index'], 'method' => 'GET', 'id' => 'report_bill_summary']) }}
+                    <div class="row">
 
-                                {{-- End Date --}}
-                                <div class="col-12 mb-3">
-                                    {{ Form::label('end_date', __('End Date'), ['class' => 'form-label']) }}
-                                    {{ Form::date('end_date', $filter['endDateRange'], ['class' => 'form-control']) }}
-                                </div>
-
-                                {{-- Buttons --}}
-                                <div class="col-12 d-flex justify-content-between">
-                                    <a href="{{ route('chart-of-account.index') }}"
-                                        class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip"
-                                        title="{{ __('Reset') }}">
-                                        <i class="ti ti-trash-off"></i> {{ __('Reset') }}
-                                    </a>
-
-                                    <button type="submit" class="btn btn-success btn-sm" data-bs-toggle="tooltip"
-                                        title="{{ __('Apply') }}">
-                                        <i class="ti ti-search"></i> {{ __('Apply') }}
-                                    </button>
-                                </div>
-
-                            </div>
-                            {{ Form::close() }}
+                        {{-- Start Date --}}
+                        <div class="col-12 mb-3">
+                            {{ Form::label('start_date', __('Start Date'), ['class' => 'form-label']) }}
+                            {{ Form::date('start_date', $filter['startDateRange'], ['class' => 'form-control']) }}
                         </div>
+
+                        {{-- End Date --}}
+                        <div class="col-12 mb-3">
+                            {{ Form::label('end_date', __('End Date'), ['class' => 'form-label']) }}
+                            {{ Form::date('end_date', $filter['endDateRange'], ['class' => 'form-control']) }}
+                        </div>
+
+                        {{-- Buttons --}}
+                        <div class="col-12 d-flex justify-content-between">
+                            <a href="{{ route('chart-of-account.index') }}" class="btn btn-outline-secondary btn-sm"
+                                data-bs-toggle="tooltip" title="{{ __('Reset') }}">
+                                <i class="ti ti-trash-off"></i> {{ __('Reset') }}
+                            </a>
+
+                            <button type="submit" class="btn btn-success btn-sm" data-bs-toggle="tooltip"
+                                title="{{ __('Apply') }}">
+                                <i class="ti ti-search"></i> {{ __('Apply') }}
+                            </button>
+                        </div>
+
                     </div>
+                    {{ Form::close() }}
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="row card">
             @foreach ($chartAccounts as $type => $accounts)
                 <div class="col-md-12">
                     <div class="card">

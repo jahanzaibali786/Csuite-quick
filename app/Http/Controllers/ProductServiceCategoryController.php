@@ -45,6 +45,7 @@ class ProductServiceCategoryController extends Controller
         }
     }
 
+
     public function store(Request $request)
     {
         if (!\Auth::user()->can('create constant category')) {
@@ -95,11 +96,16 @@ class ProductServiceCategoryController extends Controller
         }
 
         return redirect()->route('product-category.index')->with('success', __('Category successfully created.'));
+
     }
     public function show()
     {
         return redirect()->route('productservice.index');
     }
+
+
+    return redirect()->route('product-category.index')->with('success', __('Category successfully created.'));
+}
 
 
     public function edit($id)

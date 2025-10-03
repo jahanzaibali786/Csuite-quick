@@ -80,10 +80,10 @@ class ProposalController extends Controller
             $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
             $customFields    = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'proposal')->get();
             $proposal_number = \Auth::user()->proposalNumberFormat($this->proposalNumber());
-            $customers       = Customer::where($column, $ownerId)->get()->pluck('name', 'id');
-            $customers->prepend('Select Customer', '');
-            $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id');
-            $category->prepend('Select Category', '');
+            $customers       = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
+            $customers       = ['' => 'Select Customer'] + $customers + ['__add__' => '➕ Add new customer'];
+            $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
+            $category = ['' => 'Select Category'] + $category + ['__add__' => '➕ Add new category'];
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $product_services->prepend('--', '');
 
