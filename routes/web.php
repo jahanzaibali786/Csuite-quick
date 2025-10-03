@@ -693,7 +693,9 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('report/account-statement-report', [ReportController::class, 'accountStatement'])->name('report.account.statement');
             Route::get('balance-sheet-report/{view?}/{collapseview?}', [ReportController::class, 'balanceSheet'])->name('report.balance.sheet');
             Route::get('profit-loss-report/{view?}/{collapseView?}', [ReportController::class, 'profitLoss'])->name('report.profit.loss');
-
+            Route::get('profit-loss-by-month/{view?}/{collapseView?}', [VoucherController::class, 'profitLossByMonth'])->name('profit-loss-by-month');
+            Route::get('profit-loss-comparison/{view?}/{collapseView?}', [VoucherController::class, 'profitLossComparison'])->name('profit-loss-comparison');
+            Route::get('profit-loss-quaterly/{view?}/{collapseView?}', [VoucherController::class, 'profitLossQuaterly'])->name('profit-loss-quaterly');
             Route::get('ledger-report/{account?}', [ReportController::class, 'ledgerSummary'])->name('report.ledger');
             Route::get('general-ledger-list/{account?}/{account_id?}', [ReportController::class, 'general_ledger_list'])->name('report.general.ledger');
             Route::get('trial-balance-report/{view?}', [ReportController::class, 'trialBalanceSummary'])->name('trial.balance');
