@@ -706,6 +706,18 @@ class InvoiceController extends Controller
                     }
                 }
 
+                //Product Stock Report
+                // $type = 'invoice';
+                // $type_id = $invoice->id;
+                // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
+                // $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
+                // Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
+                if(Auth::user()->type == 'company')
+                {
+                    $this->createInvoiceJournalVoucher($invoice);
+                    $this->approveInvoice($invoice->id);
+                }
+
                 // Webhook
                 $module  = 'New Invoice';
                 $webhook = Utility::webhookSetting($module);
@@ -780,7 +792,7 @@ class InvoiceController extends Controller
             }
 
             // Check if in pending approval status
-            if ($invoice->status != 5) {
+            if ($invoice->status != 5 && $invoice->status != 0) {
                 return redirect()->back()->with('error', __('Invoice must be in pending approval status.'));
             }
 

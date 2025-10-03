@@ -727,7 +727,9 @@ Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary']
             Route::get('report/account-statement-report', [ReportController::class, 'accountStatement'])->name('report.account.statement');
             Route::get('balance-sheet-report/{view?}/{collapseview?}', [ReportController::class, 'balanceSheet'])->name('report.balance.sheet');
             Route::get('profit-loss-report/{view?}/{collapseView?}', [ReportController::class, 'profitLoss'])->name('report.profit.loss');
-
+            Route::get('profit-loss-by-month/{view?}/{collapseView?}', [VoucherController::class, 'profitLossByMonth'])->name('profit-loss-by-month');
+            Route::get('profit-loss-comparison/{view?}/{collapseView?}', [VoucherController::class, 'profitLossComparison'])->name('profit-loss-comparison');
+            Route::get('profit-loss-quaterly/{view?}/{collapseView?}', [VoucherController::class, 'profitLossQuaterly'])->name('profit-loss-quaterly');
             Route::get('ledger-report/{account?}', [ReportController::class, 'ledgerSummary'])->name('report.ledger');
             Route::get('general-ledger-list/{account?}/{account_id?}', [ReportController::class, 'general_ledger_list'])->name('report.general.ledger');
             Route::get('trial-balance-report/{view?}', [ReportController::class, 'trialBalanceSummary'])->name('trial.balance');
@@ -846,6 +848,8 @@ Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary']
     Route::get('balance-sheet-detail/export', [VoucherController::class, 'exportBalanceSheetDetail'])->name('balance-sheet-detail.export');
     Route::get('profit-loss-detail', [VoucherController::class, 'profitLossDetail'])->name('profit-loss-detail.index');
     Route::get('profit-loss-detail/export', [VoucherController::class, 'exportProfitLossDetail'])->name('profit-loss-detail.export');
+
+    Route::get('balance-sheet-comparison', [VoucherController::class, 'balanceSheetComparison'])->name('balance-sheet-comparison.index');
 
 
     // //Abdullah Reports (What owes you)

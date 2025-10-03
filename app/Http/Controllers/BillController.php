@@ -657,7 +657,11 @@ class BillController extends Controller
 
                 // DON'T create JV here - it will be created on approval
                 // $dataret = Utility::jr_exp_entry($data);
-
+                if(Auth::user()->type == 'company')
+                {
+                    $this->createBillJournalVoucher($bill);
+                    $this->approveBill($bill->id);
+                }
                 // Webhook
                 $module = 'New Bill';
                 $webhook = Utility::webhookSetting($module);

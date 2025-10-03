@@ -274,7 +274,36 @@ class VoucherController extends Controller
 
         return $dataTable->render('sync.profit_loss.index', $this->data);
     }
+    public function profitLossByMonth(\App\DataTables\ProfitLossByMonth $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Profit & Loss By Month';
 
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.profit_loss.by_month', $this->data);
+    }
+    public function profitLossComparison(\App\DataTables\ProfitLossComparisonDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Profit & Loss Comparison';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.profit_loss.comparison', $this->data);
+    }
+    public function profitLossQuaterly(\App\DataTables\ProfitLossQuaterlyDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Profit & Loss Quaterly';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.profit_loss.quaterly', $this->data);
+    }
     public function profitLossDetail(\App\DataTables\ProfitLossDetailDataTable $dataTable, Request $request)
     {
         $this->pageTitle = 'Profit and Loss - Detail';
@@ -698,6 +727,18 @@ class VoucherController extends Controller
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
         ]);
     }
+    public function balanceSheetComparison(\App\DataTables\BalanceSheetComparisonDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Balance Sheet - Comparison';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.balance-sheet-comparison.index', $this->data, [
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
 
     public function purchaselist(\App\DataTables\PurchaseList $dataTable, Request $request)
     {
@@ -879,6 +920,18 @@ class VoucherController extends Controller
             );
             return $exportPdf->download($filename . '.pdf');
         }
+
+        if ($format === 'print') {
+            $exportPdf = new \App\Exports\UniversalDataTableExportPdf(
+                $data,
+                $columns,
+                $pageTitle,
+                $ReportPeriod,
+                $HeaderFooterAlignment
+            );
+            return $exportPdf->stream($filename . '.pdf'); // open inline
+        }
+
 
         return ExcelFacade::download(
             $export,

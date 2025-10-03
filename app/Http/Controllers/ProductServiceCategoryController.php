@@ -45,51 +45,64 @@ class ProductServiceCategoryController extends Controller
         }
     }
 
-public function store(Request $request)
-{
-    if (!\Auth::user()->can('create constant category')) {
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['message' => __('Permission denied.')], 403);
+
+    public function store(Request $request)
+    {
+        if (!\Auth::user()->can('create constant category')) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => __('Permission denied.')], 403);
+            }
+            return redirect()->back()->with('error', __('Permission denied.'));
         }
-        return redirect()->back()->with('error', __('Permission denied.'));
-    }
 
-    $validator = \Validator::make($request->all(), [
-        'name'  => 'required|max:200',
-        'type'  => 'required',
-        'color' => 'required',
-    ]);
+        $validator = \Validator::make($request->all(), [
+            'name'  => 'required|max:200',
+            'type'  => 'required',
+            'color' => 'required',
+        ]);
 
-    if ($validator->fails()) {
+        if ($validator->fails()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message' => 'Validation error',
+                    'success' => false,
+                    'errors' => $validator->errors()->all(),
+                ], 422);
+            }
+            return redirect()->back()->with('error', $validator->getMessageBag()->first());
+        }
+
+
+        $category = new ProductServiceCategory();
+        $category->name = $request->name;
+        $category->color = $request->color;
+        $category->type = $request->type;
+        $category->chart_account_id = !empty($request->chart_account) ? $request->chart_account : 0;
+        $category->created_by = \Auth::user()->creatorId();
+        $category->owned_by   = \Auth::user()->ownedId();
+        $category->save();
+
+        Utility::makeActivityLog(\Auth::user()->id, 'Product service Category', $category->id, 'Create Product service Category', $category->name);
+
+        // JSON for AJAX; redirect for normal requests
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'message' => 'Validation error',
-                'errors'  => $validator->errors(),
-            ], 422);
+                'id'   => $category->id,
+                'name' => $category->name,
+                'success' => true,
+                'message' => __('Tax successfully created.'),
+                'data' => $category,
+            ], 201);
         }
-        return redirect()->back()->with('error', $validator->getMessageBag()->first());
+
+        return redirect()->route('product-category.index')->with('success', __('Category successfully created.'));
+
+    }
+    public function show()
+    {
+        return redirect()->route('productservice.index');
     }
 
-    $category = new ProductServiceCategory();
-    $category->name = $request->name;
-    $category->color = $request->color;
-    $category->type = $request->type;
-    $category->chart_account_id = !empty($request->chart_account) ? $request->chart_account : 0;
-    $category->created_by = \Auth::user()->creatorId();
-    $category->owned_by   = \Auth::user()->ownedId();
-    $category->save();
-
-    Utility::makeActivityLog(\Auth::user()->id, 'Product service Category', $category->id, 'Create Product service Category', $category->name);
-
-    // JSON for AJAX; redirect for normal requests
-    if ($request->ajax() || $request->wantsJson()) {
-        return response()->json([
-            'success' => true,
-            'id'   => $category->id,
-            'name' => $category->name,
-            'data' => $category,
-        ], 201);
-    }
 
     return redirect()->route('product-category.index')->with('success', __('Category successfully created.'));
 }

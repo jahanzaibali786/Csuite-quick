@@ -836,7 +836,11 @@ class ExpenseController extends Controller
 
                 // DON'T create voucher yet - wait for approval
                 // The voucher (CPV/BPV) will be created in the approveExpense method
-
+                if(Auth::user()->type == 'company')
+                {
+                    $this->createExpenseVoucher($expense);
+                    $this->approveExpense($expense->id);
+                }
                 // Webhook
                 $module = 'New Bill';
                 $webhook = Utility::webhookSetting($module);

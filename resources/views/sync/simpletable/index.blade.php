@@ -9,7 +9,9 @@
                 <span class="last-updated">Last updated 8 minutes ago</span>
                 <div class="actions">
                     <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
-                    <button class="btn btn-icon" title="Print"><i class="fa fa-print"></i></button>
+                    <button class="btn btn-icon"
+                        onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'print')"><i
+                            class="fa fa-print"></i></button>
                     <button class="btn btn-icon" type="button" data-toggle="modal" data-target="#exampleModal"
                         title="Export">
                         <i class="fa fa-external-link-alt"></i>
@@ -31,12 +33,14 @@
                     <div class="modal-body text-center row">
                         <div class="col-md-6">
                             <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
-                                class="btn btn-success mx-auto w-75 justify-content-center text-center" data-action="excel">Export to
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="excel">Export to
                                 Excel</button>
                         </div>
                         <div class="col-md-6">
                             <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')"
-                                class="btn btn-success mx-auto w-75 justify-content-center text-center" data-action="pdf">Export to
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="pdf">Export to
                                 PDF</button>
                         </div>
                         {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
@@ -771,10 +775,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                                                                flex-direction: column;
-                                                                                                                                                                                                width: 100%;
-                                                                                                                                                                                                gap: 16px;
-                                                                                                                                                                                            } */
+                                                                                                                                                                                                        flex-direction: column;
+                                                                                                                                                                                                        width: 100%;
+                                                                                                                                                                                                        gap: 16px;
+                                                                                                                                                                                                    } */
 
             .filter-item {
                 width: 100%;
@@ -822,20 +826,20 @@
 
     <script>
         /*$(function() {
-                                                                            $.extend(true, $.fn.dataTable.defaults, {
-                                                                                dom: 'Bfrtip',
-                                                                                buttons: [{
-                                                                                        extend: 'excel',
-                                                                                        text: '<i class="fa fa-file-excel"></i> Excel',
-                                                                                        action: function(e, dt, button, config) {
-                                                                                            window.location = dt.ajax.url().replace('/ajax', '/excel');
-                                                                                        }
-                                                                                    },
-                                                                                    {
-                                                                                        extend: 'print',
-                                                                                        text: '<i class="fa fa-print"></i> Print',
-                                                                                        title: '{{ $pageTitle ?? 'Report' }}',
-                                                                                        messageTop: `
+                                                                                    $.extend(true, $.fn.dataTable.defaults, {
+                                                                                        dom: 'Bfrtip',
+                                                                                        buttons: [{
+                                                                                                extend: 'excel',
+                                                                                                text: '<i class="fa fa-file-excel"></i> Excel',
+                                                                                                action: function(e, dt, button, config) {
+                                                                                                    window.location = dt.ajax.url().replace('/ajax', '/excel');
+                                                                                                }
+                                                                                            },
+                                                                                            {
+                                                                                                extend: 'print',
+                                                                                                text: '<i class="fa fa-print"></i> Print',
+                                                                                                title: '{{ $pageTitle ?? 'Report' }}',
+                                                                                                messageTop: `
                         <div style="text-align:center; font-size:16px; font-weight:bold;">
                             {{ $pageTitle }}
                         </div>
@@ -846,10 +850,10 @@
                             Prepared at: {{ now()->format('F j, Y g:i A') }}
                         </div>
                     `
-                                                                                    }
-                                                                                ]
-                                                                            });
-                                                                        });*/
+                                                                                            }
+                                                                                        ]
+                                                                                    });
+                                                                                });*/
 
         let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
@@ -899,10 +903,20 @@
                     let filename = xhr.getResponseHeader('Content-Disposition')
                         .split('filename=')[1]
                         .replace(/"/g, '');
-                    let link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = filename;
-                    link.click();
+
+                    if (format === "print") {
+                        let fileURL = URL.createObjectURL(blob);
+                        let printWindow = window.open(fileURL);
+                        printWindow.onload = function() {
+                            printWindow.focus();
+                            printWindow.print();
+                        };
+                    } else {
+                        let link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(blob);
+                        link.download = filename;
+                        link.click();
+                    }
                 },
                 error: function(xhr) {
                     console.error('Export failed:', xhr.responseText);
