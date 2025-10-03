@@ -880,6 +880,18 @@ class VoucherController extends Controller
             return $exportPdf->download($filename . '.pdf');
         }
 
+        if ($format === 'print') {
+            $exportPdf = new \App\Exports\UniversalDataTableExportPdf(
+                $data,
+                $columns,
+                $pageTitle,
+                $ReportPeriod,
+                $HeaderFooterAlignment
+            );
+            return $exportPdf->stream($filename . '.pdf'); // open inline
+        }
+
+
         return ExcelFacade::download(
             $export,
             $filename . '.xlsx',
