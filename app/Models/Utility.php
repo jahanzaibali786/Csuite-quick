@@ -6951,6 +6951,7 @@ class Utility extends Model
 
                 if($tax != 0){
                     $accounttax = Tax::where('id', $product->tax_id)->first();
+                    
                     $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
                     if(!$account_tax){
                         $types_t = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();

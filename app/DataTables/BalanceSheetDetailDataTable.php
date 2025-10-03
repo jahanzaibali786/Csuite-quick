@@ -156,9 +156,9 @@ class BalanceSheetDetailDataTable extends DataTable
             ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
             ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.type', '=', 'chart_of_account_types.id')
             ->where("journal_entries.{$this->owner}", $this->companyId)
-            ->where('journal_entries.date', '<=', $this->asOfDate)
+            ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate))) // Convert to date format for MySQL compatibility
             // ->where('journal_entries.status', 'draft')
-            ->whereIn('chart_of_account_types.name', ['Asset', 'Liability', 'Equity'])
+            ->whereIn('chart_of_account_types.name', ['Assets', 'Liabilities', 'Equity'])
             ->select([
                 'journal_entries.id as journal_id',
                 'journal_entries.date',
@@ -219,7 +219,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 // === SubType Total ===
                 $subTypeTotal = $subEntries->sum(function ($l) use ($subEntries) {
                     $accountType = $subEntries->first()->type_name;
-                    return in_array($accountType, ['Asset', 'Expense'])
+                    return in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
                         ? (($l->debit ?? 0) - ($l->credit ?? 0))
                         : (($l->credit ?? 0) - ($l->debit ?? 0));
                 });
@@ -236,7 +236,7 @@ class BalanceSheetDetailDataTable extends DataTable
             // === Type Total ===
             $typeTotal = $typeEntries->sum(function ($l) use ($typeEntries) {
                 $accountType = $typeEntries->first()->type_name;
-                return in_array($accountType, ['Asset', 'Expense'])
+                return in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
                     ? (($l->debit ?? 0) - ($l->credit ?? 0))
                     : (($l->credit ?? 0) - ($l->debit ?? 0));
             });
@@ -248,7 +248,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 'level' => 0,
             ]);
 
-            if ($typeName === 'Liability') {
+            if ($typeName === 'Liabilities') {
                 $totalLiabilities = $typeTotal;
             }
 
@@ -262,9 +262,9 @@ class BalanceSheetDetailDataTable extends DataTable
                     ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
                     ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.type', '=', 'chart_of_account_types.id')
                     ->where("journal_entries.{$this->owner}", $this->companyId)
-                    ->where('journal_entries.date', '<=', $this->asOfDate)
+                    ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate))) // Convert to date format for MySQL compatibility
                     // ->where('journal_entries.status', 'draft')
-                    ->whereIn('chart_of_account_types.name', ['Income', 'Expense'])
+                    ->whereIn('chart_of_account_types.name', ['Income', 'Expenses', 'Costs of Goods Sold'])
                     ->select([
                         'journal_entries.id as journal_id',
                         'journal_entries.date',
@@ -292,7 +292,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 $netProfit = $plEntries->sum(function ($l) {
                     if ($l->type_name === 'Income') {
                         return ($l->credit ?? 0) - ($l->debit ?? 0);
-                    } elseif ($l->type_name === 'Expense') {
+                    } elseif ($l->type_name === 'Expenses' || $l->type_name === 'Costs of Goods Sold') {
                         return -1 * (($l->debit ?? 0) - ($l->credit ?? 0));
                     }
                     return 0;
@@ -370,7 +370,7 @@ class BalanceSheetDetailDataTable extends DataTable
             foreach ($lines as $line) {
                 $accountType = $lines->first()->type_name;
 
-                if (in_array($accountType, ['Asset', 'Expense'])) {
+                if (in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])) {
                     $amount = (($line->debit ?? 0) - ($line->credit ?? 0));
                     $balance += $amount;
                 } else {

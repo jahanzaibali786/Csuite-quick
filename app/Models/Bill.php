@@ -18,11 +18,14 @@ class Bill extends Model
     ];
 
     public static $statues = [
-        'Draft',
-        'Sent',
-        'Unpaid',
-        'Partialy Paid',
-        'Paid',
+        'Draft', // 0
+        'Sent', // 1
+        'Unpaid', // 2
+        'Partialy Paid', // 3
+        'Paid', // 4
+        'Pending Approval', // 5
+        'Approved', // 6
+        'Rejected', // 7
     ];
 
     public function customer()

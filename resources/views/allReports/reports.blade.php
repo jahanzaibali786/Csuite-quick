@@ -362,12 +362,12 @@
                                                     'label' => 'Invoice list',
                                                 ],
                                                 [
-                                                    'route' => 'receivables.customer_balance_detail',
-                                                    'label' => 'Customer balance detail report',
+                                                    'route' => 'receivables.customer_balance',
+                                                    'label' => 'Customer balance summary',
                                                 ],
                                                 [
-                                                    'route' => 'receivables.customer_balance',
-                                                    'label' => 'Customer balance',
+                                                    'route' => 'receivables.customer_balance_detail',
+                                                    'label' => 'Customer balance detail report',
                                                 ],
                                             ];
                                         @endphp

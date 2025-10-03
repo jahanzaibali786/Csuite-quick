@@ -333,12 +333,21 @@ class VoucherController extends Controller
     public function generalJournal(\App\DataTables\GeneralJournalDataTable $dataTable, Request $request)
     {
         $this->pageTitle = 'General Journal';
+        $accountId = $request->get('account_id', 'all');
 
+        if (request()->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        $accounts = ChartOfAccount::get();
         if ($request->ajax()) {
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('accounting.general-journal.index', $this->data);
+        return $dataTable->render('sync.general-journal.index', $this->data, [
+            'accounts' => ChartOfAccount::get(),
+            'accountId' => $accountId,
+        ]);
     }
 
     public function exportGeneralJournal(Request $request)

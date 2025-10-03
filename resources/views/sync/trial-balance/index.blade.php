@@ -588,14 +588,15 @@
 
 @push('script-page')
     <!-- Required scripts -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {{-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> --}}
+    @include('sections.datatable_js')
 
     <!-- Enhanced Trial Balance JavaScript -->
     <script>
@@ -1177,5 +1178,225 @@
                $('.toggle-icon').css('transform', 'rotate(360deg)');
             }, 5000);
         });
+    </script>
+     <script>
+        let trialBalanceTable;
+        let expandedGroups = new Set(); // Track which groups are expanded
+
+        // Initialize DataTable
+        $(document).ready(function() {
+            trialBalanceTable = window.LaravelDataTables["trial-balance-table"];
+
+            // Initially collapse all detail rows
+            // initializeCollapsedState();
+            initializeExpandedState();
+        });
+
+        // Initialize collapsed state after table draw
+        $('#trial-balance-table').on('draw.dt', function() {
+            initializeExpandedState();
+            restoreExpandedState();
+        });
+
+        function initializeExpandedState() {
+            // Hide all child rows initially
+            $('#trial-balance-table tbody tr.child-row').removeClass('hidden-row');
+
+            $('.toggle-btn')
+                .addClass('expanded')
+                .removeClass('collapsed')
+                .css('transform', 'rotate(90deg)'); 
+            
+            //hide all debit and credit header
+            $('.debit-cell, .credit-cell').hide();
+        }
+
+
+        function restoreExpandedState() {
+            // Restore previously expanded groups
+            expandedGroups.forEach(function(groupId) {
+                expandGroup(groupId, false); // false = don't add to Set again
+            });
+        }
+
+        function expandGroup(groupId, updateSet = true) {
+            
+            const $toggleBtn = $(`.toggle-btn[data-target="${groupId}"]`);
+            const $childRows = $(`.parent-${groupId}`);            
+            // Show child rows with animation
+            $childRows.removeClass('hidden-row');
+            //remove display none style css
+            $childRows.css('display', 'table-row');
+            
+         
+            // Update toggle button state
+            $toggleBtn.removeClass('collapsed').addClass('expanded');
+            $toggleBtn.css('transform', 'rotate(90deg)'); // ▼
+
+            // Track expanded state
+            if (updateSet) {
+                expandedGroups.add(groupId);
+            }
+            $toggleBtn.closest('tr').find('.debit-cell, .credit-cell').hide();
+        }
+
+        function collapseGroup(groupId, updateSet = true) {
+            const $toggleBtn = $(`.toggle-btn[data-target="${groupId}"]`);
+            const $childRows = $(`.parent-${groupId}`);
+            // Hide child rows
+            $childRows.addClass('hidden-row');
+
+            // Update toggle button state
+            $toggleBtn.removeClass('expanded').addClass('collapsed');
+            $toggleBtn.css('transform', 'rotate(90deg)'); // ▶
+
+            // Remove from expanded state
+            if (updateSet) {
+                expandedGroups.delete(groupId);
+            }
+            $toggleBtn.closest('tr').find('.debit-cell, .credit-cell').show();
+        }
+
+        // Toggle group expansion on click
+        $(document).on('click', '.toggle-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const groupId = $(this).data('target');
+            const $row = $(this).closest('tr'); // current row
+            const rowData = $('#trial-balance-table').DataTable().row($row).data(); // row data
+            const isExpanded = $(this).hasClass('expanded');
+
+            if (!isExpanded) {
+                collapseGroup(groupId);
+                $row.find('.debit-cell, .credit-cell').show(); 
+            } else {
+                expandGroup(groupId);
+                $row.find('.debit-cell, .credit-cell').hide(); 
+            }
+        });
+
+
+
+        // Expand all groups
+        $('#expand-all').on('click', function() {
+            $('.toggle-btn').each(function() {
+                const groupId = $(this).data('target');
+                expandGroup(groupId);
+            });
+        });
+
+        // Collapse all groups
+        $('#collapse-all').on('click', function() {
+            $('.toggle-btn').each(function() {
+                const groupId = $(this).data('target');
+                collapseGroup(groupId);
+            });
+        });
+
+        const showTable = () => {
+            trialBalanceTable.draw(false);
+        }
+
+        // Trigger reload when dropdowns change
+        $('#filter-subtype, #filter-type').on('change', showTable);
+
+        
+        // Initialize default date range display
+        $('#date-range-display').text(
+            moment().startOf('year').format('MMM DD, YYYY') + ' - ' + moment().format('MMM DD, YYYY')
+        );
+
+        // Enhanced row hover effects
+        $(document).on('mouseenter', '#trial-balance-table tbody tr', function() {
+            $(this).addClass('table-hover-effect');
+        }).on('mouseleave', '#trial-balance-table tbody tr', function() {
+            $(this).removeClass('table-hover-effect');
+        });
+
+        // Double-click to toggle (alternative interaction)
+        $(document).on('dblclick', '.account-header', function() {
+            const $toggleBtn = $(this).find('.toggle-btn');
+            if ($toggleBtn.length) {
+                $toggleBtn.trigger('click');
+            }
+        });
+
+        // Keyboard navigation support
+        $(document).on('keydown', function(e) {            
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'e':
+                    case 'E':
+                        e.preventDefault();
+                        $('#expand-all').trigger('click');
+                        break;
+                    case 'c':
+                    case 'C':
+                        e.preventDefault();
+                        $('#collapse-all').trigger('click');
+                        break;
+                }
+            }
+        });
+
+        // Context menu for additional options (right-click)
+        $(document).on('contextmenu', '.account-header', function(e) {
+            e.preventDefault();
+            const $row = $(this);
+            const $toggleBtn = $row.find('.toggle-btn');
+            const groupId = $toggleBtn.data('target');
+            const isExpanded = $toggleBtn.hasClass('expanded');
+
+            // Simple context action - toggle expansion
+            if (isExpanded) {
+                collapseGroup(groupId);
+            } else {
+                expandGroup(groupId);
+            }
+        });
+
+        // Export functionality enhancement
+        $(document).on('click', '.dt-button', function() {
+            // Temporarily expand all groups for complete export
+            const wasCollapsed = [];
+            $('.toggle-btn.collapsed').each(function() {
+                const groupId = $(this).data('target');
+                wasCollapsed.push(groupId);
+                expandGroup(groupId, false);
+            });
+
+            // After a short delay, restore the previous state
+            setTimeout(function() {
+                wasCollapsed.forEach(function(groupId) {
+                    collapseGroup(groupId, false);
+                });
+            }, 1000);
+        });
+
+        // Responsive mobile handling
+        function handleMobileView() {
+            const isMobile = $(window).width() < 768;
+
+            if (isMobile) {
+                // On mobile, show more compact view
+                $('#trial-balance-table').addClass('mobile-view');
+
+                // Auto-collapse all on mobile for better performance
+                if ($('.toggle-btn.expanded').length > 2) {
+                    $('#collapse-all').trigger('click');
+                }
+            } else {
+                $('#trial-balance-table').removeClass('mobile-view');
+            }
+        }
+
+        // Handle window resize
+        $(window).on('resize', function() {
+            handleMobileView();
+        });
+
+        // Initial mobile check
+        handleMobileView();
     </script>
 @endpush
