@@ -211,6 +211,7 @@ Route::post('/plaid/exchange-public-token', 'App\Http\Controllers\PlaidControlle
 
 ///copy link
 Route::get('/customer/invoice/{id}/', [InvoiceController::class, 'invoiceLink'])->name('invoice.link.copy');
+Route::get('invoice/recurring-invoices', [InvoiceController::class, 'recurringInvoicesOrPayments'])->name('invoice.recurring-invoices');
 Route::get('/vender/bill/{id}/', [BillController::class, 'invoiceLink'])->name('bill.link.copy');
 Route::get('/vendor/purchase/{id}/', [PurchaseController::class, 'purchaseLink'])->name('purchase.link.copy');
 Route::get('/customer/proposal/{id}/', [ProposalController::class, 'invoiceLink'])->name('proposal.link.copy');
@@ -451,22 +452,22 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('productservice/estimates-by-customer', [ProductServiceController::class, 'estimatesByCustomer'])->name('productservice.estimatesByCustomer');
 
     Route::get('sales-Tax-Liability-Report', [ProductServiceController::class, 'SalesTaxLiabilityReport'])->name('SalesTaxLiabilityReport');
-
+    
     // Test route for estimates by customer report
-    Route::get('/test-estimates-query', function () {
+    Route::get('/test-estimates-query', function() {
         try {
             $user = Auth::user();
             if (!$user) {
                 return response()->json(['error' => 'Not authenticated'], 401);
             }
-
+            
             $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-
+            
             // Test the actual DataTable query
             $dataTable = new \App\DataTables\ProposalsByCustomerDataTable();
             $query = $dataTable->query(new \App\Models\Proposal());
             $results = $query->limit(5)->get();
-
+            
             return response()->json([
                 'status' => 'success',
                 'user' => $user->name,
@@ -475,7 +476,7 @@ Route::group(['middleware' => ['verified']], function () {
                 'query_class' => get_class($query),
                 'results' => $results->toArray()
             ]);
-
+            
         } catch (Exception $e) {
             return response()->json([
                 'error' => $e->getMessage(),
@@ -490,6 +491,39 @@ Route::group(['middleware' => ['verified']], function () {
     Route::post('empty-cart', [ProductServiceController::class, 'emptyCart'])->middleware(['auth', 'XSS']);
     Route::post('warehouse-empty-cart', [ProductServiceController::class, 'warehouseemptyCart'])->name('warehouse-empty-cart')->middleware(['auth', 'XSS']);
     Route::resource('productservice', ProductServiceController::class)->middleware(['auth', 'XSS', 'revalidate']);
+
+        //Product Stock
+    Route::resource('productstock', ProductStockController::class)->middleware(['auth', 'XSS']);
+
+    //Customer
+    Route::group(
+        [
+            'middleware' => [
+                'auth',
+                'XSS',
+                'revalidate',
+            ],
+        ],
+        function () {
+            Route::get('customer/{id}/show', [CustomerController::class, 'show'])->name('customer.show');
+            Route::resource('customer', CustomerController::class);
+        }
+    );
+
+    //Vendor
+    Route::group(
+        [
+            'middleware' => [
+                'auth',
+                'XSS',
+                'revalidate',
+            ],
+        ],
+        function () {
+            Route::get('vender/{id}/show', [VenderController::class, 'show'])->name('vender.show');
+            Route::resource('vender', VenderController::class);
+        }
+    );
 
     Route::group(
         [
@@ -683,10 +717,10 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('report/expense-summary', [ReportController::class, 'expenseSummary'])->name('report.expense.summary');
             Route::get('report/income-vs-expense-summary', [ReportController::class, 'incomeVsExpenseSummary'])->name('report.income.vs.expense.summary');
             Route::get('report/tax-summary', [ReportController::class, 'taxSummary'])->name('report.tax.summary');
-            Route::get('report/taxable-sales-summary', [ReportController::class, 'taxableSalesSummary'])->name('report.taxableSalesSummary');
-            Route::get('report/taxable-sales-detail', [ReportController::class, 'taxableSalesDetail'])->name('report.taxableSalesDetail');
-            //        Route::get('report/profit-loss-summary', [ReportController::class, 'profitLossSummary'])->name('report.profit.loss.summary');
-            Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary'])->name('report.invoice.summary');
+Route::get('report/taxable-sales-summary', [ReportController::class, 'taxableSalesSummary'])->name('report.taxableSalesSummary');
+Route::get('report/taxable-sales-detail', [ReportController::class, 'taxableSalesDetail'])->name('report.taxableSalesDetail');
+//        Route::get('report/profit-loss-summary', [ReportController::class, 'profitLossSummary'])->name('report.profit.loss.summary');
+Route::get('report/invoice-summary', [ReportController::class, 'invoiceSummary'])->name('report.invoice.summary');
             Route::get('report/bill-summary', [ReportController::class, 'billSummary'])->name('report.bill.summary');
             Route::get('report/product-stock-report', [ReportController::class, 'productStock'])->name('report.product.stock.report');
             Route::get('report/invoice-report', [ReportController::class, 'invoiceReport'])->name('report.invoice');
@@ -754,39 +788,6 @@ Route::group(['middleware' => ['verified']], function () {
     Route::resource('custom-field', CustomFieldController::class)->middleware(['auth', 'XSS', 'revalidate']);
 
     Route::post('chart-of-account/subtype', [ChartOfAccountController::class, 'getSubType'])->name('charofAccount.subType')->middleware(['auth', 'XSS', 'revalidate']);
-
-    //Product Stock
-    Route::resource('productstock', ProductStockController::class)->middleware(['auth', 'XSS']);
-
-    //Customer
-    Route::group(
-        [
-            'middleware' => [
-                'auth',
-                'XSS',
-                'revalidate',
-            ],
-        ],
-        function () {
-            Route::get('customer/{id}/show', [CustomerController::class, 'show'])->name('customer.show');
-            Route::resource('customer', CustomerController::class);
-        }
-    );
-
-    //Vendor
-    Route::group(
-        [
-            'middleware' => [
-                'auth',
-                'XSS',
-                'revalidate',
-            ],
-        ],
-        function () {
-            Route::get('vender/{id}/show', [VenderController::class, 'show'])->name('vender.show');
-            Route::resource('vender', VenderController::class);
-        }
-    );
 
     Route::group(
         [
@@ -1092,7 +1093,7 @@ Route::group(['middleware' => ['verified']], function () {
 
     // Notification
     Route::get('notifications', [NotificationController::class, 'getUserNotifications'])->name('get_notification');
-    Route::post('/has_Seen/{id}', [NotificationController::class, 'hasSeen'])->name('has_seen');
+    Route::post('has_Seen/{id}', [NotificationController::class, 'hasSeen'])->name('has_seen');
 
 
     // Hrm EmployeeController
@@ -1750,6 +1751,8 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('export/customer', [CustomerController::class, 'export'])->name('customer.export');
     Route::get('import/customer/file', [CustomerController::class, 'importFile'])->name('customer.file.import');
     Route::post('import/customer', [CustomerController::class, 'import'])->name('customer.import');
+    Route::post('customer/customer-contact-list', [CustomerController::class, 'customerContactList'])->name('customer.contact.list');
+    Route::post('customer/customer-contact-list-phone-numbers', [CustomerController::class, 'customerContactListPhoneNumbers'])->name('customer.contact.list.phone.numbers');
     Route::get('export/vender', [VenderController::class, 'export'])->name('vender.export');
     Route::get('import/vender/file', [VenderController::class, 'importFile'])->name('vender.file.import');
     Route::post('import/vender', [VenderController::class, 'import'])->name('vender.import');

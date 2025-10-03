@@ -1,5 +1,5 @@
-{{ Form::open(array('url' => 'product-category')) }}
-<div class="modal-body">
+{{ Form::open(array('url' => 'product-category', 'id' => 'categoryCreateForm')) }}
+<div class="modal-body" id="createCategoryModalBody">
     <div class="row">
         <div class="form-group col-md-12">
             {{ Form::label('name', __('Category Name'),['class'=>'form-label']) }}
@@ -7,7 +7,7 @@
         </div>
         <div class="form-group col-md-12 d-block">
             {{ Form::label('type', __('Category Type'),['class'=>'form-label']) }}
-            {{ Form::select('type',$types,null, array('class' => 'form-control select cattype ','required'=>'required')) }}
+            {{ Form::select('type',$types,null, array('class' => 'form-control select cattype ','required'=>'required', 'id' => 'type')) }}
         </div>
         <div class="form-group col-md-12 account d-none">
             {{Form::label('chart_account_id',__('Account'),['class'=>'form-label'])}}

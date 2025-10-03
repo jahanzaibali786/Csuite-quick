@@ -1,16 +1,15 @@
-
 @extends('layouts.admin')
 @section('page-title')
-    {{__('Expense Create')}}
+    {{ __('Expense Create') }}
 @endsection
 @section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{route('dashboard')}}">{{__('Dashboard')}}</a></li>
-    <li class="breadcrumb-item"><a href="{{route('expense.index')}}">{{__('Expense')}}</a></li>
-    <li class="breadcrumb-item">{{__('Expense Create')}}</li>
+    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('expense.index') }}">{{ __('Expense') }}</a></li>
+    <li class="breadcrumb-item">{{ __('Expense Create') }}</li>
 @endsection
 @push('script-page')
-    <script src="{{asset('js/jquery-ui.min.js')}}"></script>
-    <script src="{{asset('js/jquery.repeater.min.js')}}"></script>
+    <script src="{{ asset('js/jquery-ui.min.js') }}"></script>
+    <script src="{{ asset('js/jquery.repeater.min.js') }}"></script>
     <script src="{{ asset('js/jquery-searchbox.js') }}"></script>
     <script>
         var selector = "body";
@@ -23,7 +22,7 @@
                 defaultValues: {
                     'status': 1
                 },
-                show: function () {
+                show: function() {
                     $(this).slideDown();
                     var file_uploads = $(this).find('input.multi');
                     if (file_uploads.length) {
@@ -39,7 +38,7 @@
 
                     $('.select2').select2();
                 },
-                hide: function (deleteElement) {
+                hide: function(deleteElement) {
                     if (confirm('Are you sure you want to delete this element?')) {
                         $(this).slideUp(deleteElement);
                         $(this).remove();
@@ -54,7 +53,7 @@
                         $('.totalAmount').html(subTotal.toFixed(2));
                     }
                 },
-                ready: function (setIndexes) {
+                ready: function(setIndexes) {
                     $dragAndDrop.on('drop', setIndexes);
                 },
                 isFirstItemUndeletable: true
@@ -75,7 +74,7 @@
 
 
 
-        $(document).on('change', '.item', function () {
+        $(document).on('change', '.item', function() {
 
             var iteams_id = $(this).val();
             var url = $(this).data('url');
@@ -92,13 +91,14 @@
                     'product_id': iteams_id
                 },
                 cache: false,
-                success: function (data) {
+                success: function(data) {
                     var item = JSON.parse(data);
                     // console.log(item)
 
                     $(el.parent().parent().find('.quantity')).val(1);
                     $(el.parent().parent().find('.price')).val(item.product.purchase_price);
-                    $(el.parent().parent().parent().find('.pro_description')).val(item.product.description);
+                    $(el.parent().parent().parent().find('.pro_description')).val(item.product
+                        .description);
 
                     var taxes = '';
                     var tax = [];
@@ -108,12 +108,14 @@
                         taxes += '-';
                     } else {
                         for (var i = 0; i < item.taxes.length; i++) {
-                            taxes += '<span class="badge bg-primary mt-1 mr-2">' + item.taxes[i].name + ' ' + '(' + item.taxes[i].rate + '%)' + '</span>';
+                            taxes += '<span class="badge bg-primary mt-1 mr-2">' + item.taxes[i].name +
+                                ' ' + '(' + item.taxes[i].rate + '%)' + '</span>';
                             tax.push(item.taxes[i].id);
                             totalItemTaxRate += parseFloat(item.taxes[i].rate);
                         }
                     }
-                    var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (item.product.purchase_price * 1));
+                    var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (item.product
+                        .purchase_price * 1));
 
                     $(el.parent().parent().find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
                     $(el.parent().parent().find('.itemTaxRate')).val(totalItemTaxRate.toFixed(2));
@@ -133,11 +135,9 @@
 
                     var accountinputs = $(".accountamount");
                     var accountSubTotal = 0;
-                    for (var i = 0; i < accountinputs.length; i++)
-                    {
+                    for (var i = 0; i < accountinputs.length; i++) {
                         var currentInputValue = parseFloat(accountinputs[i].innerHTML);
-                        if (!isNaN(currentInputValue))
-                        {
+                        if (!isNaN(currentInputValue)) {
                             accountSubTotal += currentInputValue;
                         }
                     }
@@ -155,7 +155,8 @@
                     var itemTaxPriceInput = $('.itemTaxPrice');
                     for (var j = 0; j < itemTaxPriceInput.length; j++) {
                         totalItemTaxPrice += parseFloat(itemTaxPriceInput[j].value);
-                        $(el.parent().parent().find('.amount')).html(parseFloat(item.totalAmount)+parseFloat(itemTaxPriceInput[j].value));
+                        $(el.parent().parent().find('.amount')).html(parseFloat(item.totalAmount) +
+                            parseFloat(itemTaxPriceInput[j].value));
                     }
 
                     var totalItemDiscountPrice = 0;
@@ -166,12 +167,14 @@
                     }
 
 
-                    $('.subTotal').html((totalItemPrice+accountSubTotal).toFixed(2));
+                    $('.subTotal').html((totalItemPrice + accountSubTotal).toFixed(2));
                     $('.totalTax').html(totalItemTaxPrice.toFixed(2));
-                    $('.totalAmount').html((parseFloat(totalItemPrice) - parseFloat(totalItemDiscountPrice) + parseFloat(totalItemTaxPrice)).toFixed(2));
+                    $('.totalAmount').html((parseFloat(totalItemPrice) - parseFloat(
+                        totalItemDiscountPrice) + parseFloat(totalItemTaxPrice)).toFixed(2));
 
 
-                    var totalAmount= parseFloat(totalItemPrice) - parseFloat(totalItemDiscountPrice) + parseFloat(totalItemTaxPrice);
+                    var totalAmount = parseFloat(totalItemPrice) - parseFloat(totalItemDiscountPrice) +
+                        parseFloat(totalItemTaxPrice);
                     $('.totalAmount').val(totalAmount.toFixed(2));
 
 
@@ -181,16 +184,15 @@
             });
         });
 
-        $(document).on('keyup', '.quantity', function () {
+        $(document).on('keyup', '.quantity', function() {
             var quntityTotalTaxPrice = 0;
 
             var el = $(this).parent().parent().parent().parent();
             var quantity = $(this).val();
             var price = $(el.find('.price')).val();
             var discount = $(el.find('.discount')).val();
-            if(discount.length <= 0)
-            {
-                discount = 0 ;
+            if (discount.length <= 0) {
+                discount = 0;
             }
 
             var totalItemPrice = (quantity * price) - discount;
@@ -201,7 +203,7 @@
             var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
             $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
 
-            $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+            $(el.find('.amount')).html(parseFloat(itemTaxPrice) + parseFloat(amount));
 
             var totalItemTaxPrice = 0;
             var itemTaxPriceInput = $('.itemTaxPrice');
@@ -244,27 +246,26 @@
 
             $('.subTotal').html((sumAmount).toFixed(2));
             $('.totalTax').html(totalItemTaxPrice.toFixed(2));
-            $('.totalAmount').html((parseFloat(subTotal)+totalAccount).toFixed(2));
+            $('.totalAmount').html((parseFloat(subTotal) + totalAccount).toFixed(2));
 
-           //get hidden value of totalAmount
-            var totalAmount= (parseFloat(subTotal)+totalAccount);
+            //get hidden value of totalAmount
+            var totalAmount = (parseFloat(subTotal) + totalAccount);
             $('.totalAmount').val(totalAmount.toFixed(2));
 
 
 
         })
 
-        $(document).on('keyup change', '.price', function () {
+        $(document).on('keyup change', '.price', function() {
             var el = $(this).parent().parent().parent().parent();
             var price = $(this).val();
             var quantity = $(el.find('.quantity')).val();
 
             var discount = $(el.find('.discount')).val();
-            if(discount.length <= 0)
-            {
-                discount = 0 ;
+            if (discount.length <= 0) {
+                discount = 0;
             }
-            var totalItemPrice = (quantity * price)-discount;
+            var totalItemPrice = (quantity * price) - discount;
 
             var amount = (totalItemPrice);
 
@@ -273,7 +274,7 @@
             var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
             $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
 
-            $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+            $(el.find('.amount')).html(parseFloat(itemTaxPrice) + parseFloat(amount));
 
             var totalItemTaxPrice = 0;
             var itemTaxPriceInput = $('.itemTaxPrice');
@@ -312,23 +313,22 @@
             }
 
 
-            $('.subTotal').html((totalItemPrice+totalAccount).toFixed(2));
+            $('.subTotal').html((totalItemPrice + totalAccount).toFixed(2));
             $('.totalTax').html(totalItemTaxPrice.toFixed(2));
-            $('.totalAmount').html((parseFloat(subTotal)+totalAccount).toFixed(2));
+            $('.totalAmount').html((parseFloat(subTotal) + totalAccount).toFixed(2));
 
             //get hidden value of totalAmount
-            var totalAmount= (parseFloat(subTotal)+totalAccount);
+            var totalAmount = (parseFloat(subTotal) + totalAccount);
             $('.totalAmount').val(totalAmount.toFixed(2));
 
 
         })
 
-        $(document).on('keyup change', '.discount', function () {
+        $(document).on('keyup change', '.discount', function() {
             var el = $(this).parent().parent().parent();
             var discount = $(this).val();
-            if(discount.length <= 0)
-            {
-                discount = 0 ;
+            if (discount.length <= 0) {
+                discount = 0;
             }
 
             var price = $(el.find('.price')).val();
@@ -343,7 +343,7 @@
             var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
             $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
 
-            $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+            $(el.find('.amount')).html(parseFloat(itemTaxPrice) + parseFloat(amount));
 
             var totalItemTaxPrice = 0;
             var itemTaxPriceInput = $('.itemTaxPrice');
@@ -390,22 +390,22 @@
 
 
             // $('.subTotal').html(totalItemPrice.toFixed(2));
-            $('.subTotal').html((totalItemPrice+totalAccount).toFixed(2));
+            $('.subTotal').html((totalItemPrice + totalAccount).toFixed(2));
 
             $('.totalTax').html(totalItemTaxPrice.toFixed(2));
 
-            $('.totalAmount').html((parseFloat(subTotal)+totalAccount).toFixed(2));
+            $('.totalAmount').html((parseFloat(subTotal) + totalAccount).toFixed(2));
             $('.totalDiscount').html(totalItemDiscountPrice.toFixed(2));
 
 
             //get hidden value of totalAmount
-            var totalAmount= (parseFloat(subTotal)+totalAccount);
+            var totalAmount = (parseFloat(subTotal) + totalAccount);
             $('.totalAmount').val(totalAmount.toFixed(2));
 
 
         })
 
-        $(document).on('keyup change', '.accountAmount', function () {
+        $(document).on('keyup change', '.accountAmount', function() {
 
             var el1 = $(this).parent().parent().parent().parent();
             var el = $(this).parent().parent().parent().parent().parent();
@@ -414,16 +414,15 @@
             var priceDiv = $(el.find('.price'));
             var discountDiv = $(el.find('.discount'));
 
-            var itemSubTotal=0;
+            var itemSubTotal = 0;
             for (var p = 0; p < priceDiv.length; p++) {
-                var quantity=quantityDiv[p].value;
-                var price=priceDiv[p].value;
-                var discount=discountDiv[p].value;
-                if(discount.length <= 0)
-                {
-                    discount = 0 ;
+                var quantity = quantityDiv[p].value;
+                var price = priceDiv[p].value;
+                var discount = discountDiv[p].value;
+                if (discount.length <= 0) {
+                    discount = 0;
                 }
-                itemSubTotal += (quantity*price) - (discount);
+                itemSubTotal += (quantity * price) - (discount);
             }
 
             var totalItemTaxPrice = 0;
@@ -443,7 +442,7 @@
             var totalAccount = 0;
             var accountInput = $('.accountAmount');
             for (var j = 0; j < accountInput.length; j++) {
-                totalAccount += (parseFloat(accountInput[j].value) );
+                totalAccount += (parseFloat(accountInput[j].value));
             }
 
 
@@ -455,12 +454,12 @@
             }
 
 
-            $('.subTotal').text((totalAccount+itemSubTotal).toFixed(2));
+            $('.subTotal').text((totalAccount + itemSubTotal).toFixed(2));
             $('.totalAmount').text((parseFloat((subTotal + itemSubTotal) + (totalItemTaxPrice))).toFixed(2));
 
 
             //get hidden value of totalAmount
-            var totalAmount= (parseFloat((subTotal + itemSubTotal) + (totalItemTaxPrice)));
+            var totalAmount = (parseFloat((subTotal + itemSubTotal) + (totalItemTaxPrice)));
             $('.totalAmount').val(totalAmount.toFixed(2));
 
 
@@ -469,29 +468,25 @@
 
 
 
-        var id = '{{$Id}}';
+        var id = '{{ $Id }}';
         if (id > 0) {
             $('#vender').val(id).change();
         }
-
     </script>
     <script>
-        $(document).on('click', '[data-repeater-delete]', function () {
+        $(document).on('click', '[data-repeater-delete]', function() {
             $(".price").change();
             $(".discount").change();
         });
     </script>
-
-{{--  start for user select--}}
+    {{--  start for user select --}}
     <script>
-
-        $(document).ready(function()
-        {
-            $('input[name=type]:first').prop('checked',true);
+        $(document).ready(function() {
+            $('input[name=type]:first').prop('checked', true);
         });
 
 
-        $('input[name="type"]:radio').on('change', function (e) {
+        $('input[name="type"]:radio').on('change', function(e) {
             var type = $(this).val();
             if (type == 'employee') {
                 $('.employee').addClass('d-block');
@@ -500,16 +495,14 @@
                 $('.customer').removeClass('d-block');
                 $('.vendor').addClass('d-none');
                 $('.vendor').removeClass('d-block');
-            }
-            else if (type == 'customer') {
+            } else if (type == 'customer') {
                 $('.customer').addClass('d-block');
                 $('.customer').removeClass('d-none');
                 $('.employee').addClass('d-none');
                 $('.employee').removeClass('d-block');
                 $('.vendor').addClass('d-none');
                 $('.vendor').removeClass('d-block');
-            }
-            else {
+            } else {
                 $('.vendor').addClass('d-block');
                 $('.vendor').removeClass('d-none');
                 $('.employee').addClass('d-none');
@@ -521,7 +514,7 @@
 
         $('input[name="type"]:radio:checked').trigger('change');
 
-        $(document).on('change', '#employee', function () {
+        $(document).on('change', '#employee', function() {
 
             $('#employee_detail').removeClass('d-none');
             $('#employee_detail').addClass('d-block');
@@ -541,7 +534,7 @@
                     'id': cId
                 },
                 cache: false,
-                success: function (data) {
+                success: function(data) {
 
                     if (data != '') {
                         $('#employee_detail').html(data);
@@ -557,7 +550,7 @@
             });
         });
 
-        $(document).on('change', '#customer', function () {
+        $(document).on('change', '#customer', function() {
             $('#customer_detail').removeClass('d-none');
             $('#customer_detail').addClass('d-block');
             $('#customer-box').removeClass('d-block');
@@ -574,7 +567,7 @@
                     'id': id
                 },
                 cache: false,
-                success: function (data) {
+                success: function(data) {
 
                     if (data != '') {
                         $('#customer_detail').html(data);
@@ -588,7 +581,7 @@
             });
         });
 
-        $(document).on('change', '#vender', function () {
+        $(document).on('change', '#vender', function() {
             $('#vender_detail').removeClass('d-none');
             $('#vender_detail').addClass('d-block');
             $('#vender-box').removeClass('d-block');
@@ -606,7 +599,7 @@
                     'id': id
                 },
                 cache: false,
-                success: function (data) {
+                success: function(data) {
                     if (data != '') {
                         $('#vender_detail').html(data);
                     } else {
@@ -620,7 +613,7 @@
         });
 
 
-        $(document).on('click', '#remove', function () {
+        $(document).on('click', '#remove', function() {
             $('#vender-box').removeClass('d-none');
             $('#vender-box').addClass('d-block');
             $('#vender_detail').removeClass('d-block');
@@ -637,15 +630,126 @@
             $('#employee_detail').addClass('d-none');
 
         })
-
     </script>
+    {{--   end for user select --}}
+        <script>
+        $(document).ready(function() {
+            var currentSelect = null;
 
-{{--   end for user select--}}
+            function openAddNewModal($select) {
+                if ($select.val() !== '__add__') return;
+                $select.val(''); // reset dropdown
+                currentSelect = $select; // save reference
+                var url = $select.data('create-url');
+                var title = $select.data('create-title') || 'Create New';
 
+                // prevent duplicate modal
+                if ($('#globalAddNewModal').length) {
+                    $('#globalAddNewModal').modal('show');
+                    return;
+                }
+
+                var $modal = $(`
+            <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">${title}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">Loading...</div>
+                </div>
+              </div>
+            </div>
+        `);
+
+                $('body').append($modal);
+
+                $.get(url, function(html) {
+                    $modal.find('.modal-body').html(html);
+
+                    // z-index stacking
+                    var zIndex = 1070 + ($('.modal:visible').length * 10);
+                    $modal.css('z-index', zIndex);
+                    setTimeout(function() {
+                        $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                            'modal-stack');
+                    }, 0);
+
+                    $modal.modal('show');
+                });
+
+                $modal.on('hidden.bs.modal', function() {
+                    $modal.remove();
+                });
+            }
+
+            // Detect "Add New" selection
+            $(document).on('change', 'select', function() {
+                var $select = $(this);
+                if ($select.val() === '__add__') {
+                    openAddNewModal($select);
+                }
+            });
+
+            // AJAX submit for dynamic modal
+            $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+            e) {
+                e.preventDefault();
+                var $form = $(this);
+                var $modal = $form.closest('#globalAddNewModal');
+
+                // Find the select that triggered this modal
+                var $select = currentSelect;
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: $form.attr('method') || 'POST',
+                    data: $form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            // 🔹 Insert new option before the "Add New" of the same select
+                            var $addNewOption = $select.find('option[value="__add__"]').first();
+                            var $newOption = $('<option>', {
+                                value: response.data.id,
+                                text: response.data.name
+                            });
+
+                            if ($addNewOption.length) {
+                                $select.append($newOption);
+                                // $newOption.insertBefore($addNewOption);
+                            } else {
+                                $select.append($newOption);
+                            }
+
+                            $select.val(response.data.id).trigger('change');
+                            $modal.modal('hide');
+                        } else {
+                            alert(response.message || 'Something went wrong!');
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            var errors = xhr.responseJSON.errors;
+                            $form.find('.invalid-feedback').remove();
+                            $.each(errors, function(key, msgs) {
+                                $form.find('[name="' + key + '"]').after(
+                                    `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                                    );
+                            });
+                        } else {
+                            alert('Server error!');
+                        }
+                    }
+                });
+            });
+
+        });
+    </script>
 @endpush
 @section('content')
     <div class="row">
-        {{ Form::open(array('url' => 'expense','class'=>'w-100')) }}
+        {{ Form::open(['url' => 'expense', 'class' => 'w-100']) }}
         <div class="col-12">
             <input type="hidden" name="_token" id="token" value="{{ csrf_token() }}">
             <div class="card">
@@ -654,16 +758,19 @@
                         <div class="col-md-6">
                             <div class="col">
                                 <div class="form-check form-check-inline form-group">
-                                    <input type="radio" id="employee_radio" value="employee" name="type" class="form-check-input {{isset($_GET['type']) && $_GET['type']=='employee' ?'checked':'checked'}}" >
-                                    <label class="form-check-label" for="employee">{{__('Employee')}}</label>
+                                    <input type="radio" id="employee_radio" value="employee" name="type"
+                                        class="form-check-input {{ isset($_GET['type']) && $_GET['type'] == 'employee' ? 'checked' : 'checked' }}">
+                                    <label class="form-check-label" for="employee">{{ __('Employee') }}</label>
                                 </div>
                                 <div class="form-check form-check-inline form-group">
-                                    <input type="radio" id="customer_radio" value="customer" name="type" class="form-check-input" >
-                                    <label class="form-check-label" for="customer">{{__('Customer')}}</label>
+                                    <input type="radio" id="customer_radio" value="customer" name="type"
+                                        class="form-check-input">
+                                    <label class="form-check-label" for="customer">{{ __('Customer') }}</label>
                                 </div>
                                 <div class="form-check form-check-inline form-group">
-                                    <input type="radio" id="vendor_radio" value="vendor" name="type" class="form-check-input" >
-                                    <label class="form-check-label" for="vendor">{{__('Vendor')}}</label>
+                                    <input type="radio" id="vendor_radio" value="vendor" name="type"
+                                        class="form-check-input">
+                                    <label class="form-check-label" for="vendor">{{ __('Vendor') }}</label>
                                 </div>
                             </div>
 
@@ -677,41 +784,39 @@
                             </div>
                             <div class="col customer d-none">
                                 <div class="form-group" id="customer-box">
-                                    {{ Form::label('customer_id', __('Payee'),['class'=>'form-label']) }}
-                                    {{ Form::select('customer_id', $customers,null, array('class' => 'form-control select','id'=>'customer','data-url'=>route('expense.customer'))) }}
+                                    {{ Form::label('customer_id', __('Payee'), ['class' => 'form-label']) }}
+                                    {{ Form::select('customer_id', $customers, null, ['class' => 'form-control select', 'id' => 'customer', 'data-url' => route('expense.customer'), 'data-create-url' => route('customer.create'), 'data-create-title' => __('Create New Customer')]) }}
                                 </div>
                                 <div id="customer_detail" class="d-none">
                                 </div>
                             </div>
                             <div class="col vendor d-none">
                                 <div class="form-group" id="vender-box">
-                                    {{ Form::label('vender_id', __('Payee'),['class'=>'form-label']) }}
-                                    {{ Form::select('vender_id', $venders,$Id, array('class' => 'form-control select','id'=>'vender','data-url'=>route('expense.vender'))) }}
+                                    {{ Form::label('vender_id', __('Payee'), ['class' => 'form-label']) }}
+                                    {{ Form::select('vender_id', $venders, $Id, ['class' => 'form-control select', 'id' => 'vender', 'data-url' => route('expense.vender'), 'data-create-url' => route('vender.create'), 'data-create-title' => __('Create New Vendor')]) }}
                                 </div>
                                 <div id="vender_detail" class="d-none">
                                 </div>
                             </div>
                         </div>
-
-
                         <div class="col-md-6">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        {{ Form::label('payment_date', __('Payment Date'),['class'=>'form-label']) }}
-                                        {{Form::date('payment_date',null,array('class'=>'form-control','required'=>'required'))}}
+                                        {{ Form::label('payment_date', __('Payment Date'), ['class' => 'form-label']) }}
+                                        {{ Form::date('payment_date', null, ['class' => 'form-control', 'required' => 'required']) }}
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        {{ Form::label('category_id', __('Category'),['class'=>'form-label']) }}
-                                        {{ Form::select('category_id', $category,null, array('class' => 'form-control select')) }}
+                                        {{ Form::label('category_id', __('Category'), ['class' => 'form-label']) }}
+                                        {{ Form::select('category_id', $category, null, ['class' => 'form-control select', 'data-create-url' => route('product-category.create'), 'data-create-title' => __('Create New Category')]) }}
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        {{ Form::label('account_id', __('Account'),['class'=>'form-label']) }}
-                                        {{ Form::select('account_id',$accounts,null, array('class' => 'form-control ','required'=>'required')) }}
+                                        {{ Form::label('account_id', __('Account'), ['class' => 'form-label']) }}
+                                        {{ Form::select('account_id', $accounts, null, ['class' => 'form-control ', 'required' => 'required', 'data-create-url' => route('bank-account.create'), 'data-create-title' => __('Create New Account')]) }}
                                     </div>
                                 </div>
                             </div>
@@ -722,14 +827,15 @@
         </div>
 
         <div class="col-12">
-            <h5 class="d-inline-block mb-4">{{__('Product & Services')}}</h5>
+            <h5 class="d-inline-block mb-4">{{ __('Product & Services') }}</h5>
             <div class="card repeater">
                 <div class="item-section py-2">
                     <div class="row justify-content-between align-items-center">
                         <div class="col-md-12 d-flex align-items-center justify-content-between justify-content-md-end">
                             <div class="all-button-box me-2">
-                                <a href="#" data-repeater-create="" class="btn btn-primary" data-bs-toggle="modal" data-target="#add-bank">
-                                    <i class="ti ti-plus"></i> {{__('Add Item')}}
+                                <a href="#" data-repeater-create="" class="btn btn-primary" data-bs-toggle="modal"
+                                    data-target="#add-bank">
+                                    <i class="ti ti-plus"></i> {{ __('Add Item') }}
                                 </a>
                             </div>
                         </div>
@@ -739,131 +845,140 @@
                     <div class="table-responsive">
                         <table class="table mb-0" data-repeater-list="items" id="sortable-table">
                             <thead>
-                            <tr>
-                                <th width="20%">{{__('Items')}}</th>
-                                <th>{{__('Quantity')}}</th>
-                                <th>{{__('Price')}} </th>
-                                <th>{{__('Discount')}}</th>
-                                <th>{{__('Tax')}} (%)</th>
-                                <th class="text-end">{{__('Amount')}}
-                                    <br><small class="text-danger font-bold">{{__('after tax & discount')}}</small>
-                                </th>
-                                <th></th>
-                            </tr>
+                                <tr>
+                                    <th width="20%">{{ __('Items') }}</th>
+                                    <th>{{ __('Quantity') }}</th>
+                                    <th>{{ __('Price') }} </th>
+                                    <th>{{ __('Discount') }}</th>
+                                    <th>{{ __('Tax') }} (%)</th>
+                                    <th class="text-end">{{ __('Amount') }}
+                                        <br><small class="text-danger font-bold">{{ __('after tax & discount') }}</small>
+                                    </th>
+                                    <th></th>
+                                </tr>
                             </thead>
                             <tbody class="ui-sortable" data-repeater-item>
-                            <tr>
-                                <td width="25%" class="form-group pt-0">
-                                    {{ Form::select('item', $product_services,'', array('class' => 'form-control select2 item','data-url'=>route('expense.product'))) }}
-                                </td>
-                                <td>
-                                    <div class="form-group price-input input-group search-form">
-                                        {{ Form::text('quantity','', array('class' => 'form-control quantity','placeholder'=>__('Qty'))) }}
-                                        <span class="unit input-group-text bg-transparent"></span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-group price-input input-group search-form">
-                                        {{ Form::text('price','', array('class' => 'form-control price','placeholder'=>__('Price'))) }}
-                                        <span class="input-group-text bg-transparent">{{\Auth::user()->currencySymbol()}}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-group price-input input-group search-form">
-                                        {{ Form::text('discount','', array('class' => 'form-control discount','placeholder'=>__('Discount'))) }}
-                                        <span class="input-group-text bg-transparent">{{\Auth::user()->currencySymbol()}}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-group">
-                                        <div class="input-group">
-                                            <div class="taxes"></div>
-                                            {{ Form::hidden('tax','', array('class' => 'form-control tax')) }}
-                                            {{ Form::hidden('itemTaxPrice','', array('class' => 'form-control itemTaxPrice')) }}
-                                            {{ Form::hidden('itemTaxRate','', array('class' => 'form-control itemTaxRate')) }}
+                                <tr>
+                                    <td width="25%" class="form-group pt-0">
+                                        {{ Form::select('item', $product_services, '', ['class' => 'form-control select2 item', 'data-url' => route('expense.product')]) }}
+                                    </td>
+                                    <td>
+                                        <div class="form-group price-input input-group search-form">
+                                            {{ Form::text('quantity', '', ['class' => 'form-control quantity', 'placeholder' => __('Qty')]) }}
+                                            <span class="unit input-group-text bg-transparent"></span>
                                         </div>
-                                    </div>
-                                </td>
+                                    </td>
+                                    <td>
+                                        <div class="form-group price-input input-group search-form">
+                                            {{ Form::text('price', '', ['class' => 'form-control price', 'placeholder' => __('Price')]) }}
+                                            <span
+                                                class="input-group-text bg-transparent">{{ \Auth::user()->currencySymbol() }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-group price-input input-group search-form">
+                                            {{ Form::text('discount', '', ['class' => 'form-control discount', 'placeholder' => __('Discount')]) }}
+                                            <span
+                                                class="input-group-text bg-transparent">{{ \Auth::user()->currencySymbol() }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-group">
+                                            <div class="input-group">
+                                                <div class="taxes"></div>
+                                                {{ Form::hidden('tax', '', ['class' => 'form-control tax']) }}
+                                                {{ Form::hidden('itemTaxPrice', '', ['class' => 'form-control itemTaxPrice']) }}
+                                                {{ Form::hidden('itemTaxRate', '', ['class' => 'form-control itemTaxRate']) }}
+                                            </div>
+                                        </div>
+                                    </td>
 
-                                <td class="text-end amount">
-                                    0.00
-                                </td>
-                                <td>
-                                    @can('delete proposal product')
-                                        <a href="#" class="ti ti-trash text-white repeater-action-btn bg-danger ms-2" data-repeater-delete></a>
-                                    @endcan
-                                </td>
-                            </tr>
-                            <tr>
-                                <td  class="form-group">
-                                    {{-- {{ Form::select('chart_account_id', $chartAccounts,'', array('class' => 'form-control select2 js-searchBox')) }} --}}
-                                    <select name="chart_account_id" class="form-control">
-                                        @foreach ($chartAccounts as $key => $chartAccount)
-                                            <option value="{{ $key }}" class="subAccount">{{ $chartAccount}}</option>
-                                            @foreach ($subAccounts as $subAccount)
-                                                @if ($key == $subAccount['account'])
-                                                    <option value="{{ $subAccount['id'] }}" class="ms-5"> &nbsp; &nbsp;&nbsp; {{ $subAccount['name'] }}</option>
-                                                @endif
+                                    <td class="text-end amount">
+                                        0.00
+                                    </td>
+                                    <td>
+                                        @can('delete proposal product')
+                                            <a href="#"
+                                                class="ti ti-trash text-white repeater-action-btn bg-danger ms-2"
+                                                data-repeater-delete></a>
+                                        @endcan
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="form-group">
+                                        {{-- {{ Form::select('chart_account_id', $chartAccounts,'', array('class' => 'form-control select2 js-searchBox')) }} --}}
+                                        <select name="chart_account_id" class="form-control">
+                                            @foreach ($chartAccounts as $key => $chartAccount)
+                                                <option value="{{ $key }}" class="subAccount">
+                                                    {{ $chartAccount }}</option>
+                                                @foreach ($subAccounts as $subAccount)
+                                                    @if ($key == $subAccount['account'])
+                                                        <option value="{{ $subAccount['id'] }}" class="ms-5"> &nbsp;
+                                                            &nbsp;&nbsp; {{ $subAccount['name'] }}</option>
+                                                    @endif
+                                                @endforeach
                                             @endforeach
-                                        @endforeach
-                                    </select>
-                                </td>
-                                <td class="form-group">
-                                    <div class="input-group ">
-                                        {{ Form::text('amount','', array('class' => 'form-control accountAmount','placeholder'=>__('Amount'))) }}
-                                        <span class="input-group-text bg-transparent">{{\Auth::user()->currencySymbol()}}</span>
-                                    </div>
-                                </td>
-                                <td colspan="2" class="form-group">
-                                    {{ Form::textarea('description', null, ['class'=>'form-control pro_description','rows'=>'1','placeholder'=>__('Description')]) }}
-                                </td>
-                                <td></td>
-                                <td class="text-end accountamount">
-                                    0.00
-                                </td>
-                            </tr>
+                                        </select>
+                                    </td>
+                                    <td class="form-group">
+                                        <div class="input-group ">
+                                            {{ Form::text('amount', '', ['class' => 'form-control accountAmount', 'placeholder' => __('Amount')]) }}
+                                            <span
+                                                class="input-group-text bg-transparent">{{ \Auth::user()->currencySymbol() }}</span>
+                                        </div>
+                                    </td>
+                                    <td colspan="2" class="form-group">
+                                        {{ Form::textarea('description', null, ['class' => 'form-control pro_description', 'rows' => '1', 'placeholder' => __('Description')]) }}
+                                    </td>
+                                    <td></td>
+                                    <td class="text-end accountamount">
+                                        0.00
+                                    </td>
+                                </tr>
 
                             </tbody>
                             <tfoot>
-                            <tr>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td></td>
-                                <td><strong>{{__('Sub Total')}} ({{\Auth::user()->currencySymbol()}})</strong></td>
-                                <td class="text-end subTotal">0.00</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td></td>
-                                <td><strong>{{__('Discount')}} ({{\Auth::user()->currencySymbol()}})</strong></td>
-                                <td class="text-end totalDiscount">0.00</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td></td>
-                                <td><strong>{{__('Tax')}} ({{\Auth::user()->currencySymbol()}})</strong></td>
-                                <td class="text-end totalTax">0.00</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td class="blue-text"><strong>{{__('Total Amount')}} ({{\Auth::user()->currencySymbol()}})</strong></td>
+                                <tr>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td></td>
+                                    <td><strong>{{ __('Sub Total') }} ({{ \Auth::user()->currencySymbol() }})</strong>
+                                    </td>
+                                    <td class="text-end subTotal">0.00</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td></td>
+                                    <td><strong>{{ __('Discount') }} ({{ \Auth::user()->currencySymbol() }})</strong></td>
+                                    <td class="text-end totalDiscount">0.00</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td></td>
+                                    <td><strong>{{ __('Tax') }} ({{ \Auth::user()->currencySymbol() }})</strong></td>
+                                    <td class="text-end totalTax">0.00</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td class="blue-text"><strong>{{ __('Total Amount') }}
+                                            ({{ \Auth::user()->currencySymbol() }})</strong></td>
 
-                                <td class="blue-text text-end totalAmount">0.00</td>
-                                {{ Form::hidden('totalAmount',null, array('class' => 'form-control totalAmount')) }}
+                                    <td class="blue-text text-end totalAmount">0.00</td>
+                                    {{ Form::hidden('totalAmount', null, ['class' => 'form-control totalAmount']) }}
 
-                                <td></td>
-                            </tr>
+                                    <td></td>
+                                </tr>
                             </tfoot>
                         </table>
                     </div>
@@ -873,10 +988,10 @@
 
 
         <div class="modal-footer">
-            <input type="button" value="{{__('Cancel')}}" onclick="location.href = '{{route("expense.index")}}';" class="btn btn-light">
-            <input type="submit" value="{{__('Create')}}" class="btn  btn-primary">
+            <input type="button" value="{{ __('Cancel') }}" onclick="location.href = '{{ route('expense.index') }}';"
+                class="btn btn-light">
+            <input type="submit" value="{{ __('Create') }}" class="btn  btn-primary">
         </div>
         {{ Form::close() }}
     </div>
 @endsection
-

@@ -30,8 +30,8 @@
                         </a>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link" href="#" onclick="showComingSoon()">
-                            <i class="ti ti-refresh me-2"></i>{{ __('Recurring Payments') }}
+                        <a class="nav-link {{ Request::route()->getName() == 'invoice.recurring-invoices' ? 'active' : '' }}" href="{{ route('invoice.recurring-invoices')}}">
+                            <i class="ti ti-refresh me-2"></i>{{ __('Recurring Invoices') }}
                         </a>
                     </li>
                     <li class="nav-item" role="presentation">
