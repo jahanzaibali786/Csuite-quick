@@ -547,7 +547,8 @@
                     </div>
                     <div class="modal-body text-center row">
                         <div class="col-md-6">
-                            <button onclick="exportDataTable('sales-by-product-service-table', '{{ __('Sales by Product/Service Summary') }}')"
+                            <button
+                                onclick="exportDataTable('sales-by-product-service-table', '{{ __('Sales by Product/Service Summary') }}')"
                                 class="btn btn-success mx-auto w-75 justify-content-center text-center"
                                 data-action="excel">Export to
                                 Excel</button>
@@ -640,8 +641,10 @@
                         columns: columns,
                         data: data,
                         pageTitle: pageTitle,
-                        ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
-                            .textContent : "",
+                        ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section #date-range-display")
+                            .text()
+                            .replace(/\s+/g, ' ')
+                            .trim() : "",
                         HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
                             .footerAlignment
                         ],
@@ -1146,8 +1149,8 @@
             });
 
             /* ========= Header actions ========= */
-            $('#btn-print').on('click', () => window.print());
-            $('#btn-export').on('click', () => alert('Export action triggered'));
+            // $('#btn-print').on('click', () => window.print());
+            // $('#btn-export').on('click', () => alert('Export action triggered'));
             $('#btn-save').on('click', function() {
                 const name = prompt('Enter report name:', 'Sales by Product/Service Summary - ' + new Date()
                     .toISOString().slice(0, 10));
