@@ -55,6 +55,15 @@ class TaxController extends Controller
                                    'rate' => 'required|numeric',
                                ]
             );
+            if($request->ajax()) {
+                if($validator->fails())
+                {
+                    return response()->json([
+                        'success' => false,
+                        'errors' => $validator->errors()->all(),
+                    ], 422);
+                }
+            }
             if($validator->fails())
             {
                 $messages = $validator->getMessageBag();
@@ -69,10 +78,20 @@ class TaxController extends Controller
             $tax->owned_by = \Auth::user()->ownedId();
             $tax->save();
             Utility::makeActivityLog(\Auth::user()->id,'Tax',$tax->id,'Create Tax',$tax->name);
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'data'    => $tax,
+                    'message' => __('Tax successfully created.'),
+                ]);
+            }
             return redirect()->route('taxes.index')->with('success', __('Tax rate successfully created.'));
         }
         else
         {
+            if($request->ajax()) {
+                return response()->json(['error' => __('Permission denied.')], 401);
+            }
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }

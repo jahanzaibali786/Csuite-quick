@@ -846,6 +846,8 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('profit-loss-detail', [VoucherController::class, 'profitLossDetail'])->name('profit-loss-detail.index');
     Route::get('profit-loss-detail/export', [VoucherController::class, 'exportProfitLossDetail'])->name('profit-loss-detail.export');
 
+    Route::get('balance-sheet-comparison', [VoucherController::class, 'balanceSheetComparison'])->name('balance-sheet-comparison.index');
+
 
     // //Abdullah Reports (What owes you)
     // Route::get("/receivables/agingsummary", [VoucherController::class, 'ARAgingSummary'])->name("AgingSummary.index");
