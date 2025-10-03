@@ -13,6 +13,10 @@ use App\Models\Utility;
 use App\Models\WorkFlow;
 use App\Models\Notification;
 use App\Models\WorkFlowAction;
+use App\Models\Proposal;
+use App\Models\Invoice;
+use App\Models\Revenue;
+use App\Models\CreditNote;
 use Auth;
 use App\Models\User;
 use App\Models\Plan;
@@ -29,72 +33,72 @@ use Illuminate\Validation\Rule;
 class CustomerController extends Controller
 {
 
-public function contactList(
-    CustomerContactListDataTable $dataTable,
-    \Illuminate\Http\Request $request
-) {
-    if (!\Auth::user()->can('manage customer')) {
-        return redirect()->back()->with('error', __('Permission denied.'));
+    public function contactList(
+        CustomerContactListDataTable $dataTable,
+        \Illuminate\Http\Request $request
+    ) {
+        if (!\Auth::user()->can('manage customer')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+
+        $user    = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+        $pageTitle = __('Customer Contact List');
+
+        $filter = [
+            'selectedCustomerName' => $request->get('customer_name', ''),
+        ];
+
+        // NEW: all active customer names for the dropdown
+        $customers = \App\Models\Customer::query()
+            ->where($column, $ownerId)
+            ->where('is_active', 1)
+            ->whereNotNull('name')
+            ->orderBy('name')
+            ->pluck('name')
+            ->unique()
+            ->values();
+
+        return $dataTable->render(
+            'customer.contactList',
+            compact('pageTitle', 'user', 'filter', 'customers')
+        );
     }
+    public function customerContactListPhoneNumbers(
+        CustomerContactListPhoneNumbersDataTable $dataTable,
+        \Illuminate\Http\Request $request
+    ) {
+        if (!\Auth::user()->can('manage customer')) {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
 
-    $user    = \Auth::user();
-    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-    $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        $user    = \Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
 
-    $pageTitle = __('Customer Contact List');
+        $pageTitle = __('Customer Phone List');
 
-    $filter = [
-        'selectedCustomerName' => $request->get('customer_name', ''),
-    ];
+        $filter = [
+            'selectedCustomerName' => $request->get('customer_name', ''),
+        ];
 
-    // NEW: all active customer names for the dropdown
-    $customers = \App\Models\Customer::query()
-        ->where($column, $ownerId)
-        ->where('is_active', 1)
-        ->whereNotNull('name')
-        ->orderBy('name')
-        ->pluck('name')
-        ->unique()
-        ->values();
+        // NEW: all active customer names for the dropdown
+        $customers = \App\Models\Customer::query()
+            ->where($column, $ownerId)
+            ->where('is_active', 1)
+            ->whereNotNull('name')
+            ->orderBy('name')
+            ->pluck('name')
+            ->unique()
+            ->values();
 
-    return $dataTable->render(
-        'customer.contactList',
-        compact('pageTitle', 'user', 'filter', 'customers')
-    );
-}
-public function contactListPhoneNumbers(
-    CustomerContactListPhoneNumbersDataTable $dataTable,
-    \Illuminate\Http\Request $request
-) {
-    if (!\Auth::user()->can('manage customer')) {
-        return redirect()->back()->with('error', __('Permission denied.'));
+        return $dataTable->render(
+            'customer.contactList',
+            compact('pageTitle', 'user', 'filter', 'customers')
+        );
     }
-
-    $user    = \Auth::user();
-    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-    $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
-
-    $pageTitle = __('Customer Phone List');
-
-    $filter = [
-        'selectedCustomerName' => $request->get('customer_name', ''),
-    ];
-
-    // NEW: all active customer names for the dropdown
-    $customers = \App\Models\Customer::query()
-        ->where($column, $ownerId)
-        ->where('is_active', 1)
-        ->whereNotNull('name')
-        ->orderBy('name')
-        ->pluck('name')
-        ->unique()
-        ->values();
-
-    return $dataTable->render(
-        'customer.contactList',
-        compact('pageTitle', 'user', 'filter', 'customers')
-    );
-}
 
 
     public function dashboard()
@@ -106,31 +110,154 @@ public function contactListPhoneNumbers(
 
     public function index()
     {
-        if(\Auth::user()->can('manage customer'))
-        {
-            $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        if (\Auth::user()->can('manage customer')) {
+            $user     = \Auth::user();
+            $companyId = $user->creatorId();
+            $userId   = $user->id;
+
+            // Scope helpers (match allSales())
+            $ownedById       = method_exists($user, 'ownedId') ? $user->ownedId() : $userId;
+            $createdByScope  = array_values(array_unique([$companyId, $userId]));
+
+            // Default date window (current month). No Request here, so we pick safe defaults.
+            $start = \Carbon\Carbon::now()->startOfMonth();
+            $end   = \Carbon\Carbon::now()->endOfMonth();
+            $dateFilter = [$start->toDateString(), $end->toDateString()];
+
+            // No customer filter on this page
+            $customerFilter = null;
+
+            // Calculate sales data for overview (same helper as allSales)
+            $salesData = $this->calculateSalesData($createdByScope, $ownedById, $dateFilter, $customerFilter);
+
+            // Customers list as before
+            $column    = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId   = ($user->type === 'company') ? $companyId : $ownedById;
             $customers = Customer::where($column, $ownerId)->get();
 
-            return view('customer.index', compact('customers'));
-        }
-        else
-        {
+            return view('customer.index', compact('customers', 'salesData'));
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
 
+
+    private function calculateSalesData($createdByScope, $ownedById, $dateFilter, $customer = null)
+    {
+        // Get estimates data
+        $estimates = Proposal::where(function ($q) use ($createdByScope, $ownedById) {
+            $q->whereIn('created_by', $createdByScope)->orWhere('owned_by', $ownedById);
+        })
+            ->whereBetween('issue_date', $dateFilter)
+            ->when($customer, fn($q) => $q->where('customer_id', $customer))
+            ->with(['items'])->get();
+
+        $estimatesAmount = 0;
+        foreach ($estimates as $p) {
+            foreach ($p->items as $it) {
+                $line = ($it->price * $it->quantity) - (float)($it->discount ?? 0);
+                $estimatesAmount += $line;
+                $taxes = \App\Models\Utility::tax($it->tax);
+                if (!empty($taxes)) {
+                    foreach ($taxes as $t) {
+                        if ($t === null) continue;
+                        $estimatesAmount += \App\Models\Utility::taxRate($t->rate, $it->price, $it->quantity, $it->discount);
+                    }
+                }
+            }
+        }
+
+        // Get invoices data
+        $invoices = Invoice::whereIn('created_by', $createdByScope)
+            ->whereBetween('issue_date', $dateFilter)
+            ->when($customer, fn($q) => $q->where('customer_id', $customer))
+            ->get();
+
+        $overdueInvoices = Invoice::whereIn('created_by', $createdByScope)
+            ->where('due_date', '<', now())
+            ->whereNotIn('status', [4])
+            ->when($customer, fn($q) => $q->where('customer_id', $customer))
+            ->get();
+
+        $openInvoices = Invoice::whereIn('created_by', $createdByScope)
+            ->whereIn('status', [0, 1, 2, 3])
+            ->when($customer, fn($q) => $q->where('customer_id', $customer))
+            ->get();
+
+        $paidInvoices = Invoice::whereIn('created_by', $createdByScope)
+            ->where('status', 4)
+            ->whereBetween('issue_date', $dateFilter)
+            ->when($customer, fn($q) => $q->where('customer_id', $customer))
+            ->get();
+
+        // Get revenue data
+        $revenues = Revenue::where(function ($q) use ($createdByScope, $ownedById) {
+            $q->whereIn('created_by', $createdByScope)->orWhere('owned_by', $ownedById);
+        })
+            ->whereBetween('date', $dateFilter)
+            ->when($customer, fn($q) => $q->where('customer_id', $customer))
+            ->get();
+
+        // Get credit notes data
+        $credits = CreditNote::whereBetween('date', $dateFilter)
+            ->whereHas('invoice', function ($q) use ($createdByScope, $customer) {
+                $q->whereIn('created_by', $createdByScope);
+                if ($customer) {
+                    $q->where('customer_id', $customer);
+                }
+            })->get();
+
+        return [
+            'estimates' => [
+                'amount' => $estimatesAmount,
+                'count' => $estimates->count()
+            ],
+            'unbilled' => [
+                'amount' => $revenues->sum('amount'),
+                'count' => $revenues->count()
+            ],
+            'overdue' => [
+                'amount' => $overdueInvoices->sum(function ($inv) {
+                    return method_exists($inv, 'getDue') ? $inv->getDue() : ($inv->total ?? 0);
+                }),
+                'count' => $overdueInvoices->count()
+            ],
+            'open' => [
+                'amount' => $openInvoices->sum(function ($inv) {
+                    return method_exists($inv, 'getDue') ? $inv->getDue() : ($inv->total ?? 0);
+                }),
+                'count' => $openInvoices->count()
+            ],
+            'paid' => [
+                'amount' => $paidInvoices->sum(function ($inv) {
+                    return method_exists($inv, 'getTotal') ? $inv->getTotal() : ($inv->total ?? 0);
+                }),
+                'count' => $paidInvoices->count()
+            ],
+            'invoices' => [
+                'amount' => $invoices->sum(function ($inv) {
+                    return method_exists($inv, 'getTotal') ? $inv->getTotal() : ($inv->total ?? 0);
+                }),
+                'count' => $invoices->count()
+            ],
+            'revenue' => [
+                'amount' => $revenues->sum('amount'),
+                'count' => $revenues->count()
+            ],
+            'credits' => [
+                'amount' => $credits->sum('amount'),
+                'count' => $credits->count()
+            ]
+        ];
+    }
+
     public function create()
     {
-        if(\Auth::user()->can('create customer'))
-        {
+        if (\Auth::user()->can('create customer')) {
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'customer')->get();
 
             return view('customer.create', compact('customFields'));
-        }
-        else
-        {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -140,8 +267,12 @@ public function contactListPhoneNumbers(
     {
         \DB::beginTransaction();
         try {
-        if(\Auth::user()->can('create customer'))
-        {
+            if (!\Auth::user()->can('create customer')) {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['message' => __('Permission denied.')], 403);
+                }
+                return redirect()->back()->with('error', __('Permission denied.'));
+            }
 
             $rules = [
                 'name' => 'required',
@@ -154,12 +285,16 @@ public function contactListPhoneNumbers(
                 ],
             ];
 
-
             $validator = \Validator::make($request->all(), $rules);
 
-            if($validator->fails())
-            {
+            if ($validator->fails()) {
                 $messages = $validator->getMessageBag();
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'message' => 'Validation error',
+                        'errors'  => $validator->errors(),
+                    ], 422);
+                }
                 return redirect()->route('customer.index')->with('error', $messages->first());
             }
 
@@ -168,17 +303,17 @@ public function contactListPhoneNumbers(
             $total_customer = $objCustomer->countCustomers();
             $plan           = Plan::find($creator->plan);
 
-            $default_language          = DB::table('settings')->select('value')->where('name', 'default_language')->first();
-            if($total_customer < $plan->max_customers || $plan->max_customers == -1)
-            {
+            $default_language = DB::table('settings')->select('value')->where('name', 'default_language')->first();
+
+            if ($total_customer < $plan->max_customers || $plan->max_customers == -1) {
                 $customer                  = new Customer();
                 $customer->customer_id     = $this->customerNumber();
                 $customer->name            = $request->name;
                 $customer->contact         = $request->contact;
                 $customer->email           = $request->email;
-                $customer->tax_number      =$request->tax_number;
+                $customer->tax_number      = $request->tax_number;
                 $customer->created_by      = \Auth::user()->creatorId();
-                $customer->owned_by      = \Auth::user()->ownedId();
+                $customer->owned_by        = \Auth::user()->ownedId();
                 $customer->billing_name    = $request->billing_name;
                 $customer->billing_country = $request->billing_country;
                 $customer->billing_state   = $request->billing_state;
@@ -232,8 +367,7 @@ public function contactListPhoneNumbers(
                                     'email' => 'email',
                                     'contact' => 'contact',
                                 ];
-                                $relate = [
-                                ];
+                                $relate = [];
                                 foreach ($applied_conditions['conditions'] as $conditionGroup) {
 
                                     if (in_array($conditionGroup['action'], ['send_email', 'send_notification', 'send_approval'])) {
@@ -282,10 +416,10 @@ public function contactListPhoneNumbers(
                                             "data_id" => $customer->id,
                                             "name" => @$customer->name,
                                         ];
-                                        if($us_notify == 'true'){
-                                            Utility::makeNotification($usrLead,'create_customer',$data,$customer->id,'create Customer');
-                                        }elseif($us_approve == 'true'){
-                                            Utility::makeNotification($usrLead,'approve_customer',$data,$customer->id,'For Approval Customer');
+                                        if ($us_notify == 'true') {
+                                            Utility::makeNotification($usrLead, 'create_customer', $data, $customer->id, 'create Customer');
+                                        } elseif ($us_approve == 'true') {
+                                            Utility::makeNotification($usrLead, 'approve_customer', $data, $customer->id, 'For Approval Customer');
                                         }
                                     }
                                 }
@@ -293,10 +427,10 @@ public function contactListPhoneNumbers(
                         }
                     }
                 }
-
-            }
-            else
-            {
+            } else {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['message' => __('Your user limit is over, Please upgrade plan.')], 402);
+                }
                 return redirect()->back()->with('error', __('Your user limit is over, Please upgrade plan.'));
             }
 
@@ -309,20 +443,28 @@ public function contactListPhoneNumbers(
             ];
 
             //Twilio Notification
-            if(isset($setting['twilio_customer_notification']) && $setting['twilio_customer_notification'] ==1)
-            {
-                Utility::send_twilio_msg($request->contact,'new_customer', $customerNotificationArr);
+            if (isset($setting['twilio_customer_notification']) && $setting['twilio_customer_notification'] == 1) {
+                Utility::send_twilio_msg($request->contact, 'new_customer', $customerNotificationArr);
             }
-            Utility::makeActivityLog(\Auth::user()->id,'Customer',$customer->id,'Create Customer',$customer->name);
+            Utility::makeActivityLog(\Auth::user()->id, 'Customer', $customer->id, 'Create Customer', $customer->name);
             \DB::commit();
+
+            // If AJAX, return JSON (used by the invoice page to append/select)
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'id'   => $customer->id,
+                    'name' => $customer->name,
+                    'data' => $customer,
+                    'success' => true
+                ], 201);
+            }
+
             return redirect()->route('customer.index')->with('success', __('Customer successfully created.'));
-        }
-        else
-        {
-            return redirect()->back()->with('error', __('Permission denied.'));
-        }
         } catch (\Exception $e) {
             \DB::rollback();
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $e->getMessage()], 500);
+            }
             return redirect()->back()->with('error', $e);
         }
     }
@@ -344,17 +486,14 @@ public function contactListPhoneNumbers(
 
     public function edit($id)
     {
-        if(\Auth::user()->can('edit customer'))
-        {
+        if (\Auth::user()->can('edit customer')) {
             $customer              = Customer::find($id);
             $customer->customField = CustomField::getData($customer, 'customer');
 
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'customer')->get();
 
             return view('customer.edit', compact('customer', 'customFields'));
-        }
-        else
-        {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -363,8 +502,7 @@ public function contactListPhoneNumbers(
     public function update(Request $request, Customer $customer)
     {
 
-        if(\Auth::user()->can('edit customer'))
-        {
+        if (\Auth::user()->can('edit customer')) {
 
             $rules = [
                 'name' => 'required',
@@ -373,8 +511,7 @@ public function contactListPhoneNumbers(
 
 
             $validator = \Validator::make($request->all(), $rules);
-            if($validator->fails())
-            {
+            if ($validator->fails()) {
                 $messages = $validator->getMessageBag();
 
                 return redirect()->route('customer.index')->with('error', $messages->first());
@@ -383,7 +520,7 @@ public function contactListPhoneNumbers(
             $customer->name             = $request->name;
             $customer->contact          = $request->contact;
             $customer->email           = $request->email;
-            $customer->tax_number      =$request->tax_number;
+            $customer->tax_number      = $request->tax_number;
             $customer->created_by       = \Auth::user()->creatorId();
             $customer->billing_name     = $request->billing_name;
             $customer->billing_country  = $request->billing_country;
@@ -402,11 +539,9 @@ public function contactListPhoneNumbers(
             $customer->save();
             //log
             CustomField::saveData($customer, $request->customField);
-            Utility::makeActivityLog(\Auth::user()->id,'Customer',$customer->id,'Update Customer',$customer->name);
+            Utility::makeActivityLog(\Auth::user()->id, 'Customer', $customer->id, 'Update Customer', $customer->name);
             return redirect()->route('customer.index')->with('success', __('Customer successfully updated.'));
-        }
-        else
-        {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -414,23 +549,17 @@ public function contactListPhoneNumbers(
 
     public function destroy(Customer $customer)
     {
-        if(\Auth::user()->can('delete customer'))
-        {
-            if($customer->created_by == \Auth::user()->creatorId())
-            {
+        if (\Auth::user()->can('delete customer')) {
+            if ($customer->created_by == \Auth::user()->creatorId()) {
                 //log
-                Utility::makeActivityLog(\Auth::user()->id,'Customer',$customer->id,'Delete Customer',$customer->name);
+                Utility::makeActivityLog(\Auth::user()->id, 'Customer', $customer->id, 'Delete Customer', $customer->name);
                 $customer->delete();
 
                 return redirect()->route('customer.index')->with('success', __('Customer successfully deleted.'));
-            }
-            else
-            {
+            } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
-        }
-        else
-        {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -441,8 +570,7 @@ public function contactListPhoneNumbers(
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
         $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
         $latest = Customer::where($column, '=', $ownerId)->latest()->first();
-        if(!$latest)
-        {
+        if (!$latest) {
             return 1;
         }
 
@@ -461,8 +589,7 @@ public function contactListPhoneNumbers(
     public function payment(Request $request)
     {
 
-        if(\Auth::user()->can('manage customer payment'))
-        {
+        if (\Auth::user()->can('manage customer payment')) {
             $category = [
                 'Invoice' => 'Invoice',
                 'Deposit' => 'Deposit',
@@ -470,30 +597,25 @@ public function contactListPhoneNumbers(
             ];
 
             $query = Transaction::where('user_id', \Auth::user()->id)->where('user_type', 'Customer')->where('type', 'Payment');
-            if(!empty($request->date))
-            {
+            if (!empty($request->date)) {
                 $date_range = explode(' - ', $request->date);
                 $query->whereBetween('date', $date_range);
             }
 
-            if(!empty($request->category))
-            {
+            if (!empty($request->category)) {
                 $query->where('category', '=', $request->category);
             }
             $payments = $query->get();
 
             return view('customer.payment', compact('payments', 'category'));
-        }
-        else
-        {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
 
     public function transaction(Request $request)
     {
-        if(\Auth::user()->can('manage customer payment'))
-        {
+        if (\Auth::user()->can('manage customer payment')) {
             $category = [
                 'Invoice' => 'Invoice',
                 'Deposit' => 'Deposit',
@@ -502,22 +624,18 @@ public function contactListPhoneNumbers(
 
             $query = Transaction::where('user_id', \Auth::user()->id)->where('user_type', 'Customer');
 
-            if(!empty($request->date))
-            {
+            if (!empty($request->date)) {
                 $date_range = explode(' - ', $request->date);
                 $query->whereBetween('date', $date_range);
             }
 
-            if(!empty($request->category))
-            {
+            if (!empty($request->category)) {
                 $query->where('category', '=', $request->category);
             }
             $transactions = $query->get();
 
             return view('customer.transaction', compact('transactions', 'category'));
-        }
-        else
-        {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -537,15 +655,15 @@ public function contactListPhoneNumbers(
         $user       = Customer::findOrFail($userDetail['id']);
 
         $this->validate(
-            $request, [
-                        'name' => 'required|max:120',
-                        'contact' => 'required',
-                        'email' => 'required|email|unique:users,email,' . $userDetail['id'],
-                    ]
+            $request,
+            [
+                'name' => 'required|max:120',
+                'contact' => 'required',
+                'email' => 'required|email|unique:users,email,' . $userDetail['id'],
+            ]
         );
 
-        if($request->hasFile('profile'))
-        {
+        if ($request->hasFile('profile')) {
             $filenameWithExt = $request->file('profile')->getClientOriginalName();
             $filename        = pathinfo($filenameWithExt, PATHINFO_FILENAME);
             $extension       = $request->file('profile')->getClientOriginalExtension();
@@ -554,22 +672,18 @@ public function contactListPhoneNumbers(
             $dir        = storage_path('uploads/avatar/');
             $image_path = $dir . $userDetail['avatar'];
 
-            if(File::exists($image_path))
-            {
+            if (File::exists($image_path)) {
                 File::delete($image_path);
             }
 
-            if(!file_exists($dir))
-            {
+            if (!file_exists($dir)) {
                 mkdir($dir, 0777, true);
             }
 
             $path = $request->file('profile')->storeAs('uploads/avatar/', $fileNameToStore);
-
         }
 
-        if(!empty($request->profile))
-        {
+        if (!empty($request->profile)) {
             $user['avatar'] = $fileNameToStore;
         }
         $user['name']    = $request['name'];
@@ -579,7 +693,8 @@ public function contactListPhoneNumbers(
         CustomField::saveData($user, $request->customField);
 
         return redirect()->back()->with(
-            'success', 'Profile successfully updated.'
+            'success',
+            'Profile successfully updated.'
         );
     }
 
@@ -588,21 +703,23 @@ public function contactListPhoneNumbers(
         $userDetail = \Auth::user();
         $user       = Customer::findOrFail($userDetail['id']);
         $this->validate(
-            $request, [
-                        'billing_name' => 'required',
-                        'billing_country' => 'required',
-                        'billing_state' => 'required',
-                        'billing_city' => 'required',
-                        'billing_phone' => 'required',
-                        'billing_zip' => 'required',
-                        'billing_address' => 'required',
-                    ]
+            $request,
+            [
+                'billing_name' => 'required',
+                'billing_country' => 'required',
+                'billing_state' => 'required',
+                'billing_city' => 'required',
+                'billing_phone' => 'required',
+                'billing_zip' => 'required',
+                'billing_address' => 'required',
+            ]
         );
         $input = $request->all();
         $user->fill($input)->save();
 
         return redirect()->back()->with(
-            'success', 'Profile successfully updated.'
+            'success',
+            'Profile successfully updated.'
         );
     }
 
@@ -611,21 +728,23 @@ public function contactListPhoneNumbers(
         $userDetail = \Auth::user();
         $user       = Customer::findOrFail($userDetail['id']);
         $this->validate(
-            $request, [
-                        'shipping_name' => 'required',
-                        'shipping_country' => 'required',
-                        'shipping_state' => 'required',
-                        'shipping_city' => 'required',
-                        'shipping_phone' => 'required',
-                        'shipping_zip' => 'required',
-                        'shipping_address' => 'required',
-                    ]
+            $request,
+            [
+                'shipping_name' => 'required',
+                'shipping_country' => 'required',
+                'shipping_state' => 'required',
+                'shipping_city' => 'required',
+                'shipping_phone' => 'required',
+                'shipping_zip' => 'required',
+                'shipping_address' => 'required',
+            ]
         );
         $input = $request->all();
         $user->fill($input)->save();
 
         return redirect()->back()->with(
-            'success', 'Profile successfully updated.'
+            'success',
+            'Profile successfully updated.'
         );
     }
 
@@ -638,14 +757,14 @@ public function contactListPhoneNumbers(
         $user->save();
 
         return redirect()->back()->with('success', __('Language Change Successfully!'));
-
     }
 
 
     public function export()
     {
         $name = 'customer_' . date('Y-m-d i:h:s');
-        $data = Excel::download(new CustomerExport(), $name . '.xlsx'); ob_end_clean();
+        $data = Excel::download(new CustomerExport(), $name . '.xlsx');
+        ob_end_clean();
 
         return $data;
     }
@@ -664,8 +783,7 @@ public function contactListPhoneNumbers(
 
         $validator = \Validator::make($request->all(), $rules);
 
-        if($validator->fails())
-        {
+        if ($validator->fails()) {
             $messages = $validator->getMessageBag();
 
             return redirect()->back()->with('error', $messages->first());
@@ -675,17 +793,13 @@ public function contactListPhoneNumbers(
 
         $totalCustomer = count($customers) - 1;
         $errorArray    = [];
-        for($i = 1; $i <= count($customers) - 1; $i++)
-        {
+        for ($i = 1; $i <= count($customers) - 1; $i++) {
             $customer = $customers[$i];
 
             $customerByEmail = Customer::where('email', $customer[2])->first();
-            if(!empty($customerByEmail))
-            {
+            if (!empty($customerByEmail)) {
                 $customerData = $customerByEmail;
-            }
-            else
-            {
+            } else {
                 $customerData = new Customer();
                 $customerData->customer_id      = $this->customerNumber();
             }
@@ -713,34 +827,26 @@ public function contactListPhoneNumbers(
             $customerData->created_by       = \Auth::user()->creatorId();
             $customerData->owned_by       = \Auth::user()->ownedId();
 
-            if(empty($customerData))
-            {
+            if (empty($customerData)) {
                 $errorArray[] = $customerData;
-            }
-            else
-            {
-                Utility::makeActivityLog(\Auth::user()->id,'Customer Record',$customerData->id,'Create Customer Record',$customerData->name);
+            } else {
+                Utility::makeActivityLog(\Auth::user()->id, 'Customer Record', $customerData->id, 'Create Customer Record', $customerData->name);
                 $customerData->save();
             }
         }
 
         $errorRecord = [];
-        if(empty($errorArray))
-        {
+        if (empty($errorArray)) {
             $data['status'] = 'success';
             $data['msg']    = __('Record successfully imported');
-        }
-        else
-        {
+        } else {
             $data['status'] = 'error';
             $data['msg']    = count($errorArray) . ' ' . __('Record imported fail out of' . ' ' . $totalCustomer . ' ' . 'record');
 
 
-            foreach($errorArray as $errorData)
-            {
+            foreach ($errorArray as $errorData) {
 
                 $errorRecord[] = implode(',', $errorData);
-
             }
 
             \Session::put('errorArray', $errorRecord);
@@ -768,8 +874,4 @@ public function contactListPhoneNumbers(
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
-
-
-
-
 }

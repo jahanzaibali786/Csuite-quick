@@ -1,15 +1,15 @@
 @extends('layouts.admin')
 @section('page-title')
-    {{__('Proposal Create')}}
+    {{ __('Proposal Create') }}
 @endsection
 @section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{route('dashboard')}}">{{__('Dashboard')}}</a></li>
-    <li class="breadcrumb-item"><a href="{{route('proposal.index')}}">{{__('Proposal')}}</a></li>
-    <li class="breadcrumb-item">{{__('Proposal Create')}}</li>
+    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('proposal.index') }}">{{ __('Proposal') }}</a></li>
+    <li class="breadcrumb-item">{{ __('Proposal Create') }}</li>
 @endsection
 @push('script-page')
-    <script src="{{asset('js/jquery-ui.min.js')}}"></script>
-    <script src="{{asset('js/jquery.repeater.min.js')}}"></script>
+    <script src="{{ asset('js/jquery-ui.min.js') }}"></script>
+    <script src="{{ asset('js/jquery.repeater.min.js') }}"></script>
     <script>
         var selector = "body";
         if ($(selector + " .repeater").length) {
@@ -21,7 +21,7 @@
                 defaultValues: {
                     'status': 1
                 },
-                show: function () {
+                show: function() {
                     $(this).slideDown();
                     var file_uploads = $(this).find('input.multi');
                     if (file_uploads.length) {
@@ -33,7 +33,7 @@
                     }
                     $('.select2').select2();
                 },
-                hide: function (deleteElement) {
+                hide: function(deleteElement) {
                     if (confirm('Are you sure you want to delete this element?')) {
                         $(this).slideUp(deleteElement);
                         $(this).remove();
@@ -47,7 +47,7 @@
                         $('.totalAmount').html(subTotal.toFixed(2));
                     }
                 },
-                ready: function (setIndexes) {
+                ready: function(setIndexes) {
                     $dragAndDrop.on('drop', setIndexes);
                 },
                 isFirstItemUndeletable: true
@@ -60,7 +60,7 @@
 
         }
 
-        $(document).on('change', '#customer', function () {
+        $(document).on('change', '#customer', function() {
             $('#customer_detail').removeClass('d-none');
             $('#customer_detail').addClass('d-block');
             $('#customer-box').removeClass('d-block');
@@ -77,7 +77,7 @@
                     'id': id
                 },
                 cache: false,
-                success: function (data) {
+                success: function(data) {
                     if (data != '') {
                         $('#customer_detail').html(data);
                     } else {
@@ -91,7 +91,7 @@
             });
         });
 
-        $(document).on('click', '#remove', function () {
+        $(document).on('click', '#remove', function() {
             $('#customer-box').removeClass('d-none');
             $('#customer-box').addClass('d-block');
             $('#customer_detail').removeClass('d-block');
@@ -99,7 +99,7 @@
         })
 
 
-        $(document).on('change', '.item', function () {
+        $(document).on('change', '.item', function() {
 
 
             var iteams_id = $(this).val();
@@ -115,12 +115,13 @@
                     'product_id': iteams_id
                 },
                 cache: false,
-                success: function (data) {
+                success: function(data) {
                     var item = JSON.parse(data);
 
                     $(el.parent().parent().find('.quantity')).val(1);
                     $(el.parent().parent().find('.price')).val(item.product.sale_price);
-                    $(el.parent().parent().parent().find('.pro_description')).val(item.product.description);
+                    $(el.parent().parent().parent().find('.pro_description')).val(item.product
+                        .description);
                     // $('.pro_description').text(item.product.description);
 
                     var taxes = '';
@@ -131,13 +132,15 @@
                         taxes += '-';
                     } else {
                         for (var i = 0; i < item.taxes.length; i++) {
-                            taxes += '<span class="badge  badge bg-primary mt-1 mr-2">' + item.taxes[i].name + ' ' + '(' + item.taxes[i].rate + '%)' + '</span>';
+                            taxes += '<span class="badge  badge bg-primary mt-1 mr-2">' + item.taxes[i]
+                                .name + ' ' + '(' + item.taxes[i].rate + '%)' + '</span>';
                             tax.push(item.taxes[i].id);
                             totalItemTaxRate += parseFloat(item.taxes[i].rate);
                         }
                     }
 
-                    var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (item.product.sale_price * 1));
+                    var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (item.product.sale_price *
+                        1));
 
                     $(el.parent().parent().find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
                     $(el.parent().parent().find('.itemTaxRate')).val(totalItemTaxRate.toFixed(2));
@@ -164,7 +167,8 @@
                     var itemTaxPriceInput = $('.itemTaxPrice');
                     for (var j = 0; j < itemTaxPriceInput.length; j++) {
                         totalItemTaxPrice += parseFloat(itemTaxPriceInput[j].value);
-                        $(el.parent().parent().find('.amount')).html(parseFloat(item.totalAmount)+parseFloat(itemTaxPriceInput[j].value));
+                        $(el.parent().parent().find('.amount')).html(parseFloat(item.totalAmount) +
+                            parseFloat(itemTaxPriceInput[j].value));
                     }
 
 
@@ -179,14 +183,15 @@
 
                     $('.subTotal').html(totalItemPrice.toFixed(2));
                     $('.totalTax').html(totalItemTaxPrice.toFixed(2));
-                    $('.totalAmount').html((parseFloat(totalItemPrice) - parseFloat(totalItemDiscountPrice) + parseFloat(totalItemTaxPrice)).toFixed(2));
+                    $('.totalAmount').html((parseFloat(totalItemPrice) - parseFloat(
+                        totalItemDiscountPrice) + parseFloat(totalItemTaxPrice)).toFixed(2));
 
                 },
             });
         });
 
 
-        $(document).on('keyup', '.quantity', function () {
+        $(document).on('keyup', '.quantity', function() {
             var quntityTotalTaxPrice = 0;
 
             var el = $(this).parent().parent().parent().parent();
@@ -194,9 +199,8 @@
             var quantity = $(this).val();
             var price = $(el.find('.price')).val();
             var discount = $(el.find('.discount')).val();
-            if(discount.length <= 0)
-            {
-                discount = 0 ;
+            if (discount.length <= 0) {
+                discount = 0;
             }
 
             var totalItemPrice = (quantity * price) - discount;
@@ -208,7 +212,7 @@
             var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
             $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
 
-            $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+            $(el.find('.amount')).html(parseFloat(itemTaxPrice) + parseFloat(amount));
 
             var totalItemTaxPrice = 0;
             var itemTaxPriceInput = $('.itemTaxPrice');
@@ -239,17 +243,16 @@
 
         })
 
-        $(document).on('keyup change', '.price', function () {
+        $(document).on('keyup change', '.price', function() {
             var el = $(this).parent().parent().parent().parent();
             var price = $(this).val();
             var quantity = $(el.find('.quantity')).val();
 
             var discount = $(el.find('.discount')).val();
-            if(discount.length <= 0)
-            {
-                discount = 0 ;
+            if (discount.length <= 0) {
+                discount = 0;
             }
-            var totalItemPrice = (quantity * price)-discount;
+            var totalItemPrice = (quantity * price) - discount;
 
             var amount = (totalItemPrice);
 
@@ -258,7 +261,7 @@
             var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
             $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
 
-            $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+            $(el.find('.amount')).html(parseFloat(itemTaxPrice) + parseFloat(amount));
 
             var totalItemTaxPrice = 0;
             var itemTaxPriceInput = $('.itemTaxPrice');
@@ -290,12 +293,11 @@
 
         })
 
-        $(document).on('keyup change', '.discount', function () {
+        $(document).on('keyup change', '.discount', function() {
             var el = $(this).parent().parent().parent();
             var discount = $(this).val();
-            if(discount.length <= 0)
-            {
-                discount = 0 ;
+            if (discount.length <= 0) {
+                discount = 0;
             }
 
             var price = $(el.find('.price')).val();
@@ -310,7 +312,7 @@
             var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
             $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
 
-            $(el.find('.amount')).html(parseFloat(itemTaxPrice)+parseFloat(amount));
+            $(el.find('.amount')).html(parseFloat(itemTaxPrice) + parseFloat(amount));
 
             var totalItemTaxPrice = 0;
             var itemTaxPriceInput = $('.itemTaxPrice');
@@ -355,23 +357,222 @@
 
         })
 
-        var customerId = '{{$customerId}}';
+        var customerId = '{{ $customerId }}';
         if (customerId > 0) {
             $('#customer').val(customerId).change();
         }
-
     </script>
-
     <script>
-        $(document).on('click', '[data-repeater-delete]', function () {
+        $(document).on('click', '[data-repeater-delete]', function() {
             $(".price").change();
             $(".discount").change();
         });
     </script>
+    <script>
+        (function() {
+
+            // ---------- helpers ----------
+            function ensureAddOption(select, label) {
+                if (!select) return;
+                var exists = Array.from(select.options).some(function(o) {
+                    return o.value === '__add__';
+                });
+                if (!exists) {
+                    var opt = new Option(label, '__add__', false, false);
+                    select.add(opt);
+                }
+            }
+
+            function openHiddenLauncher(launcherId) {
+                var a = document.getElementById(launcherId);
+                if (a) a.click();
+            }
+
+            function selectSetValue(select, value) {
+                if (window.jQuery && jQuery.fn && jQuery.fn.select2) {
+                    jQuery(select).val(String(value)).trigger('change');
+                } else {
+                    select.value = String(value);
+                    select.dispatchEvent(new Event('change'));
+                }
+            }
+
+            function insertBeforeAddOption(select, option) {
+                var addIdx = Array.from(select.options).findIndex(function(o) {
+                    return o.value === '__add__';
+                });
+                if (addIdx >= 0) select.add(option, select.options[addIdx]);
+                else select.add(option);
+            }
+
+            // ---------- locate selects on this Proposal blade ----------
+            var customerSelect = document.getElementById('customer'); // you already have id="customer"
+            var categorySelect = document.querySelector(
+                'select[name="category_id"]'); // category field (no id in your snippet)
+
+            // Ensure special "Add…" options exist (in case controller didn't add them)
+            ensureAddOption(customerSelect, '➕ Add new customer…');
+            ensureAddOption(categorySelect, '➕ Add new category…');
+
+            // ---------- change handlers to open modals ----------
+            document.addEventListener('change', function(e) {
+                // Customer
+                if (e.target === customerSelect && e.target.value === '__add__') {
+                    selectSetValue(customerSelect, ''); // reset away from special option
+                    openHiddenLauncher('launchAddCustomer'); // MUST exist somewhere in layout
+                }
+                // Category
+                if (e.target === categorySelect && e.target.value === '__add__') {
+                    selectSetValue(categorySelect, ''); // reset away
+                    openHiddenLauncher('launchAddCategory'); // MUST exist somewhere in layout
+                }
+            });
+
+            // ---------- intercept modal submits (dynamic content) ----------
+            document.addEventListener('submit', function(e) {
+                var form = e.target;
+
+                // A) Customer modal form (id="customerForm")
+                if (form && form.id === 'customerForm') {
+                    e.preventDefault();
+
+                    var fd = new FormData(form);
+                    fetch(form.getAttribute('action') || '{{ url('customer') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            },
+                            body: fd
+                        })
+                        .then(async (res) => {
+                            const data = await res.json().catch(() => ({}));
+                            if (!res.ok) {
+                                const msg = (data.errors && Object.values(data.errors)[0][0]) || data
+                                    .message || 'Request failed';
+                                throw new Error(msg);
+                            }
+                            return data; // { id, name }
+                        })
+                        .then(function(data) {
+                            if (!customerSelect) return;
+
+                            // add if not present
+                            var exists = Array.from(customerSelect.options).some(function(o) {
+                                return String(o.value) === String(data.id);
+                            });
+                            if (!exists) {
+                                var opt = new Option(data.name, data.id, true, true);
+                                insertBeforeAddOption(customerSelect, opt);
+                            }
+
+                            // select it
+                            selectSetValue(customerSelect, data.id);
+
+                            // close modal (Bootstrap 5)
+                            var modalEl = form.closest('.modal');
+                            if (modalEl) {
+                                var inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(
+                                    modalEl);
+                                inst.hide();
+                            }
+
+                            // refresh proposal customer detail panel if endpoint given
+                            var url = customerSelect.getAttribute('data-url'); // route('proposal.customer')
+                            if (url) {
+                                fetch(url, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                            'Accept': 'text/html'
+                                        },
+                                        body: JSON.stringify({
+                                            customer_id: data.id
+                                        })
+                                    })
+                                    .then(res => res.text())
+                                    .then(function(html) {
+                                        var box = document.getElementById('customer_detail');
+                                        if (box) {
+                                            box.innerHTML = html;
+                                            box.classList.remove('d-none');
+                                        }
+                                    })
+                                    .catch(console.error);
+                            }
+
+                            form.reset();
+                        })
+                        .catch(function(err) {
+                            alert(err.message ||
+                                "{{ __('Could not create customer. Please try again.') }}");
+                        });
+                }
+
+                // B) Category modal form (prefer id="categoryCreateForm"; fallback to action contains product-category)
+                if (form && (form.id === 'categoryCreateForm' || (form.action && form.action.indexOf(
+                        'product-category') !== -1))) {
+                    e.preventDefault();
+
+                    var fd2 = new FormData(form);
+                    fetch(form.getAttribute('action') || '{{ route('product-category.store') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            },
+                            body: fd2
+                        })
+                        .then(async (res) => {
+                            const data = await res.json().catch(() => ({}));
+                            if (!res.ok) {
+                                const msg = (data.errors && Object.values(data.errors)[0][0]) || data
+                                    .message || 'Request failed';
+                                throw new Error(msg);
+                            }
+                            return data; // { id, name }
+                        })
+                        .then(function(data) {
+                            if (!categorySelect) return;
+
+                            // add if not present
+                            var exists = Array.from(categorySelect.options).some(function(o) {
+                                return String(o.value) === String(data.id);
+                            });
+                            if (!exists) {
+                                var opt = new Option(data.name, data.id, true, true);
+                                insertBeforeAddOption(categorySelect, opt);
+                            }
+
+                            // select it
+                            selectSetValue(categorySelect, data.id);
+
+                            // close modal (Bootstrap 5)
+                            var modalEl = form.closest('.modal');
+                            if (modalEl) {
+                                var inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(
+                                    modalEl);
+                                inst.hide();
+                            }
+
+                            form.reset();
+                        })
+                        .catch(function(err) {
+                            alert(err.message ||
+                                "{{ __('Could not create category. Please try again.') }}");
+                        });
+                }
+            });
+
+        })();
+    </script>
 @endpush
 @section('content')
     <div class="row">
-        {{ Form::open(array('url' => 'proposal','class'=>'w-100')) }}
+        {{ Form::open(['url' => 'proposal', 'class' => 'w-100']) }}
         <div class="col-12">
             <input type="hidden" name="_token" id="token" value="{{ csrf_token() }}">
             <div class="card">
@@ -379,9 +580,14 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group" id="customer-box">
-                                {{ Form::label('customer_id', __('Customer'),['class'=>'form-label']) }}
-                                {{ Form::select('customer_id', $customers,$customerId, array('class' => 'form-control select','id'=>'customer','data-url'=>route('proposal.customer'),'required'=>'required')) }}
+                                {{ Form::label('customer_id', __('Customer'), ['class' => 'form-label']) }}
+                                {{ Form::select('customer_id', $customers, $customerId, ['class' => 'form-control select', 'id' => 'customer', 'data-url' => route('proposal.customer'), 'required' => 'required']) }}
                             </div>
+
+                            <a href="#" id="launchAddCustomer" data-size="lg"
+                                data-url="{{ route('customer.create') }}" data-ajax-popup="true" data-bs-toggle="tooltip"
+                                title="{{ __('Create') }}" data-title="{{ __('Create Customer') }}" class="d-none">
+                            </a>
 
                             <div id="customer_detail" class="d-none">
                             </div>
@@ -390,42 +596,48 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        {{ Form::label('issue_date', __('Issue Date'),['class'=>'form-label']) }}
+                                        {{ Form::label('issue_date', __('Issue Date'), ['class' => 'form-label']) }}
                                         <div class="form-icon-user">
-                                            {{Form::date('issue_date',null,array('class'=>'form-control','required'=>'required'))}}
+                                            {{ Form::date('issue_date', null, ['class' => 'form-control', 'required' => 'required']) }}
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        {{ Form::label('category_id', __('Category'),['class'=>'form-label']) }}
-                                        {{ Form::select('category_id', $category,null, array('class' => 'form-control select','required'=>'required')) }}
+                                        {{ Form::label('category_id', __('Category'), ['class' => 'form-label']) }}
+                                        {{ Form::select('category_id', $category, null, ['class' => 'form-control select', 'required' => 'required']) }}
                                     </div>
+                                    <a href="#" id="launchAddCategory" data-size="lg"
+                                        data-url="{{ route('product-category.create') }}" data-ajax-popup="true"
+                                        data-bs-toggle="tooltip" title="{{ __('Create') }}"
+                                        data-title="{{ __('Create New Category') }}" class="d-none">
+                                    </a>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        {{ Form::label('proposal_number', __('Proposal Number'),['class'=>'form-label']) }}
+                                        {{ Form::label('proposal_number', __('Proposal Number'), ['class' => 'form-label']) }}
                                         <div class="form-icon-user">
-                                            <input type="text" class="form-control" value="{{$proposal_number}}" readonly>
+                                            <input type="text" class="form-control" value="{{ $proposal_number }}"
+                                                readonly>
                                         </div>
                                     </div>
                                 </div>
 
-{{--                                <div class="col-md-6">--}}
-{{--                                    <div class="form-check custom-checkbox mt-4">--}}
-{{--                                        <input class="form-check-input" type="checkbox" name="discount_apply" id="discount_apply">--}}
-{{--                                        <label class="form-check-label " for="discount_apply">{{__('Discount Apply')}}</label>--}}
-{{--                                    </div>--}}
-{{--                                </div>--}}
+                                {{--                                <div class="col-md-6"> --}}
+                                {{--                                    <div class="form-check custom-checkbox mt-4"> --}}
+                                {{--                                        <input class="form-check-input" type="checkbox" name="discount_apply" id="discount_apply"> --}}
+                                {{--                                        <label class="form-check-label " for="discount_apply">{{__('Discount Apply')}}</label> --}}
+                                {{--                                    </div> --}}
+                                {{--                                </div> --}}
 
 
-{{--                                <div class="col-md-6">--}}
-{{--                                    <div class="form-group">--}}
-{{--                                        {{Form::label('sku',__('SKU')) }}--}}
-{{--                                        {!!Form::text('sku', null,array('class' => 'form-control','required'=>'required')) !!}--}}
-{{--                                    </div>--}}
-{{--                                </div>--}}
-                                @if(!$customFields->isEmpty())
+                                {{--                                <div class="col-md-6"> --}}
+                                {{--                                    <div class="form-group"> --}}
+                                {{--                                        {{Form::label('sku',__('SKU')) }} --}}
+                                {{--                                        {!!Form::text('sku', null,array('class' => 'form-control','required'=>'required')) !!} --}}
+                                {{--                                    </div> --}}
+                                {{--                                </div> --}}
+                                @if (!$customFields->isEmpty())
                                     <div class="col-md-6">
                                         <div class="tab-pane fade show" id="tab-2" role="tabpanel">
                                             @include('customFields.formBuilder')
@@ -439,133 +651,141 @@
             </div>
         </div>
         <div class="col-12">
-            <h5 class="d-inline-block mb-4">{{__('Product & Services')}}</h5>
+            <h5 class="d-inline-block mb-4">{{ __('Product & Services') }}</h5>
             <div class="card repeater">
                 <div class="item-section py-2">
                     <div class="d-flex align-items-center float-end me-2">
-                        <a href="#" data-repeater-create="" class="btn btn-primary mb-2" data-bs-toggle="modal" data-target="#add-bank">
-                            <i class="ti ti-plus"></i> {{__('Add item')}}
+                        <a href="#" data-repeater-create="" class="btn btn-primary mb-2" data-bs-toggle="modal"
+                            data-target="#add-bank">
+                            <i class="ti ti-plus"></i> {{ __('Add item') }}
                         </a>
                     </div>
 
                     <div class="card-body mt-3">
-                    <div class="table-responsive">
-                        <table class="table mb-0" data-repeater-list="items">
-                            <thead>
-                            <tr>
-                                <th>{{__('Items')}}</th>
-                                <th>{{__('Quantity')}}</th>
-                                <th>{{__('Price')}} </th>
-                                <th>{{__('Discount')}}</th>
-                                <th>{{__('Tax')}} (%)</th>
+                        <div class="table-responsive">
+                            <table class="table mb-0" data-repeater-list="items">
+                                <thead>
+                                    <tr>
+                                        <th>{{ __('Items') }}</th>
+                                        <th>{{ __('Quantity') }}</th>
+                                        <th>{{ __('Price') }} </th>
+                                        <th>{{ __('Discount') }}</th>
+                                        <th>{{ __('Tax') }} (%)</th>
 
-                                <th class="text-end">{{__('Amount')}} <br>
-                                    <small class="text-danger font-weight-bold">{{__('after tax & discount')}}</small>
-                                </th>
-                                <th></th>
-                            </tr>
-                            </thead>
-                            <tbody class="ui-sortable" data-repeater-item>
-                            <tr>
-                                <td width="25%" class="form-group pt-0">
-                                    {{ Form::select('item', $product_services,'', array('class' => 'form-control item'  ,'data-url'=>route('proposal.product'),'required'=>'required')) }}
-                                </td>
-                                <td>
-                                    <div class="form-group price-input input-group search-form">
-                                        {{ Form::text('quantity','', array('class' => 'form-control quantity','required'=>'required','placeholder'=>__('Qty'),'required'=>'required')) }}
-                                        <span class="unit input-group-text bg-transparent"></span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-group price-input input-group search-form">
-                                        {{ Form::text('price','', array('class' => 'form-control price','required'=>'required','placeholder'=>__('Price'),'required'=>'required')) }}
-                                        <span class="input-group-text bg-transparent">{{\Auth::user()->currencySymbol()}}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-group price-input input-group search-form">
-                                        {{ Form::text('discount','', array('class' => 'form-control discount','required'=>'required','placeholder'=>__('Discount'))) }}
-                                        <span class="input-group-text bg-transparent">{{\Auth::user()->currencySymbol()}}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-group">
-                                        <div class="input-group">
-                                            <div class="taxes"></div>
-                                            {{ Form::hidden('tax','', array('class' => 'form-control tax')) }}
-                                            {{ Form::hidden('itemTaxPrice','', array('class' => 'form-control itemTaxPrice')) }}
-                                            {{ Form::hidden('itemTaxRate','', array('class' => 'form-control itemTaxRate')) }}
-                                        </div>
-                                    </div>
-                                </td>
+                                        <th class="text-end">{{ __('Amount') }} <br>
+                                            <small
+                                                class="text-danger font-weight-bold">{{ __('after tax & discount') }}</small>
+                                        </th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="ui-sortable" data-repeater-item>
+                                    <tr>
+                                        <td width="25%" class="form-group pt-0">
+                                            {{ Form::select('item', $product_services, '', ['class' => 'form-control item', 'data-url' => route('proposal.product'), 'required' => 'required']) }}
+                                        </td>
+                                        <td>
+                                            <div class="form-group price-input input-group search-form">
+                                                {{ Form::text('quantity', '', ['class' => 'form-control quantity', 'required' => 'required', 'placeholder' => __('Qty'), 'required' => 'required']) }}
+                                                <span class="unit input-group-text bg-transparent"></span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group price-input input-group search-form">
+                                                {{ Form::text('price', '', ['class' => 'form-control price', 'required' => 'required', 'placeholder' => __('Price'), 'required' => 'required']) }}
+                                                <span
+                                                    class="input-group-text bg-transparent">{{ \Auth::user()->currencySymbol() }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group price-input input-group search-form">
+                                                {{ Form::text('discount', '', ['class' => 'form-control discount', 'required' => 'required', 'placeholder' => __('Discount')]) }}
+                                                <span
+                                                    class="input-group-text bg-transparent">{{ \Auth::user()->currencySymbol() }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <div class="input-group">
+                                                    <div class="taxes"></div>
+                                                    {{ Form::hidden('tax', '', ['class' => 'form-control tax']) }}
+                                                    {{ Form::hidden('itemTaxPrice', '', ['class' => 'form-control itemTaxPrice']) }}
+                                                    {{ Form::hidden('itemTaxRate', '', ['class' => 'form-control itemTaxRate']) }}
+                                                </div>
+                                            </div>
+                                        </td>
 
-                                <td class="text-end amount">
-                                    0.00
-                                </td>
-                                <td>
-                                    <a href="#" class="ti ti-trash text-white text-danger" data-repeater-delete></a>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td colspan="2">
-                                    <div class="form-group">
-                                        {{ Form::textarea('description', null, ['class'=>'form-control pro_description','rows'=>'1','placeholder'=>__('Description')]) }}
-                                    </div>
-                                </td>
-                                <td colspan="5"></td>
-                            </tr>
-                            </tbody>
-                            <tfoot>
-                            <tr class="border-none">
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td></td>
-                                <td><strong>{{__('Sub Total')}} ({{\Auth::user()->currencySymbol()}})</strong></td>
-                                <td class="text-end subTotal">0.00</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td></td>
-                                <td><strong>{{__('Discount')}} ({{\Auth::user()->currencySymbol()}})</strong></td>
-                                <td class="text-end totalDiscount">0.00</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td></td>
-                                <td><strong>{{__('Tax')}} ({{\Auth::user()->currencySymbol()}})</strong></td>
-                                <td class="text-end totalTax">0.00</td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td class="blue-text border-none"><strong>{{__('Total Amount')}} ({{\Auth::user()->currencySymbol()}})</strong></td>
-                                <td class="text-end totalAmount blue-text border-none">0.00</td>
-                                <td></td>
-                            </tr>
-                            </tfoot>
-                        </table>
+                                        <td class="text-end amount">
+                                            0.00
+                                        </td>
+                                        <td>
+                                            <a href="#" class="ti ti-trash text-white text-danger"
+                                                data-repeater-delete></a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                            <div class="form-group">
+                                                {{ Form::textarea('description', null, ['class' => 'form-control pro_description', 'rows' => '1', 'placeholder' => __('Description')]) }}
+                                            </div>
+                                        </td>
+                                        <td colspan="5"></td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="border-none">
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td></td>
+                                        <td><strong>{{ __('Sub Total') }} ({{ \Auth::user()->currencySymbol() }})</strong>
+                                        </td>
+                                        <td class="text-end subTotal">0.00</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td></td>
+                                        <td><strong>{{ __('Discount') }} ({{ \Auth::user()->currencySymbol() }})</strong>
+                                        </td>
+                                        <td class="text-end totalDiscount">0.00</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td></td>
+                                        <td><strong>{{ __('Tax') }} ({{ \Auth::user()->currencySymbol() }})</strong>
+                                        </td>
+                                        <td class="text-end totalTax">0.00</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td>&nbsp;</td>
+                                        <td class="blue-text border-none"><strong>{{ __('Total Amount') }}
+                                                ({{ \Auth::user()->currencySymbol() }})</strong></td>
+                                        <td class="text-end totalAmount blue-text border-none">0.00</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
-                </div>
                 </div>
             </div>
 
             <div class="modal-footer">
-                <input type="button" value="{{__('Cancel')}}" onclick="location.href = '{{route("proposal.index")}}';" class="btn btn-light">
-                <input type="submit" value="{{__('Create')}}" class="btn  btn-primary">
+                <input type="button" value="{{ __('Cancel') }}"
+                    onclick="location.href = '{{ route('proposal.index') }}';" class="btn btn-light">
+                <input type="submit" value="{{ __('Create') }}" class="btn  btn-primary">
             </div>
             {{ Form::close() }}
         </div>
     </div>
 @endsection
-
-

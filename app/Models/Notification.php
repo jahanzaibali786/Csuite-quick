@@ -179,7 +179,7 @@ class Notification extends Model
                 'text_template' => '{user} {notification_for} <b class="font-weight-bold">{name}</b>',
                 'icon' => 'fa fa-eye',
                 'icon_color' => 'bg-primary',
-                'not_type' => 'approval',
+                'not_type' => 'simple',
             ],
 
             // Invoice Management

@@ -280,6 +280,20 @@
                                             </a>
                                         </li>
                                         <li
+                                            class="col-6 report-item {{ Request::route()->getName() == 'profit-loss-by-month' ? 'active' : '' }}">
+                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                href="{{ route('profit-loss-by-month') }}">
+                                                <span class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                                    {{ __('Profit and Loss By Month') }}
+                                                </span>
+                                                <span class="report-actions">
+                                                    <i class="bi bi-star text-muted"></i>
+                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                </span>
+                                            </a>
+                                        </li>
+                                        <li
                                             class="col-6 report-item {{ Request::route()->getName() == 'ledger.index' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
                                                 href="{{ route('ledger.index') }}">
@@ -293,7 +307,20 @@
                                                 </span>
                                             </a>
                                         </li>
-
+                                        <li
+                                            class="col-6 report-item {{ Request::route()->getName() == 'profit-loss-comparison' ? 'active' : '' }}">
+                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                href="{{ route('profit-loss-comparison') }}">
+                                                <span class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                                    {{ __('Profit and Loss Comparison') }}
+                                                </span>
+                                                <span class="report-actions">
+                                                    <i class="bi bi-star text-muted"></i>
+                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                </span>
+                                            </a>
+                                        </li>
                                         <li
                                             class="col-6 report-item {{ Request::route()->getName() == 'cash-flow.index' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
@@ -308,7 +335,20 @@
                                                 </span>
                                             </a>
                                         </li>
-
+                                        <li
+                                            class="col-6 report-item {{ Request::route()->getName() == 'profit-loss-quaterly' ? 'active' : '' }}">
+                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                href="{{ route('profit-loss-quaterly') }}">
+                                                <span class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                                    {{ __('Profit and Loss Quaterly') }}
+                                                </span>
+                                                <span class="report-actions">
+                                                    <i class="bi bi-star text-muted"></i>
+                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                </span>
+                                            </a>
+                                        </li>
 
                                     </ul>
                                 </div>

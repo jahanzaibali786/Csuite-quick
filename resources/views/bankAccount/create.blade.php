@@ -1,5 +1,5 @@
-{{ Form::open(array('url' => 'bank-account')) }}
-<div class="modal-body">
+{{ Form::open(array('url' => 'bank-account', 'id'=>'bankAccountForm')) }}
+<div class="modal-body" id="bankAccountFormBody">
     <div class="row">
         <div class="form-group col-md-6">
             {{ Form::label('chart_account_id', __('Account'),['class'=>'form-label']) }}
