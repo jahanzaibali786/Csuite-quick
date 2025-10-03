@@ -772,8 +772,10 @@
                         columns: columns,
                         data: data,
                         pageTitle: pageTitle,
-                        ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
-                            .textContent : "",
+                        ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section #date-range-display")
+                            .text()
+                            .replace(/\s+/g, ' ')
+                            .trim() : "",
                         HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
                             .footerAlignment
                         ],

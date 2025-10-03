@@ -134,24 +134,11 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
                         ? \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnCount)
                         : 'A';
 
-                    // Debug: Write something in the entire row first
-                    foreach (range(1, $columnCount) as $colIndex) {
-                        $sheet->setCellValueByColumnAndRow($colIndex, $noDataRow, "X");
-                    }
-
-                    // Merge across columns
-                    $sheet->mergeCells("A{$noDataRow}:{$lastColumn}{$noDataRow}");
-
-                    // Now overwrite with the message
-                    $sheet->setCellValue("A{$noDataRow}", 'No data available in table');
-
-                    // Style
-                    $sheet->getStyle("A{$noDataRow}:{$lastColumn}{$noDataRow}")
-                        ->getAlignment()
-                        ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
-                        ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-                    $sheet->getStyle("A{$noDataRow}:{$lastColumn}{$noDataRow}")
-                        ->getFont()->setItalic(true)->setSize(12)->getColor()->setRGB('FF0000');
+                    $sheet->mergeCells("A4:D4");
+                    $sheet->getStyle("A4:D4")->getAlignment()
+                        ->setHorizontal($headerAlign)
+                        ->setVertical('center');
+                    $sheet->getRowDimension(1)->setRowHeight(34);
                 } else {
                     for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
                         $isBoldRow = false;

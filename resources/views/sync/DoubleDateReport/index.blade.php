@@ -216,14 +216,6 @@
                                     <input type="date" class="form-control " name="end_date"
                                         id="sidebar-filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
                                 </div>
-
-                                <div class="filter-item col-md-3">
-                                    <label class="filter-label">Accounting method</label>
-                                    <select id="accounting-method" class="form-control">
-                                        <option value="accrual" selected>Accrual</option>
-                                        <option value="cash">Cash</option>
-                                    </select>
-                                </div>
                             </div>
                         </div>
 
