@@ -27,22 +27,49 @@ class UniversalDataTableExportPdf
         }
     }
 
-    public function download(string $filename)
+    /**
+     * Generate PDF HTML with fixed width for A4
+     */
+    protected function generateHtml(): string
     {
-        $options = new Options();
-        $options->set('isRemoteEnabled', true);
-        $options->set('defaultFont', 'DejaVu Sans'); // good Unicode font support
-        $dompdf = new Dompdf($options);
-
         $html = '<html><head><style>
             body { font-family: DejaVu Sans, sans-serif; font-size:12px; }
             h1 { text-align: ' . $this->headerFooterAlignment[0] . '; font-size:24px; margin-bottom:5px; }
             .report-period { text-align: ' . $this->headerFooterAlignment[0] . '; font-size:11px; margin-top:0; color:#555; }
-            table { width:100%; border-collapse:collapse; margin-top:15px; }
-            th, td { border:0px solid #ccc; border-bottom: 1px solid #f3f4f6; padding:6px 8px; }
-            th { background:#f1f1f1; font-weight:bold; text-align:center; }
-            tr.bold td { font-weight:bold; }
-            .footer { margin-top:30px; text-align: ' . $this->headerFooterAlignment[1] . '; font-size:11px; color:#6B7280; }
+
+            /* Ensure table always fits page width */
+            .table-container {
+                width: 100%;
+                overflow: hidden;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+                table-layout: fixed; /* lock column widths */
+                word-wrap: break-word;
+            }
+            th, td {
+                border: 0px solid #ccc;
+                border-bottom: 1px solid #f3f4f6;
+                padding: 6px 8px;
+                font-size: 10px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                word-break: break-word;
+            }
+            th {
+                background: #f1f1f1;
+                font-weight: bold;
+                text-align: center;
+            }
+            tr.bold td { font-weight: bold; }
+            .footer {
+                margin-top: 30px;
+                text-align: ' . $this->headerFooterAlignment[1] . ';
+                font-size: 11px;
+                color: #6B7280;
+            }
         </style></head><body>';
 
         // Title + period
@@ -52,7 +79,7 @@ class UniversalDataTableExportPdf
         }
 
         // Table
-        $html .= '<table><thead><tr>';
+        $html .= '<div class="table-container"><table><thead><tr>';
         foreach ($this->columns as $col) {
             $html .= "<th>{$col}</th>";
         }
@@ -78,7 +105,7 @@ class UniversalDataTableExportPdf
             $html .= $isBold ? "<tr class='bold'>{$rowHtml}</tr>" : "<tr>{$rowHtml}</tr>";
         }
 
-        $html .= '</tbody></table>';
+        $html .= '</tbody></table></div>';
 
         // Footer
         $html .= '<div class="footer">'
@@ -89,10 +116,42 @@ class UniversalDataTableExportPdf
 
         $html .= '</body></html>';
 
-        $dompdf->loadHtml($html);
+        return $html;
+    }
+
+    /**
+     * Download PDF (forces file download)
+     */
+    public function download(string $filename)
+    {
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($this->generateHtml());
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
 
         return $dompdf->stream($filename);
+    }
+
+    /**
+     * Stream PDF inline (for browser preview/print)
+     */
+    public function stream(string $filename)
+    {
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($this->generateHtml());
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        return response($dompdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
     }
 }

@@ -18,8 +18,7 @@ class ChartOfAccountController extends Controller
 
     public function index(Request $request)
     {
-        if(\Auth::user()->can('manage chart of account'))
-        {
+        if (\Auth::user()->can('manage chart of account')) {
             if (!empty($request->start_date) && !empty($request->end_date)) {
                 $start = $request->start_date;
                 $end = $request->end_date;
@@ -44,10 +43,8 @@ class ChartOfAccountController extends Controller
                 $chartAccounts[$typeName] = $accounts[$type->id] ?? [];
             }
 
-            return view('chartOfAccount.index', compact('chartAccounts', 'types' , 'filter'));
-        }
-        else
-        {
+            return view('chartOfAccount.index', compact('chartAccounts', 'types', 'filter'));
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
@@ -55,23 +52,22 @@ class ChartOfAccountController extends Controller
     public function create()
     {
 
-        $types = ChartOfAccountType::where('created_by',\Auth::user()->creatorId())->get();
+        $types = ChartOfAccountType::where('created_by', \Auth::user()->creatorId())->get();
 
         $account_type = [];
 
         foreach ($types as $type) {
-            $accountTypes = ChartOfAccountSubType::where('type', $type->id)->where('created_by',\Auth::user()->creatorId())->get();
+            $accountTypes = ChartOfAccountSubType::where('type', $type->id)->where('created_by', \Auth::user()->creatorId())->get();
             $temp = [];
-            foreach($accountTypes as $accountType)
-            {
+            foreach ($accountTypes as $accountType) {
                 $temp[$accountType->id] = $accountType->name;
             }
             $account_type[$type->name] = $temp;
         }
         $selectAcc =     [
             null => "Select",
-            ];
-               $account_type =  array_merge($selectAcc, $account_type);
+        ];
+        $account_type =  array_merge($selectAcc, $account_type);
 
         return view('chartOfAccount.create', compact('account_type'));
     }
@@ -80,110 +76,121 @@ class ChartOfAccountController extends Controller
     public function store(Request $request)
     {
 
-        if(\Auth::user()->can('create chart of account'))
-        {
+        if (\Auth::user()->can('create chart of account')) {
             $validator = \Validator::make(
-                $request->all(), [
-                                   'name' => 'required',
-                                   'sub_type' => 'required',
-                               ]
+                $request->all(),
+                [
+                    'name' => 'required',
+                    'sub_type' => 'required',
+                ]
             );
-            if($validator->fails())
-            {
+            //  also ajax submit 
+            if ($request->ajax()) {
+                if ($validator->fails()) {
+                    return response()->json([
+                        'success' => false,
+                        'errors' => $validator->errors()->all(),
+                    ], 422);
+                }
+            }
+            if ($validator->fails()) {
                 $messages = $validator->getMessageBag();
 
                 return redirect()->back()->with('error', $messages->first());
             }
-    // dd('yes');
-    if($request->parent){
-            $type = ChartOfAccountSubType::where('id',$request->sub_type)->where('created_by', '=', \Auth::user()->creatorId())->first();
+            // dd('yes');
+            if ($request->parent) {
+                $type = ChartOfAccountSubType::where('id', $request->sub_type)->where('created_by', '=', \Auth::user()->creatorId())->first();
 
-            $account = ChartOfAccount::where('id',$request->parent)->where('created_by', '=', \Auth::user()->creatorId())->first();
-            if(!empty($account->name)){
-            $existingparentAccount = ChartOfAccountParent::where('name',$account->name)->where('created_by',\Auth::user()->creatorId())->first();
+                $account = ChartOfAccount::where('id', $request->parent)->where('created_by', '=', \Auth::user()->creatorId())->first();
+                if (!empty($account->name)) {
+                    $existingparentAccount = ChartOfAccountParent::where('name', $account->name)->where('created_by', \Auth::user()->creatorId())->first();
 
-            if ($existingparentAccount) {
-                $parentAccount = $existingparentAccount;
+                    if ($existingparentAccount) {
+                        $parentAccount = $existingparentAccount;
+                    } else {
+                        $parentAccount              = new ChartOfAccountParent();
+                    }
+                    $parentAccount->name        = $account->name;
+                    $parentAccount->sub_type    = $request->sub_type;
+                    $parentAccount->type        = $type->type;
+                    $parentAccount->account      = $request->parent;
+                    $parentAccount->created_by  = \Auth::user()->creatorId();
+                    $parentAccount->save();
+
+                    $account              = new ChartOfAccount();
+                    $account->name        = $request->name;
+                    $account->code        = $request->code;
+                    $account->type        = $type->type;
+                    $account->sub_type    = $request->sub_type;
+                    $account->parent      = $parentAccount->id;
+                    $account->description = $request->description;
+                    $account->is_enabled  = isset($request->is_enabled) ? 1 : 0;
+                    $account->created_by  = \Auth::user()->creatorId();
+                    $account->save();
+                }
             } else {
-                $parentAccount              = new ChartOfAccountParent();
+                $type = ChartOfAccountSubType::where('id', $request->sub_type)->where('created_by', '=', \Auth::user()->creatorId())->first();
+                $account              = new ChartOfAccount();
+                $account->name        = $request->name;
+                $account->code        = $request->code;
+                $account->type        = $type->type;
+                $account->sub_type    = $request->sub_type;
+                $account->parent      = 0;
+                $account->description = $request->description;
+                $account->is_enabled  = isset($request->is_enabled) ? 1 : 0;
+                $account->created_by  = \Auth::user()->creatorId();
+                $account->save();
             }
-            $parentAccount->name        = $account->name;
-            $parentAccount->sub_type    = $request->sub_type;
-            $parentAccount->type        = $type->type;
-            $parentAccount->account      = $request->parent;
-            $parentAccount->created_by  = \Auth::user()->creatorId();
-            $parentAccount->save();
-
-            $account              = new ChartOfAccount();
-            $account->name        = $request->name;
-            $account->code        = $request->code;
-            $account->type        = $type->type;
-            $account->sub_type    = $request->sub_type;
-            $account->parent      = $parentAccount->id;
-            $account->description = $request->description;
-            $account->is_enabled  = isset($request->is_enabled) ? 1 : 0;
-            $account->created_by  = \Auth::user()->creatorId();
-            $account->save();
-        }
-    }else{
-        $type = ChartOfAccountSubType::where('id',$request->sub_type)->where('created_by', '=', \Auth::user()->creatorId())->first();
-        $account              = new ChartOfAccount();
-            $account->name        = $request->name;
-            $account->code        = $request->code;
-            $account->type        = $type->type;
-            $account->sub_type    = $request->sub_type;
-            $account->parent      = 0;
-            $account->description = $request->description;
-            $account->is_enabled  = isset($request->is_enabled) ? 1 : 0;
-            $account->created_by  = \Auth::user()->creatorId();
-            $account->save();
-    }
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('Account successfully created.'),
+                    'data' => $account,
+                    'type' => $account->type,
+                    'id' => $account->id,
+                    'name' => $account->name,
+                ]);
+            }
             return redirect()->route('chart-of-account.index')->with('success', __('Account successfully created.'));
-        }
-        else
-        {
+        } else {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('Permission denied.'),
+                ], 401);
+            }
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
 
 
-    public function show(ChartOfAccount $chartOfAccount,Request $request)
+    public function show(ChartOfAccount $chartOfAccount, Request $request)
     {
-        if(\Auth::user()->can('ledger report'))
-        {
-            if(!empty($request->start_date) && !empty($request->end_date))
-            {
+        if (\Auth::user()->can('ledger report')) {
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 $start = $request->start_date;
                 $end   = $request->end_date;
-            }
-            else
-            {
+            } else {
                 $start = date('Y-m-01');
                 $end   = date('Y-m-t');
             }
-            if(!empty($request->start_date) && !empty($request->end_date))
-            {
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 $accounts = ChartOfAccount::select(\DB::raw('CONCAT(code, " - ", name) AS code_name, id'))
                     ->where('created_by', \Auth::user()->creatorId())
                     ->where('created_at', '>=', $start)
                     ->where('created_at', '<=', $end)
                     ->get()->pluck('code_name', 'id');
                 $accounts->prepend('Select Account', '');
-
-            }
-            else
-            {
+            } else {
                 $accounts = ChartOfAccount::select(\DB::raw('CONCAT(code, " - ", name) AS code_name, id'))
                     ->where('created_by', \Auth::user()->creatorId())->get()
                     ->pluck('code_name', 'id');
                 $accounts->prepend('Select Account', '');
             }
-            if(!empty($request->account))
-            {
+            if (!empty($request->account)) {
                 $account = ChartOfAccount::find($request->account);
-            }
-            else
-            {
+            } else {
                 $account = ChartOfAccount::find($chartOfAccount->id);
             }
 
@@ -218,9 +225,7 @@ class ChartOfAccountController extends Controller
             $filter['endDateRange']   = $end;
 
             return view('chartOfAccount.show', compact('filter', 'account', 'accounts'));
-        }
-        else
-        {
+        } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
@@ -237,15 +242,14 @@ class ChartOfAccountController extends Controller
     public function update(Request $request, ChartOfAccount $chartOfAccount)
     {
 
-        if(\Auth::user()->can('edit chart of account'))
-        {
+        if (\Auth::user()->can('edit chart of account')) {
             $validator = \Validator::make(
-                $request->all(), [
-                                   'name' => 'required',
-                               ]
+                $request->all(),
+                [
+                    'name' => 'required',
+                ]
             );
-            if($validator->fails())
-            {
+            if ($validator->fails()) {
                 $messages = $validator->getMessageBag();
 
                 return redirect()->back()->with('error', $messages->first());
@@ -261,9 +265,7 @@ class ChartOfAccountController extends Controller
 
 
             return redirect()->route('chart-of-account.index')->with('success', __('Account successfully updated.'));
-        }
-        else
-        {
+        } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
     }
@@ -271,14 +273,11 @@ class ChartOfAccountController extends Controller
 
     public function destroy(ChartOfAccount $chartOfAccount)
     {
-        if(\Auth::user()->can('delete chart of account'))
-        {
+        if (\Auth::user()->can('delete chart of account')) {
             $chartOfAccount->delete();
 
             return redirect()->route('chart-of-account.index')->with('success', __('Account successfully deleted.'));
-        }
-        else
-        {
+        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }

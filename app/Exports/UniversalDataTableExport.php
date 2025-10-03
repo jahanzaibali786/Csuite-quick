@@ -24,7 +24,7 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
                 unset($row['id']);
 
             // foreach ($row as $key => $value) {
-                // $row[$key] = trim(str_replace('▼', '', strip_tags($value)));
+            // $row[$key] = trim(str_replace('▼', '', strip_tags($value)));
             // }
 
             return $row;
@@ -125,41 +125,57 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
                     ->setIndent(1);
 
                 // Apply alignment + styles to data rows (same as before)
-                for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
-                    $isBoldRow = false;
-                    foreach (range(1, $columnCount) as $colIndex) {
-                        $cellValue = trim($sheet->getCellByColumnAndRow($colIndex, $row)->getValue());
-                        if (
-                            stripos($cellValue, 'subtotal') !== false ||
-                            stripos($cellValue, 'total') !== false ||
-                            strpos($cellValue, '▶') !== false ||
-                            strpos($cellValue, '▼') !== false
-                        ) {
-                            $isBoldRow = true;
-                        }
-                        if ($colIndex === 1 && !empty($cellValue)) {
-                            $emptyOtherColumns = true;
-                            foreach (range(2, $columnCount) as $checkCol) {
-                                if (trim($sheet->getCellByColumnAndRow($checkCol, $row)->getValue()) !== '') {
-                                    $emptyOtherColumns = false;
-                                    break;
-                                }
-                            }
-                            if ($emptyOtherColumns) {
+    
+                if ($this->collection->isEmpty()) {
+                    $noDataRow = $headerRow + 1;
+
+                    // Force the merge across all columns (at least one)
+                    $lastColumn = $columnCount > 0
+                        ? \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnCount)
+                        : 'A';
+
+                    $sheet->mergeCells("A4:D4");
+                    $sheet->getStyle("A4:D4")->getAlignment()
+                        ->setHorizontal($headerAlign)
+                        ->setVertical('center');
+                    $sheet->getRowDimension(1)->setRowHeight(34);
+                } else {
+                    for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
+                        $isBoldRow = false;
+                        foreach (range(1, $columnCount) as $colIndex) {
+                            $cellValue = trim($sheet->getCellByColumnAndRow($colIndex, $row)->getValue());
+                            if (
+                                stripos($cellValue, 'subtotal') !== false ||
+                                stripos($cellValue, 'total') !== false ||
+                                strpos($cellValue, '▶') !== false ||
+                                strpos($cellValue, '▼') !== false
+                            ) {
                                 $isBoldRow = true;
                             }
+                            if ($colIndex === 1 && !empty($cellValue)) {
+                                $emptyOtherColumns = true;
+                                foreach (range(2, $columnCount) as $checkCol) {
+                                    if (trim($sheet->getCellByColumnAndRow($checkCol, $row)->getValue()) !== '') {
+                                        $emptyOtherColumns = false;
+                                        break;
+                                    }
+                                }
+                                if ($emptyOtherColumns) {
+                                    $isBoldRow = true;
+                                }
+                            }
+                            $sheet->getStyleByColumnAndRow($colIndex, $row)
+                                ->getAlignment()
+                                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT)
+                                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER)
+                                ->setIndent(1);
                         }
-                        $sheet->getStyleByColumnAndRow($colIndex, $row)
-                            ->getAlignment()
-                            ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT)
-                            ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER)
-                            ->setIndent(1);
-                    }
-                    if ($sheet->getRowDimension($row)->getRowHeight() === -1) {
-                        $sheet->getRowDimension($row)->setRowHeight(18);
-                    }
-                    if ($isBoldRow) {
-                        $sheet->getStyle("A{$row}:{$lastColumn}{$row}")->getFont()->setBold(true);
+                        if ($sheet->getRowDimension($row)->getRowHeight() === -1) {
+                            $sheet->getRowDimension($row)->setRowHeight(18);
+                        }
+                        if ($isBoldRow) {
+                            $sheet->getStyle("A{$row}:{$lastColumn}{$row}")->getFont()->setBold(true);
+                        }
                     }
                 }
 
