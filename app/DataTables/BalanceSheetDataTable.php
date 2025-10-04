@@ -16,8 +16,8 @@ class BalanceSheetDataTable extends DataTable
 
     public function __construct()
     {
-        $this->asOfDate = request('asOfDate')
-            ? Carbon::parse(request('asOfDate'))->endOfDay()->format('Y-m-d')
+        $this->asOfDate = request('endDate')
+            ? Carbon::parse(request('endDate'))->endOfDay()->format('Y-m-d')
             : Carbon::now()->endOfDay()->format('Y-m-d');
         
         $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
@@ -70,7 +70,7 @@ class BalanceSheetDataTable extends DataTable
                     
                     return $indent . '
                         <div class="toggle-section" data-section="' . $row->id . '">
-                            <i class="fa fa-chevron-right toggle-chevron"></i>
+                            <i class="toggle-chevron">▶</i>
                             <strong class="section-header">' . e($row->name) . '</strong>
                             <span class="section-total-amount" data-group="' . $row->id . '"> - ' . $sectionTotal . '</span>
                         </div>';
@@ -331,7 +331,7 @@ class BalanceSheetDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('balance-sheet-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([

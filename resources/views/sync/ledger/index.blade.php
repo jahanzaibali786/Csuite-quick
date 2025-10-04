@@ -9,13 +9,156 @@
                 <span class="last-updated">Last updated 8 minutes ago</span>
                 <div class="actions">
                     <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
-                    <button class="btn btn-icon" title="Print"><i class="fa fa-print"></i></button>
+                    <button class="btn btn-icon"
+                        onclick="exportDataTable('ledger-table', '{{ 'General Ledger' }}', 'print')"><i
+                            class="fa fa-print"></i></button>
                     <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
                     <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
                     <button class="btn btn-success btn-save">Save As</button>
                 </div>
             </div>
         </div>
+
+
+        <!-- Bootstrap Modal -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content p-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Choose Export Format</h5> <button type="button" class="btn-close"
+                            data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center row">
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('ledger-table', '{{ 'General Ledger' }}')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="excel">Export to
+                                Excel</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('ledger-table', '{{ 'General Ledger' }}', 'pdf')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="pdf">Export to
+                                PDF</button>
+                        </div>
+                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Show modal on export button click
+            $('.btn-icon[title="Export"]').on('click', function() {
+                $('#exportModal').modal('show');
+            });
+
+            // Handle export actions
+            $('#exportModal button[data-action]').on('click', function() {
+                // Hide modal after action
+                $('#exportModal').modal('hide');
+            });
+        </script>
+
+        <script>
+            let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            {{-- console.log([window.Header, window.footerAlignment]) --}}
+
+            function exportDataTable(tableId, pageTitle, format = 'excel') {
+                let table = $('#' + tableId).DataTable();
+
+                // Only get visible columns (skip auto-index)
+                let columns = [];
+                $('#' + tableId + ' thead th:visible').each(function() {
+                    columns.push($(this).text().trim());
+                });
+
+                // Get visible data rows
+                let data = [];
+
+                const getRealtimeTableData = () => {
+
+                    let data = [];
+
+
+                    table.rows({
+                        search: 'applied'
+                    }).every(function() {
+                        let rowData = this.data();
+
+                        if (typeof rowData === 'object') {
+                            // Only keep values for visible columns
+                            let rowArray = [];
+                            table.columns(':visible').every(function(colIdx) {
+                                let val = rowData[this.dataSrc()] ?? '-';
+                                rowArray.push(val);
+                            });
+                            rowData = rowArray;
+                        }
+                        data.push(rowData);
+                    });
+
+                    return data
+
+                }
+
+                // Get visible data rows (rendered DOM text, not raw data)
+                $('#' + tableId + ' tbody tr:visible').each(function() {
+                    let rowArray = [];
+                    $(this).find('td:visible').each(function() {
+                        rowArray.push($(this).text().trim());
+                    });
+                    data.push(rowArray);
+                });
+
+
+
+                // Send to universal export route
+                $.ajax({
+                    url: '{{ route('export.datatable') }}',
+                    method: 'POST',
+                    data: {
+                        columns: columns,
+                        data: data,
+                        pageTitle: pageTitle,
+                        ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
+                            .textContent : "",
+                        HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
+                            .footerAlignment
+                        ],
+                        format: format,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function(blob, status, xhr) {
+                        let filename = xhr.getResponseHeader('Content-Disposition')
+                            .split('filename=')[1]
+                            .replace(/"/g, ''); //"
+
+                        if (format === "print") {
+                            let fileURL = URL.createObjectURL(blob);
+                            let printWindow = window.open(fileURL);
+                            printWindow.onload = function() {
+                                printWindow.focus();
+                                printWindow.print();
+                            };
+                        } else {
+                            let link = document.createElement('a');
+                            link.href = window.URL.createObjectURL(blob);
+                            link.download = filename;
+                            link.click();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Export failed:', xhr.responseText);
+                        alert('Export failed! Check console.');
+                    }
+                });
+            }
+        </script>
 
         <!-- Filter Controls -->
         <div class="filter-controls">
@@ -734,10 +877,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                    flex-direction: column;
-                    width: 100%;
-                    gap: 16px;
-                } */
+                        flex-direction: column;
+                        width: 100%;
+                        gap: 16px;
+                    } */
 
             .filter-item {
                 width: 100%;
@@ -977,7 +1120,7 @@
             $('#ledger-table').on('preXhr.dt', function(e, settings, data) {
                 data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
-                
+
                 data.account_id = $('#filter-account').val();
                 data.accounting_method = $('#accounting-method').val();
 
@@ -1238,7 +1381,7 @@
             });
 
             // Export functionality
-            $('.btn-icon[title="Export"]').on('click', function() {
+            /*$('.btn-icon[title="Export"]').on('click', function() {
                 // Create export menu
                 const exportOptions = [{
                         text: 'Export to Excel',
@@ -1270,7 +1413,7 @@
                     default:
                         alert('Invalid option');
                 }
-            });
+            });*/
 
             // View options functionality
             $('#view-options-btn').on('click', function() {

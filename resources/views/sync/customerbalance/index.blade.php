@@ -531,6 +531,122 @@
         });
     </script>
 
+    <script>
+        $(document).on('click', '.toggle-section', handleSectionToggle);
+
+
+
+        window.viewState = {};
+        window.viewState.viewType = 'detailed'; // default view
+
+        function handleSectionToggle(e) {
+            e.preventDefault();
+
+            if (window.viewState.viewType === 'compact') {
+                return;
+            }
+
+            const $this = $(this);
+            // fallback: use data-group from .toggle-section if row-id missing
+            let group = $this.closest('tr').data('row-id');
+            if (!group) {
+                group = $this.data('group'); // <-- fix for this report
+            }
+
+            const $row = $this.closest('tr');
+            const $chevron = $this.find('.toggle-chevron');
+            // fallback: support both .section-total-amount and .section-total-display
+            const $sectionTotal = $row.find(
+                '.section-total-amount[data-group="' + group + '"], .section-total-display[data-group="' + group + '"]'
+            );
+            const $childRows = $('.group-' + group);
+
+            if ($chevron.length === 0) return;
+
+            if ($chevron.text() === "▼") {
+                // Collapse
+                $childRows.hide();
+                $chevron.text("▶");
+                $sectionTotal.show();
+            } else {
+                // Expand
+                $childRows.show();
+                $chevron.text("▼");
+                $sectionTotal.hide();
+            }
+        }
+
+
+        function toggleSection($headerRow) {
+            if (window.viewState.viewType === 'compact') {
+                return; // Don't allow toggle in compact view
+            }
+
+            const sectionId = $headerRow.attr('data-row-id');
+            if (!sectionId) return;
+
+            if ($headerRow.hasClass('section-expanded')) {
+                // Collapse section
+                collapseSection(sectionId);
+            } else {
+                // Expand section
+                expandSection(sectionId);
+            }
+        }
+
+        const expandCollapseInit = function() {
+            if (!window.LaravelDataTables || !window.LaravelDataTables['customer-balance-table']) {
+                setTimeout(expandCollapseInit, 500);
+                return;
+            }
+
+            // Attach handler once DataTable is initialized
+            window.LaravelDataTables['customer-balance-table']
+                .on('draw.dt', function() {
+                    console.log("Table redrawn, checking for toggle sections...");
+                    console.log($('.toggle-section'));
+                    $('.toggle-section').each(function() {
+                        {{-- console.log($(this)); --}}
+                        $(this).click();
+                    })
+                    // do your expand/collapse binding here
+                    {{-- $('.toggle-section').off('click').on('click', function() {
+                        console.log("Clicked section:", $(this).data('section'));
+                    }); --}}
+                });
+        };
+
+        $(document).ready(expandCollapseInit);
+
+
+        // Attach once for chevron-icon style tables
+        $(document).on('click', '.chevron-icon', function(e) {
+            e.preventDefault();
+
+            const $icon = $(this);
+            const parentType = $icon.data('parent-type'); // "subtype" or "account"
+            const parentId = $icon.data('parent-id'); // e.g. "subtype_current_asset" or "3"
+
+            if (!parentType || !parentId) return;
+
+            // Build selector for children
+            const childSelector = `.child-of-${parentType}-${parentId}`;
+            const $children = $(childSelector);
+
+            if ($children.length === 0) return;
+
+            if ($icon.text().trim() === "▼") {
+                // Collapse
+                $children.hide();
+                $icon.text("▶");
+            } else {
+                // Expand
+                $children.show();
+                $icon.text("▼");
+            }
+        });
+    </script>
+
     <style>
         /* Base styling */
         * {
@@ -997,10 +1113,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                                                                        flex-direction: column;
-                                                                                                                                                                                                        width: 100%;
-                                                                                                                                                                                                        gap: 16px;
-                                                                                                                                                                                                    } */
+                                                                                                                                                                                                                                            flex-direction: column;
+                                                                                                                                                                                                                                            width: 100%;
+                                                                                                                                                                                                                                            gap: 16px;
+                                                                                                                                                                                                                                        } */
 
             .filter-item {
                 width: 100%;
@@ -1094,8 +1210,25 @@
             $('#' + tableId + ' tbody tr:visible').each(function() {
                 let rowArray = [];
                 $(this).find('td:visible').each(function() {
-                    rowArray.push($(this).text().trim());
+                    let cellContent;
+
+                    if ($(this).find('h4').length > 0 || $(this).find('strong').length > 0) {
+                        // If <h4> exists, keep HTML (preserve h4)
+                        cellContent = $(this).html()
+                            .replace(/[\n\r]+/g, ' ')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+                    } else {
+                        // Otherwise, use plain text
+                        cellContent = $(this).text()
+                            .replace(/[\n\r]+/g, ' ')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+                    }
+
+                    rowArray.push(cellContent);
                 });
+
                 data.push(rowArray);
             });
 
@@ -1114,6 +1247,7 @@
                     HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
                         .footerAlignment
                     ],
+                    singleBold: pageTitle === "Balance Sheet - Standard" ? false : true,
                     format: format,
                     _token: '{{ csrf_token() }}'
                 },

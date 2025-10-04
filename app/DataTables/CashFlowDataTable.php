@@ -255,7 +255,7 @@ class CashFlowDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('cash-flow-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([

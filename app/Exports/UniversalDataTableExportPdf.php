@@ -57,18 +57,51 @@ class UniversalDataTableExportPdf
                 overflow: hidden;
                 text-overflow: ellipsis;
                 word-break: break-word;
+                text-align: center;   /* default for all cells */
             }
+
+            /* override first column (index 1) */
+            th:first-child,
+            td:first-child {
+                text-align: left;
+            }
+
+            h4 {
+                font-size: 1.25rem;
+                font-weight: 600;
+            }
+
             th {
                 background: #f1f1f1;
                 font-weight: bold;
-                text-align: center;
             }
-            tr.bold td { font-weight: bold; }
+            tr.bold td {
+                font-weight: bold;
+            }
+
+            tr.bold td:first-child {
+                text-align: left !important;
+            }
+
             .footer {
                 margin-top: 30px;
                 text-align: ' . $this->headerFooterAlignment[1] . ';
                 font-size: 11px;
                 color: #6B7280;
+            }
+
+            h4 {
+                font-size: 16px;
+                font-weight: bold;
+                margin: 0;
+                padding: 0;
+}
+
+            td h4 {
+                font-size: 16px !important;
+                font-weight: bold !important;
+                margin: 0;
+                padding: 0;
             }
         </style></head><body>';
 
@@ -87,6 +120,7 @@ class UniversalDataTableExportPdf
 
         foreach ($this->collection as $row) {
             $isBold = false;
+            $isLeft = false;
             $rowHtml = '';
 
             foreach ($row as $cell) {
@@ -98,8 +132,14 @@ class UniversalDataTableExportPdf
                     strpos($val, '▼') !== false
                 ) {
                     $isBold = true;
+                    $isLeft = true;
                 }
-                $rowHtml .= '<td>' . htmlspecialchars($val) . '</td>';
+                $val = strip_tags($val, '<h4><strong>');
+                $val = html_entity_decode($val, ENT_QUOTES, 'UTF-8');
+                $val = str_replace("\xC2\xA0", ' ', $val);
+                $val = preg_replace('/\s+/', ' ', $val);
+                $val = trim($val);
+                $rowHtml .= '<td>' . $val . '</td>';
             }
 
             $html .= $isBold ? "<tr class='bold'>{$rowHtml}</tr>" : "<tr>{$rowHtml}</tr>";
