@@ -272,7 +272,13 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.profit_loss.index', $this->data);
+        // return $dataTable->render('sync.profit_loss.index', $this->data);
+
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
     }
     public function profitLossByMonth(\App\DataTables\ProfitLossByMonth $dataTable, Request $request)
     {
@@ -312,7 +318,12 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.profit-loss-detail.index', $this->data);
+        // return $dataTable->render('sync.profit-loss-detail.index', $this->data);
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
     }
 
     public function balanceSheet(\App\DataTables\BalanceSheetDataTable $dataTable, Request $request)
@@ -323,7 +334,13 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.balance-sheet.index', $this->data);
+        // return $dataTable->render('sync.balance-sheet.index', $this->data);
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
+
     }
 
     public function balanceSheetStandard(\App\DataTables\BalanceSheetStandardDataTable $dataTable, Request $request)
@@ -334,7 +351,12 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.balance-sheet-standard.index', $this->data);
+        // return $dataTable->render('sync.balance-sheet-standard.index', $this->data);
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
     }
 
     public function balanceSheetDetail(\App\DataTables\BalanceSheetDetailDataTable $dataTable, Request $request)
@@ -345,7 +367,12 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.balance-sheet-detail.index', $this->data);
+        // return $dataTable->render('sync.balance-sheet-detail.index', $this->data);
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
     }
 
     public function cashFlow(\App\DataTables\CashFlowDataTable $dataTable, Request $request)
@@ -356,7 +383,12 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.cash-flow.index', $this->data);
+        //return $dataTable->render('sync.cash-flow.index', $this->data);
+        return $dataTable->render('sync.customerbalance.index', [
+            'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
     }
 
     public function generalJournal(\App\DataTables\GeneralJournalDataTable $dataTable, Request $request)
@@ -899,6 +931,8 @@ class VoucherController extends Controller
         $HeaderFooterAlignment = $request->input('HeaderFooterAlignment') ?? "";
         $format = $request->input('format', $format);
 
+        $singleBold = $request->has('singleBold') && $request->boolean('singleBold');
+
         $sanitizedTitle = preg_replace('/[\/\\\\]+/', '_', $pageTitle);
         $filename = str_replace(' ', '_', $sanitizedTitle) . '_' . now()->format('YmdHis');
 
@@ -907,7 +941,8 @@ class VoucherController extends Controller
             $columns,
             $pageTitle,
             $ReportPeriod,
-            $HeaderFooterAlignment
+            $HeaderFooterAlignment,
+            $singleBold
         );
 
         if ($format === 'pdf') {
