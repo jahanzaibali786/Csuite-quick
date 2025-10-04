@@ -660,7 +660,9 @@ class BillController extends Controller
                 if(Auth::user()->type == 'company')
                 {
                     $this->createBillJournalVoucher($bill);
-                    $this->approveBill($bill->id);
+                    $bill->status = 6;
+                    $bill->save();
+                    Utility::makeActivityLog(\Auth::user()->id, 'Bill', $bill->id, 'Create Bill', 'Bill Created & Approved');
                 }
                 // Webhook
                 $module = 'New Bill';
@@ -822,13 +824,6 @@ class BillController extends Controller
 
             Utility::makeActivityLog(\Auth::user()->id, 'Bill', $bill->id, 'Approve Bill', 'Bill approved and JV posted');
 
-            // Send notification to bill creator
-            $data = [
-                "updated_by" => \Auth::user()->id,
-                "data_id" => $bill->id,
-                "name" => '',
-            ];
-            Utility::makeNotification($bill->created_by, 'bill_approved', $data, $bill->id, 'Bill Approved');
 
             \DB::commit();
             return redirect()->route('bill.index')->with('success', __('Bill approved successfully and JV posted.'));

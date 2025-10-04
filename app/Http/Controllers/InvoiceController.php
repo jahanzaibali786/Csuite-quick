@@ -715,7 +715,10 @@ class InvoiceController extends Controller
                 if(Auth::user()->type == 'company')
                 {
                     $this->createInvoiceJournalVoucher($invoice);
-                    $this->approveInvoice($invoice->id);
+                    // $this->approveInvoice($invoice->id);
+                    $invoice->status = 6; // Approved
+                    $invoice->save();
+                    Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Create Invoice', 'Invoice Created & Approved');
                 }
 
                 // Webhook

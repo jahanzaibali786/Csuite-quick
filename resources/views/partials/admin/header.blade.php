@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert(response.message);
                     } else {
                         alert('Action processed successfully.');
-                        // window.location.reload();
+                        window.location.reload();
                     }
                     
                     // Remove the notification from view
@@ -447,15 +447,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         notificationElement.remove();
                     }, 300);
                 },
-                error: function(xhr, status, error) {
-                    console.error('Error processing action:', error);
-                    
+                error: function(xhr, status, error) {                    
                     // Re-enable button
                     button.disabled = false;
                     button.textContent = originalText;
                     
                     // Show error message
-                    let errorMessage = 'An error occurred while processing the action.';
+                    let errorMessage = 'Something went wrong ...';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
                     }

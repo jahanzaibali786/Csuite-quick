@@ -100,14 +100,14 @@
 
         /* .accordion-item:first-child .accordion-button {
 
-                                border-top-left-radius: 0.375rem;
-                                border-top-right-radius: 0.375rem;
-                            }
+                                    border-top-left-radius: 0.375rem;
+                                    border-top-right-radius: 0.375rem;
+                                }
 
-                            .accordion-item:last-child .accordion-button.collapsed {
-                                border-bottom-left-radius: 0.375rem;
-                                border-bottom-right-radius: 0.375rem;
-                            } */
+                                .accordion-item:last-child .accordion-button.collapsed {
+                                    border-bottom-left-radius: 0.375rem;
+                                    border-bottom-right-radius: 0.375rem;
+                                } */
 
 
         /* Responsive grid adjustments */
@@ -210,7 +210,7 @@
 
                                         {{-- ================== Existing Reports ================== --}}
                                         <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.balance.sheet' ? 'active' : '' }}">
+                                            class="col-6 report-item {{ Request::route()->getName() == 'balance-sheet.index' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
                                                 href="{{ route('balance-sheet.index') }}">
                                                 <span class="d-flex align-items-center">
@@ -294,12 +294,12 @@
                                             </a>
                                         </li>
                                         <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'ledger.index' ? 'active' : '' }}">
+                                            class="col-6 report-item {{ Request::route()->getName() == 'balance-sheet-comparison.index' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('ledger.index') }}">
+                                                href="{{ route('balance-sheet-comparison.index') }}">
                                                 <span class="d-flex align-items-center">
                                                     <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('General Ledger') }}
+                                                    {{ __('Balance Sheet Comparison') }}
                                                 </span>
                                                 <span class="report-actions">
                                                     <i class="bi bi-star text-muted"></i>
@@ -322,6 +322,35 @@
                                             </a>
                                         </li>
                                         <li
+                                            class="col-6 report-item {{ Request::route()->getName() == 'ledger.index' ? 'active' : '' }}">
+                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                href="{{ route('ledger.index') }}">
+                                                <span class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                                    {{ __('General Ledger') }}
+                                                </span>
+                                                <span class="report-actions">
+                                                    <i class="bi bi-star text-muted"></i>
+                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                </span>
+                                            </a>
+                                        </li>
+
+                                        <li
+                                            class="col-6 report-item {{ Request::route()->getName() == 'profit-loss-quaterly' ? 'active' : '' }}">
+                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                href="{{ route('profit-loss-quaterly') }}">
+                                                <span class="d-flex align-items-center">
+                                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                                    {{ __('Profit and Loss Quarterly') }}
+                                                </span>
+                                                <span class="report-actions">
+                                                    <i class="bi bi-star text-muted"></i>
+                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                </span>
+                                            </a>
+                                        </li>
+                                        <li
                                             class="col-6 report-item {{ Request::route()->getName() == 'cash-flow.index' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
                                                 href="{{ route('cash-flow.index') }}">
@@ -335,21 +364,6 @@
                                                 </span>
                                             </a>
                                         </li>
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'profit-loss-quaterly' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('profit-loss-quaterly') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Profit and Loss Quaterly') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
                                     </ul>
                                 </div>
                             </div>
@@ -435,76 +449,7 @@
                         </div>
                     </div>
 
-                    {{-- ================== What You Owe ================== --}}
-                    <div class="accordion pb-2" id="reportsAccordion">
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="whoYouOweHeading">
-                                <button class="accordion-button {{ Request::segment(1) == 'report' ? '' : 'collapsed' }}"
-                                    type="button" data-bs-toggle="collapse" data-bs-target="#whoYouOweCollapse"
-                                    aria-expanded="{{ Request::segment(1) == 'report' ? 'true' : 'false' }}"
-                                    aria-controls="whoYouOweCollapse">
-                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                    {{ __('Who You Owe') }}
-                                </button>
-                            </h2>
-                            <div id="whoYouOweCollapse"
-                                class="accordion-collapse collapse {{ Request::segment(1) == 'report' ? 'show' : '' }}"
-                                aria-labelledby="whoYouOweHeading" data-bs-parent="#reportsAccordion">
-                                <div class="accordion-body p-0">
-                                    <ul class="list-unstyled mb-0 row g-0">
 
-                                        @php
-                                            $payableReports = [
-                                                [
-                                                    'route' => 'payables.aging_summary',
-                                                    'label' => 'Accounts payable aging summary',
-                                                ],
-                                                [
-                                                    'route' => 'payables.aging_details',
-                                                    'label' => 'Accounts payable aging details',
-                                                ],
-                                                ['route' => 'payables.bills_payments', 'label' => 'Bills and payments'],
-                                                [
-                                                    'route' => 'payables.vendor_balance_summary',
-                                                    'label' => 'Vendor balance summary',
-                                                ],
-                                                [
-                                                    'route' => 'payables.vendor_balance_detail',
-                                                    'label' => 'Vendor balance detail',
-                                                ],
-                                                [
-                                                    'route' => 'payables.unpaid_bills_report',
-                                                    'label' => 'Unpaid Bills',
-                                                ],
-                                                [
-                                                    'route' => 'payables.bill_payment_list',
-                                                    'label' => 'Bill Payment List',
-                                                ],
-                                            ];
-                                        @endphp
-
-                                        @foreach ($payableReports as $report)
-                                            <li
-                                                class="col-6 report-item {{ Request::route()->getName() == $report['route'] ? 'active' : '' }}">
-                                                <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                    href="{{ route($report['route']) }}">
-                                                    <span class="d-flex align-items-center">
-                                                        <i class="bi bi-file-earmark-text me-2"></i>
-                                                        {{ __($report['label']) }}
-                                                    </span>
-                                                    <span class="report-actions">
-                                                        <i class="bi bi-star text-muted"></i>
-                                                        <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                    </span>
-                                                </a>
-                                            </li>
-                                        @endforeach
-
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     @php
                         $salesAndCustomersReports = [
@@ -519,38 +464,39 @@
                             ],
 
                             // ================== Added Reports ==================
-                            ['route' => null, 'label' => 'Estimates & Progress Invoicing Summary by Customer'],
-                            ['route' => null, 'label' => 'Customer Contact List'],
-                            [
-                                'route' => 'productservice.incomeByCustomerSummaryTwo',
-                                'label' => 'Income by Customer Summary',
-                            ],
-                            ['route' => null, 'label' => 'Customer Phone List'],
-                            ['route' => 'report.sales.salesByCustomerSummary', 'label' => 'Sales by Customer Summary'],
-                            ['route' => 'report.sales.salesByCustomerDetail', 'label' => 'Sales by Customer Detail'],
-                            ['route' => 'report.depositDetail', 'label' => 'Deposit Detail'],
-                            ['route' => 'productservice.estimatesByCustomer', 'label' => 'Estimates by Customer'],
-                            [
-                                'route' => 'productservice.inventoryValuationDetail',
-                                'label' => 'Inventory Valuation Detail',
-                            ],
+                            // ['route' => null, 'label' => 'Estimates & Progress Invoicing Summary by Customer'],
                             ['route' => 'productservice.incomeByCustomerSummary', 'label' => 'Product/Service List'],
+                            ['route' => null, 'label' => 'Customer Contact List'],
                             [
                                 'route' => 'productservice.SalesByProductServiceSummary',
                                 'label' => 'Sales by Product/Service Summary',
                             ],
                             [
+                                'route' => 'productservice.incomeByCustomerSummaryTwo',
+                                'label' => 'Income by Customer Summary',
+                            ],
+                            [
                                 'route' => 'productservice.SalesByProductServiceDetail',
                                 'label' => 'Sales by Product/Service Detail',
                             ],
-                            ['route' => null, 'label' => 'Payment Method List'],
-                            ['route' => null, 'label' => 'Physical Inventory Worksheet'],
-                            ['route' => null, 'label' => 'Time Activities by Customer Detail'],
+                            ['route' => null, 'label' => 'Customer Phone List'],
+                            // ['route' => null, 'label' => 'Payment Method List'],
+
+                            ['route' => 'report.sales.salesByCustomerSummary', 'label' => 'Sales by Customer Summary'],
+                            // ['route' => null, 'label' => 'Physical Inventory Worksheet'],
+                            ['route' => 'report.sales.salesByCustomerDetail', 'label' => 'Sales by Customer Detail'],
+                            // ['route' => null, 'label' => 'Time Activities by Customer Detail'],
+                            ['route' => 'report.depositDetail', 'label' => 'Deposit Detail'],
                             [
                                 'route' => 'productservice.transactionListByCustomer',
                                 'label' => 'Transaction List by Customer',
                             ],
-                            ['route' => null, 'label' => 'Transaction List by Tag Group'],
+                            ['route' => 'productservice.estimatesByCustomer', 'label' => 'Estimates by Customer'],
+                            // ['route' => null, 'label' => 'Transaction List by Tag Group'],
+                            [
+                                'route' => 'productservice.inventoryValuationDetail',
+                                'label' => 'Inventory Valuation Detail',
+                            ],
                         ];
                     @endphp
 
@@ -592,18 +538,90 @@
                         </div>
                     </div>
 
+                    {{-- ================== What You Owe ================== --}}
+                    <div class="accordion pb-2" id="reportsAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="whoYouOweHeading">
+                                <button class="accordion-button {{ Request::segment(1) == 'report' ? '' : 'collapsed' }}"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#whoYouOweCollapse"
+                                    aria-expanded="{{ Request::segment(1) == 'report' ? 'true' : 'false' }}"
+                                    aria-controls="whoYouOweCollapse">
+                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                    {{ __('Who You Owe') }}
+                                </button>
+                            </h2>
+                            <div id="whoYouOweCollapse"
+                                class="accordion-collapse collapse {{ Request::segment(1) == 'report' ? 'show' : '' }}"
+                                aria-labelledby="whoYouOweHeading" data-bs-parent="#reportsAccordion">
+                                <div class="accordion-body p-0">
+                                    <ul class="list-unstyled mb-0 row g-0">
 
+                                        @php
+                                            $payableReports = [
+                                                [
+                                                    'route' => 'payables.aging_summary',
+                                                    'label' => 'Accounts payable aging summary',
+                                                ],
+                                                [
+                                                    'route' => 'payables.unpaid_bills_report',
+                                                    'label' => 'Unpaid Bills',
+                                                ],
+                                                [
+                                                    'route' => 'payables.aging_details',
+                                                    'label' => 'Accounts payable aging details',
+                                                ],
+                                                [
+                                                    'route' => 'payables.vendor_balance_summary',
+                                                    'label' => 'Vendor balance summary',
+                                                ],
+                                                [
+                                                    'route' => 'payables.bills_payments',
+                                                    'label' => 'Bills and Applied payments',
+                                                ],
+                                                [
+                                                    'route' => 'payables.vendor_balance_detail',
+                                                    'label' => 'Vendor balance detail',
+                                                ],
+                                                [
+                                                    'route' => 'payables.bill_payment_list',
+                                                    'label' => 'Bill Payment List',
+                                                ],
+                                            ];
+                                        @endphp
+
+                                        @foreach ($payableReports as $report)
+                                            <li
+                                                class="col-6 report-item {{ Request::route()->getName() == $report['route'] ? 'active' : '' }}">
+                                                <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                    href="{{ route($report['route']) }}">
+                                                    <span class="d-flex align-items-center">
+                                                        <i class="bi bi-file-earmark-text me-2"></i>
+                                                        {{ __($report['label']) }}
+                                                    </span>
+                                                    <span class="report-actions">
+                                                        <i class="bi bi-star text-muted"></i>
+                                                        <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                    </span>
+                                                </a>
+                                            </li>
+                                        @endforeach
+
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     @php
                         $expenseReports = [
                             ['route' => 'expenses.open_purchase_order_detail', 'label' => 'Open Purchase Order Detail'],
-                            ['route' => 'expenses.open_purchase_order_list', 'label' => 'Open Purchase Order List'],
-                            ['route' => 'expenses.purchase_list', 'label' => 'Purchase List'],
-                            ['route' => 'expenses.transaction_list_by_vendor', 'label' => 'Transaction List by Vendor'],
-                            ['route' => 'expenses.purchase_by_vendor', 'label' => 'Purchase by Vendor'],
-                            ['route' => 'expenses.vendors_contact_list', 'label' => 'Vendors Contact List'],
                             ['route' => 'expenses.vendors_phone_list', 'label' => 'Vendors Phone List'],
+                            ['route' => 'expenses.open_purchase_order_list', 'label' => 'Open Purchase Order List'],
+                            ['route' => 'expenses.transaction_list_by_vendor', 'label' => 'Transaction List by Vendor'],
+                            ['route' => 'expenses.purchase_list', 'label' => 'Purchase List'],
                             ['route' => 'expenses.expenses_by_vendor_summary', 'label' => 'Expenses by Vendor Summary'],
+                            ['route' => 'expenses.purchase_by_vendor', 'label' => 'Purchase by Vendor Detail'],
+                            ['route' => 'expenses.vendors_contact_list', 'label' => 'Vendors Contact List'],
                         ];
                     @endphp
 
@@ -717,6 +735,31 @@
 
 
                     {{-- ================== ACCOUNTING ================== --}}
+                    @php
+                        $accountingreports = [
+                            ['route' => 'report.account.statement', 'name' => __('Account List')],
+                            ['route' => 'report.invoice.summary', 'name' => __('Invoice Summary')],
+                            ['route' => 'report.sales', 'name' => __('Sales Report')],
+                            ['route' => 'report.receivables', 'name' => __('Receivables')],
+                            ['route' => 'report.payables', 'name' => __('Payables')],
+                            ['route' => 'report.bill.summary', 'name' => __('Bill Summary')],
+                            ['route' => 'report.product.stock.report', 'name' => __('Product Stock')],
+                            ['route' => 'report.monthly.cashflow', 'name' => __('Cash Flow')],
+                            ['route' => 'report.income.summary', 'name' => __('Income Summary')],
+                            ['route' => 'report.expense.summary', 'name' => __('Expense Summary')],
+                            ['route' => 'report.income.vs.expense.summary', 'name' => __('Income VS Expense')],
+                            ['route' => 'report.tax.summary', 'name' => __('Tax Summary')],
+                            ['route' => 'transaction.index', 'name' => __('All Transactions')],
+                            ['route' => 'transaction.bankTransactions', 'name' => __('Bank Transactions')],
+                            ['route' => 'reciept.index', 'name' => __('Receipts')],
+                            ['route' => 'report.ledger', 'name' => __('Ledger Summary'), 'params' => [0]],
+                            ['route' => 'report.profit.loss', 'name' => __('Profit & Loss')],
+                            ['route' => 'trial-balance.index', 'name' => __('Trial Balance')],
+                            ['route' => 'budget.index', 'name' => __('Budget Planner')],
+                            ['route' => 'goal.index', 'name' => __('Financial Goal')],
+                        ];
+                    @endphp
+
                     <div class="accordion pb-2" id="reportsAccordion">
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="accountingHeading">
@@ -725,7 +768,7 @@
                                     aria-expanded="{{ Request::segment(1) == 'report' ? 'true' : 'false' }}"
                                     aria-controls="accountingCollapse">
                                     <i class="bi bi-file-earmark-text me-2"></i>
-                                    {{ __('Accounting Reports') }}
+                                    {{ __('For my accountant') }}
                                 </button>
                             </h2>
                             <div id="accountingCollapse"
@@ -733,310 +776,27 @@
                                 aria-labelledby="accountingHeading" data-bs-parent="#reportsAccordion">
                                 <div class="accordion-body p-0">
                                     <ul class="list-unstyled mb-0 row g-0">
-
-                                        {{-- ================== Existing Reports ================== --}}
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.account.statement' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.account.statement') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Account Statement') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.invoice.summary' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.invoice.summary') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Invoice Summary') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li class="col-6 report-item">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.sales') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Sales Report') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li class="col-6 report-item">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.receivables') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Receivables') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li class="col-6 report-item">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.payables') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Payables') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.bill.summary' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.bill.summary') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Bill Summary') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.product.stock.report' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.product.stock.report') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Product Stock') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ request()->is('reports-monthly-cashflow') || request()->is('reports-quarterly-cashflow') ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.monthly.cashflow') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Cash Flow') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.income.summary' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.income.summary') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Income Summary') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.expense.summary' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.expense.summary') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Expense Summary') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.income.vs.expense.summary' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.income.vs.expense.summary') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Income VS Expense') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.tax.summary' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.tax.summary') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Tax Summary') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        {{-- ================== Added From Sidebar ================== --}}
-                                        {{-- Transactions --}}
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'transaction.index' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('transaction.index') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('All Transactions') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'transaction.bankTransactions' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('transaction.bankTransactions') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Bank Transactions') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'reciept.index' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('reciept.index') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Receipts') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        {{-- Double Entry --}}
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.ledger' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.ledger', 0) }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Ledger Summary') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'report.profit.loss' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.profit.loss') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Profit & Loss') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::route()->getName() == 'trial-balance.index' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('trial-balance.index') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Trial Balance') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        {{-- Budget & Goal --}}
-                                        <li
-                                            class="col-6 report-item {{ Request::segment(1) == 'budget' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('budget.index') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Budget Planner') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
-                                        <li
-                                            class="col-6 report-item {{ Request::segment(1) == 'goal' ? 'active' : '' }}">
-                                            <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('goal.index') }}">
-                                                <span class="d-flex align-items-center">
-                                                    <i class="bi bi-file-earmark-text me-2"></i>
-                                                    {{ __('Financial Goal') }}
-                                                </span>
-                                                <span class="report-actions">
-                                                    <i class="bi bi-star text-muted"></i>
-                                                    <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
-                                                </span>
-                                            </a>
-                                        </li>
-
+                                        {{-- Loop through reports --}}
+                                        @foreach ($accountingreports as $accreport)
+                                            @php
+                                                $isActive =
+                                                    Request::route()->getName() == $accreport['route'] ? 'active' : '';
+                                                $params = $accreport['params'] ?? [];
+                                            @endphp
+                                            <li class="col-6 report-item {{ $isActive }}">
+                                                <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                    href="{{ route($accreport['route'], $params) }}">
+                                                    <span class="d-flex align-items-center">
+                                                        <i class="bi bi-file-earmark-text me-2"></i>
+                                                        {{ $accreport['name'] }}
+                                                    </span>
+                                                    <span class="report-actions">
+                                                        <i class="bi bi-star text-muted"></i>
+                                                        <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                    </span>
+                                                </a>
+                                            </li>
+                                        @endforeach
                                     </ul>
                                 </div>
                             </div>
@@ -1115,7 +875,7 @@
                     </div>
 
                     {{-- ================== CRM ================== --}}
-                    <div class="accordion pb-2" id="reportsAccordion">
+                    {{-- <div class="accordion pb-2" id="reportsAccordion">
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="crmHeading">
                                 <button
@@ -1132,7 +892,7 @@
                                 aria-labelledby="crmHeading" data-bs-parent="#reportsAccordion">
                                 <div class="accordion-body p-0">
                                     <ul class="list-unstyled mb-0 row g-0">
-                                        {{-- Lead Report --}}
+                                        {{-- Lead Report 
                                         <li
                                             class="col-6 report-item {{ request()->is('reports-lead') ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
@@ -1148,7 +908,7 @@
                                             </a>
                                         </li>
 
-                                        {{-- Deal Report --}}
+                                        {{-- Deal Report -
                                         <li
                                             class="col-6 report-item {{ request()->is('reports-deal') ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
@@ -1167,10 +927,10 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> --}}
 
                     {{-- ================== PROJECT ================== --}}
-                    <div class="accordion pb-2" id="reportsAccordion">
+                    {{-- <div class="accordion pb-2" id="reportsAccordion">
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="projectHeading">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
@@ -1202,7 +962,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> --}}
 
                     {{-- ================== POS ================== --}}
                     <div class="accordion pb-2" id="reportsAccordion">

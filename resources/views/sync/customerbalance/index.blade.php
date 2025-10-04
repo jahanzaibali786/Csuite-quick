@@ -118,6 +118,15 @@
                         <input type="date" class="form-control " name="end_date" id="filter-end-date"
                             value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
                     </div>
+                    @if (isset($accounting_method) && $accounting_method)
+                        <div class="filter-item col-md-3">
+                            <label class="filter-label">Accounting method</label>
+                            <select id="accounting-method" class="form-control">
+                                <option value="accrual" selected>Accrual</option>
+                                <option value="cash">Cash</option>
+                            </select>
+                        </div>
+                    @endif
                     <div class="filter-item col-md-2 mt-4">
                         <button class="btn btn-view-options" id="view-options-btn"
                             style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
@@ -126,7 +135,7 @@
                     </div>
 
                     <!-- Action buttons row -->
-                    <div class="d-flex align-items-end gap-2 " style="justify-content: end;">
+                    <div class="d-flex align-items-end gap-2 mt-1" style="justify-content: end;">
 
                         <button class="btn btn-outline" id="columns-btn">
                             <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
@@ -1066,7 +1075,7 @@
 
         /* Table enhancements */
         .text-right {
-            text-align: right;
+            text-align: right !important;
         }
 
         .negative-amount {
@@ -1648,7 +1657,6 @@
                 data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.account_id = $('#filter-account').val();
                 data.accounting_method = $('#accounting-method').val();
-
                 data.reportOptions = window.reportOptions;
             });
 
