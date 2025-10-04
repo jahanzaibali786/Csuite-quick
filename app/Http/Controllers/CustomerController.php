@@ -40,10 +40,9 @@ class CustomerController extends Controller
         if (!\Auth::user()->can('manage customer')) {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
-
-        $user    = \Auth::user();
+        $user = \Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
 
         $pageTitle = __('Customer Contact List');
 
@@ -61,10 +60,16 @@ class CustomerController extends Controller
             ->unique()
             ->values();
 
-        return $dataTable->render(
-            'customer.contactList',
-            compact('pageTitle', 'user', 'filter', 'customers')
-        );
+        // return $dataTable->render(
+        //     'customer.contactList',
+        //     compact('pageTitle', 'user', 'filter', 'customers')
+        // );
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
     }
     public function customerContactListPhoneNumbers(
         CustomerContactListPhoneNumbersDataTable $dataTable,
@@ -74,9 +79,9 @@ class CustomerController extends Controller
             return redirect()->back()->with('error', __('Permission denied.'));
         }
 
-        $user    = \Auth::user();
+        $user = \Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
 
         $pageTitle = __('Customer Phone List');
 
@@ -94,10 +99,16 @@ class CustomerController extends Controller
             ->unique()
             ->values();
 
-        return $dataTable->render(
-            'customer.contactList',
-            compact('pageTitle', 'user', 'filter', 'customers')
-        );
+        // return $dataTable->render(
+        //     'customer.contactList',
+        //     compact('pageTitle', 'user', 'filter', 'customers')
+        // );
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
     }
 
 
@@ -111,17 +122,17 @@ class CustomerController extends Controller
     public function index()
     {
         if (\Auth::user()->can('manage customer')) {
-            $user     = \Auth::user();
+            $user = \Auth::user();
             $companyId = $user->creatorId();
-            $userId   = $user->id;
+            $userId = $user->id;
 
             // Scope helpers (match allSales())
-            $ownedById       = method_exists($user, 'ownedId') ? $user->ownedId() : $userId;
-            $createdByScope  = array_values(array_unique([$companyId, $userId]));
+            $ownedById = method_exists($user, 'ownedId') ? $user->ownedId() : $userId;
+            $createdByScope = array_values(array_unique([$companyId, $userId]));
 
             // Default date window (current month). No Request here, so we pick safe defaults.
             $start = \Carbon\Carbon::now()->startOfMonth();
-            $end   = \Carbon\Carbon::now()->endOfMonth();
+            $end = \Carbon\Carbon::now()->endOfMonth();
             $dateFilter = [$start->toDateString(), $end->toDateString()];
 
             // No customer filter on this page
@@ -131,8 +142,8 @@ class CustomerController extends Controller
             $salesData = $this->calculateSalesData($createdByScope, $ownedById, $dateFilter, $customerFilter);
 
             // Customers list as before
-            $column    = ($user->type == 'company') ? 'created_by' : 'owned_by';
-            $ownerId   = ($user->type === 'company') ? $companyId : $ownedById;
+            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId = ($user->type === 'company') ? $companyId : $ownedById;
             $customers = Customer::where($column, $ownerId)->get();
 
             return view('customer.index', compact('customers', 'salesData'));
@@ -155,12 +166,13 @@ class CustomerController extends Controller
         $estimatesAmount = 0;
         foreach ($estimates as $p) {
             foreach ($p->items as $it) {
-                $line = ($it->price * $it->quantity) - (float)($it->discount ?? 0);
+                $line = ($it->price * $it->quantity) - (float) ($it->discount ?? 0);
                 $estimatesAmount += $line;
                 $taxes = \App\Models\Utility::tax($it->tax);
                 if (!empty($taxes)) {
                     foreach ($taxes as $t) {
-                        if ($t === null) continue;
+                        if ($t === null)
+                            continue;
                         $estimatesAmount += \App\Models\Utility::taxRate($t->rate, $it->price, $it->quantity, $it->discount);
                     }
                 }
@@ -292,42 +304,42 @@ class CustomerController extends Controller
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json([
                         'message' => 'Validation error',
-                        'errors'  => $validator->errors(),
+                        'errors' => $validator->errors(),
                     ], 422);
                 }
                 return redirect()->route('customer.index')->with('error', $messages->first());
             }
 
-            $objCustomer    = \Auth::user();
-            $creator        = User::find($objCustomer->creatorId());
+            $objCustomer = \Auth::user();
+            $creator = User::find($objCustomer->creatorId());
             $total_customer = $objCustomer->countCustomers();
-            $plan           = Plan::find($creator->plan);
+            $plan = Plan::find($creator->plan);
 
             $default_language = DB::table('settings')->select('value')->where('name', 'default_language')->first();
 
             if ($total_customer < $plan->max_customers || $plan->max_customers == -1) {
-                $customer                  = new Customer();
-                $customer->customer_id     = $this->customerNumber();
-                $customer->name            = $request->name;
-                $customer->contact         = $request->contact;
-                $customer->email           = $request->email;
-                $customer->tax_number      = $request->tax_number;
-                $customer->created_by      = \Auth::user()->creatorId();
-                $customer->owned_by        = \Auth::user()->ownedId();
-                $customer->billing_name    = $request->billing_name;
+                $customer = new Customer();
+                $customer->customer_id = $this->customerNumber();
+                $customer->name = $request->name;
+                $customer->contact = $request->contact;
+                $customer->email = $request->email;
+                $customer->tax_number = $request->tax_number;
+                $customer->created_by = \Auth::user()->creatorId();
+                $customer->owned_by = \Auth::user()->ownedId();
+                $customer->billing_name = $request->billing_name;
                 $customer->billing_country = $request->billing_country;
-                $customer->billing_state   = $request->billing_state;
-                $customer->billing_city    = $request->billing_city;
-                $customer->billing_phone   = $request->billing_phone;
-                $customer->billing_zip     = $request->billing_zip;
+                $customer->billing_state = $request->billing_state;
+                $customer->billing_city = $request->billing_city;
+                $customer->billing_phone = $request->billing_phone;
+                $customer->billing_zip = $request->billing_zip;
                 $customer->billing_address = $request->billing_address;
 
-                $customer->shipping_name    = $request->shipping_name;
+                $customer->shipping_name = $request->shipping_name;
                 $customer->shipping_country = $request->shipping_country;
-                $customer->shipping_state   = $request->shipping_state;
-                $customer->shipping_city    = $request->shipping_city;
-                $customer->shipping_phone   = $request->shipping_phone;
-                $customer->shipping_zip     = $request->shipping_zip;
+                $customer->shipping_state = $request->shipping_state;
+                $customer->shipping_city = $request->shipping_city;
+                $customer->shipping_phone = $request->shipping_phone;
+                $customer->shipping_zip = $request->shipping_zip;
                 $customer->shipping_address = $request->shipping_address;
 
                 $customer->lang = !empty($default_language) ? $default_language->value : '';
@@ -435,7 +447,7 @@ class CustomerController extends Controller
             }
 
             //For Notification
-            $setting  = Utility::settings(\Auth::user()->creatorId());
+            $setting = Utility::settings(\Auth::user()->creatorId());
             $customerNotificationArr = [
                 'user_name' => \Auth::user()->name,
                 'customer_name' => $customer->name,
@@ -452,7 +464,7 @@ class CustomerController extends Controller
             // If AJAX, return JSON (used by the invoice page to append/select)
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
-                    'id'   => $customer->id,
+                    'id' => $customer->id,
                     'name' => $customer->name,
                     'data' => $customer,
                     'success' => true
@@ -473,11 +485,11 @@ class CustomerController extends Controller
     public function show($ids)
     {
         try {
-            $id       = Crypt::decrypt($ids);
+            $id = Crypt::decrypt($ids);
         } catch (\Throwable $th) {
             return redirect()->back()->with('error', __('Customer Not Found.'));
         }
-        $id       = \Crypt::decrypt($ids);
+        $id = \Crypt::decrypt($ids);
         $customer = Customer::find($id);
 
         return view('customer.show', compact('customer'));
@@ -487,7 +499,7 @@ class CustomerController extends Controller
     public function edit($id)
     {
         if (\Auth::user()->can('edit customer')) {
-            $customer              = Customer::find($id);
+            $customer = Customer::find($id);
             $customer->customField = CustomField::getData($customer, 'customer');
 
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'customer')->get();
@@ -517,24 +529,24 @@ class CustomerController extends Controller
                 return redirect()->route('customer.index')->with('error', $messages->first());
             }
 
-            $customer->name             = $request->name;
-            $customer->contact          = $request->contact;
-            $customer->email           = $request->email;
-            $customer->tax_number      = $request->tax_number;
-            $customer->created_by       = \Auth::user()->creatorId();
-            $customer->billing_name     = $request->billing_name;
-            $customer->billing_country  = $request->billing_country;
-            $customer->billing_state    = $request->billing_state;
-            $customer->billing_city     = $request->billing_city;
-            $customer->billing_phone    = $request->billing_phone;
-            $customer->billing_zip      = $request->billing_zip;
-            $customer->billing_address  = $request->billing_address;
-            $customer->shipping_name    = $request->shipping_name;
+            $customer->name = $request->name;
+            $customer->contact = $request->contact;
+            $customer->email = $request->email;
+            $customer->tax_number = $request->tax_number;
+            $customer->created_by = \Auth::user()->creatorId();
+            $customer->billing_name = $request->billing_name;
+            $customer->billing_country = $request->billing_country;
+            $customer->billing_state = $request->billing_state;
+            $customer->billing_city = $request->billing_city;
+            $customer->billing_phone = $request->billing_phone;
+            $customer->billing_zip = $request->billing_zip;
+            $customer->billing_address = $request->billing_address;
+            $customer->shipping_name = $request->shipping_name;
             $customer->shipping_country = $request->shipping_country;
-            $customer->shipping_state   = $request->shipping_state;
-            $customer->shipping_city    = $request->shipping_city;
-            $customer->shipping_phone   = $request->shipping_phone;
-            $customer->shipping_zip     = $request->shipping_zip;
+            $customer->shipping_state = $request->shipping_state;
+            $customer->shipping_city = $request->shipping_city;
+            $customer->shipping_phone = $request->shipping_phone;
+            $customer->shipping_zip = $request->shipping_zip;
             $customer->shipping_address = $request->shipping_address;
             $customer->save();
             //log
@@ -642,9 +654,9 @@ class CustomerController extends Controller
 
     public function profile()
     {
-        $userDetail              = \Auth::user();
+        $userDetail = \Auth::user();
         $userDetail->customField = CustomField::getData($userDetail, 'customer');
-        $customFields            = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'customer')->get();
+        $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'customer')->get();
 
         return view('customer.profile', compact('userDetail', 'customFields'));
     }
@@ -652,7 +664,7 @@ class CustomerController extends Controller
     public function editprofile(Request $request)
     {
         $userDetail = \Auth::user();
-        $user       = Customer::findOrFail($userDetail['id']);
+        $user = Customer::findOrFail($userDetail['id']);
 
         $this->validate(
             $request,
@@ -665,11 +677,11 @@ class CustomerController extends Controller
 
         if ($request->hasFile('profile')) {
             $filenameWithExt = $request->file('profile')->getClientOriginalName();
-            $filename        = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-            $extension       = $request->file('profile')->getClientOriginalExtension();
+            $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+            $extension = $request->file('profile')->getClientOriginalExtension();
             $fileNameToStore = $filename . '_' . time() . '.' . $extension;
 
-            $dir        = storage_path('uploads/avatar/');
+            $dir = storage_path('uploads/avatar/');
             $image_path = $dir . $userDetail['avatar'];
 
             if (File::exists($image_path)) {
@@ -686,8 +698,8 @@ class CustomerController extends Controller
         if (!empty($request->profile)) {
             $user['avatar'] = $fileNameToStore;
         }
-        $user['name']    = $request['name'];
-        $user['email']   = $request['email'];
+        $user['name'] = $request['name'];
+        $user['email'] = $request['email'];
         $user['contact'] = $request['contact'];
         $user->save();
         CustomField::saveData($user, $request->customField);
@@ -701,7 +713,7 @@ class CustomerController extends Controller
     public function editBilling(Request $request)
     {
         $userDetail = \Auth::user();
-        $user       = Customer::findOrFail($userDetail['id']);
+        $user = Customer::findOrFail($userDetail['id']);
         $this->validate(
             $request,
             [
@@ -726,7 +738,7 @@ class CustomerController extends Controller
     public function editShipping(Request $request)
     {
         $userDetail = \Auth::user();
-        $user       = Customer::findOrFail($userDetail['id']);
+        $user = Customer::findOrFail($userDetail['id']);
         $this->validate(
             $request,
             [
@@ -752,7 +764,7 @@ class CustomerController extends Controller
     public function changeLanquage($lang)
     {
 
-        $user       = Auth::user();
+        $user = Auth::user();
         $user->lang = $lang;
         $user->save();
 
@@ -792,7 +804,7 @@ class CustomerController extends Controller
         $customers = (new CustomerImport())->toArray(request()->file('file'))[0];
 
         $totalCustomer = count($customers) - 1;
-        $errorArray    = [];
+        $errorArray = [];
         for ($i = 1; $i <= count($customers) - 1; $i++) {
             $customer = $customers[$i];
 
@@ -801,31 +813,31 @@ class CustomerController extends Controller
                 $customerData = $customerByEmail;
             } else {
                 $customerData = new Customer();
-                $customerData->customer_id      = $this->customerNumber();
+                $customerData->customer_id = $this->customerNumber();
             }
 
-            $customerData->customer_id             = $customer[0];
-            $customerData->name             = $customer[1];
-            $customerData->email            = $customer[2];
-            $customerData->contact          = $customer[3];
-            $customerData->is_active        = 1;
-            $customerData->billing_name     = $customer[4];
-            $customerData->billing_country  = $customer[5];
-            $customerData->billing_state    = $customer[6];
-            $customerData->billing_city     = $customer[7];
-            $customerData->billing_phone    = $customer[8];
-            $customerData->billing_zip      = $customer[9];
-            $customerData->billing_address  = $customer[10];
-            $customerData->shipping_name    = $customer[11];
+            $customerData->customer_id = $customer[0];
+            $customerData->name = $customer[1];
+            $customerData->email = $customer[2];
+            $customerData->contact = $customer[3];
+            $customerData->is_active = 1;
+            $customerData->billing_name = $customer[4];
+            $customerData->billing_country = $customer[5];
+            $customerData->billing_state = $customer[6];
+            $customerData->billing_city = $customer[7];
+            $customerData->billing_phone = $customer[8];
+            $customerData->billing_zip = $customer[9];
+            $customerData->billing_address = $customer[10];
+            $customerData->shipping_name = $customer[11];
             $customerData->shipping_country = $customer[12];
-            $customerData->shipping_state   = $customer[13];
-            $customerData->shipping_city    = $customer[14];
-            $customerData->shipping_phone   = $customer[15];
-            $customerData->shipping_zip     = $customer[16];
+            $customerData->shipping_state = $customer[13];
+            $customerData->shipping_city = $customer[14];
+            $customerData->shipping_phone = $customer[15];
+            $customerData->shipping_zip = $customer[16];
             $customerData->shipping_address = $customer[17];
-            $customerData->balance          = $customer[18];
-            $customerData->created_by       = \Auth::user()->creatorId();
-            $customerData->owned_by       = \Auth::user()->ownedId();
+            $customerData->balance = $customer[18];
+            $customerData->created_by = \Auth::user()->creatorId();
+            $customerData->owned_by = \Auth::user()->ownedId();
 
             if (empty($customerData)) {
                 $errorArray[] = $customerData;
@@ -838,10 +850,10 @@ class CustomerController extends Controller
         $errorRecord = [];
         if (empty($errorArray)) {
             $data['status'] = 'success';
-            $data['msg']    = __('Record successfully imported');
+            $data['msg'] = __('Record successfully imported');
         } else {
             $data['status'] = 'error';
-            $data['msg']    = count($errorArray) . ' ' . __('Record imported fail out of' . ' ' . $totalCustomer . ' ' . 'record');
+            $data['msg'] = count($errorArray) . ' ' . __('Record imported fail out of' . ' ' . $totalCustomer . ' ' . 'record');
 
 
             foreach ($errorArray as $errorData) {
@@ -859,7 +871,7 @@ class CustomerController extends Controller
     {
         if (\Illuminate\Support\Facades\Auth::user()->can('manage customer')) {
             $customers = [];
-            $search    = $request->search;
+            $search = $request->search;
             if ($request->ajax() && isset($search) && !empty($search)) {
                 $user = \Auth::user();
                 $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();

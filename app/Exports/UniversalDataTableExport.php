@@ -16,8 +16,10 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
     protected $pageTitle;
     protected $reportPeriod;
     protected $headerFooterAlignment;
+    protected $allowSingleColumnBold;
 
-    public function __construct($collection, array $columns = [], string $pageTitle = 'Report', string $reportPeriod = '', $headerFooterAlignment = [])
+
+    public function __construct($collection, array $columns = [], string $pageTitle = 'Report', string $reportPeriod = '', $headerFooterAlignment = [], $allowSingleColumnBold = false)
     {
         $this->collection = $collection->map(function ($row) {
             if (isset($row['id']))
@@ -26,6 +28,14 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
             // foreach ($row as $key => $value) {
             // $row[$key] = trim(str_replace('▼', '', strip_tags($value)));
             // }
+
+            foreach ($row as $key => $value) {
+                if (is_string($value)) {
+                    // Preserve <h4>, <strong>, <b>
+                    $row[$key] = trim(strip_tags($value, '<h4><strong><b>'));
+                }
+            }
+
 
             return $row;
         });
@@ -40,6 +50,8 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
         } else {
             $this->headerFooterAlignment = ['center', 'center']; // default
         }
+
+        $this->allowSingleColumnBold = $allowSingleColumnBold;
     }
 
     public function collection()
@@ -151,7 +163,33 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
                                 strpos($cellValue, '▼') !== false
                             ) {
                                 $isBoldRow = true;
+                                $plainValue = html_entity_decode(strip_tags($cellValue));
+
+                                // Replace non-breaking spaces (&nbsp;) with normal spaces
+                                $plainValue = str_replace("\xC2\xA0", ' ', $plainValue);
+
+                                // Trim leading/trailing spaces
+                                $plainValue = trim($plainValue);
+
+                                $sheet->setCellValueByColumnAndRow($colIndex, $row, $plainValue);
+
+
                             }
+                            // ✅ detect if <h4>, <strong>, <b> existed
+                            else if (
+                                stripos($cellValue, '<h4') !== false ||
+                                stripos($cellValue, '<strong') !== false || // note: allow attributes like <strong class="">
+                                stripos($cellValue, '<b') !== false         // same for <b ...>
+                            ) {
+                                // strip only after detection
+                                $plainValue = trim(html_entity_decode(strip_tags($cellValue)));
+                                $sheet->setCellValueByColumnAndRow($colIndex, $row, $plainValue);
+
+                                // Bold this particular cell
+                                $sheet->getStyleByColumnAndRow($colIndex, $row)->getFont()->setBold(true);
+                            }
+
+
                             if ($colIndex === 1 && !empty($cellValue)) {
                                 $emptyOtherColumns = true;
                                 foreach (range(2, $columnCount) as $checkCol) {
@@ -160,7 +198,7 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
                                         break;
                                     }
                                 }
-                                if ($emptyOtherColumns) {
+                                if ($emptyOtherColumns && $this->allowSingleColumnBold) {
                                     $isBoldRow = true;
                                 }
                             }

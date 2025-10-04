@@ -44,7 +44,8 @@ class AgingDetailsDataTable extends DataTable
                 return 'Current';
             }
 
-            $age = $end->diffInDays($due, false); // 👈 use $end instead of today
+            $age = $due->diffInDays($end, false); // 👈 use $end instead of today
+
             if ($age <= 0)
                 return 'Current';
             if ($age <= 15)
@@ -53,7 +54,7 @@ class AgingDetailsDataTable extends DataTable
                 return '16–30 Days';
             if ($age <= 45)
                 return '31–45 Days';
-            return '>45 Days';
+            return '> 45 Days';
         });
 
 
@@ -169,6 +170,9 @@ class AgingDetailsDataTable extends DataTable
                     2 => 'nbg-danger',
                     3 => 'nbg-info',
                     4 => 'nbg-primary',
+                    5 => 'nbg-primary',
+                    6 => 'nbg-primary',
+                    7 => 'nbg-primary',
                 ];
                 return '<span class="status_badger badger text-whit ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
                     . __($labels[$status] ?? '-') . '</span>';

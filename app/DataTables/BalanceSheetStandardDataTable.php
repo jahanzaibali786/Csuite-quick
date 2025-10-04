@@ -19,8 +19,8 @@ class BalanceSheetStandardDataTable extends DataTable
     {
         parent::__construct();
 
-        $this->asOfDate = request('asOfDate')
-            ? Carbon::parse(request('asOfDate'))->endOfDay()
+        $this->asOfDate = request('endDate')
+            ? Carbon::parse(request('endDate'))->endOfDay()
             : Carbon::now()->endOfDay();
         $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
         $this->owner = \Auth::user()->type === 'company' ? 'created_by' : 'owned_by';
@@ -42,7 +42,7 @@ class BalanceSheetStandardDataTable extends DataTable
                     $chevron = '';
                     
                     if ($hasChildren) {
-                        $chevron = '<i class="fas fa-chevron-down chevron-icon" data-parent-type="subtype" data-parent-id="' . $subtypeId . '" style="margin-right: 8px; cursor: pointer; color: #007bff;"></i>';
+                        $chevron = '<i class=" chevron-icon" data-parent-type="subtype" data-parent-id="' . $subtypeId . '" style="margin-right: 8px; cursor: pointer;">▼</i>';
                     }
                     
                     $indent = str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', (int) ($row->depth ?? 0));
@@ -149,8 +149,8 @@ class BalanceSheetStandardDataTable extends DataTable
                 'chart_of_account_sub_types.name as sub_type_name',
                 'chart_of_account_types.id as type_id',
                 'chart_of_account_types.name as type_name',
-                DB::raw('COALESCE(SUM(journal_items.debit), 0) as total_debit'),
-                DB::raw('COALESCE(SUM(journal_items.credit), 0) as total_credit'),
+                    DB::raw("COALESCE(SUM(CASE WHEN journal_items.created_at <= '{$this->asOfDate->format('Y-m-d 23:59:59')}' THEN journal_items.debit ELSE 0 END), 0) as total_debit"),
+                    DB::raw("COALESCE(SUM(CASE WHEN journal_items.created_at <= '{$this->asOfDate->format('Y-m-d 23:59:59')}' THEN journal_items.credit ELSE 0 END), 0) as total_credit"),
             ])
             ->groupBy(
                 'chart_of_accounts.id',
@@ -160,12 +160,10 @@ class BalanceSheetStandardDataTable extends DataTable
                 'chart_of_account_sub_types.name',
                 'chart_of_account_types.id',
                 'chart_of_account_types.name'
-            )
-            ->get();
-
+            )->get();
         // Calculate balances
         $accounts = $accounts->map(function($acc) {
-            if ($acc->type_name === 'Asset') {
+            if ($acc->type_name === 'Assets') {
                 $acc->balance = $acc->total_debit - $acc->total_credit;
             } else {
                 $acc->balance = $acc->total_credit - $acc->total_debit;
@@ -311,7 +309,7 @@ class BalanceSheetStandardDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('balance-sheet-standard-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             // ->dom('Bfrtip')

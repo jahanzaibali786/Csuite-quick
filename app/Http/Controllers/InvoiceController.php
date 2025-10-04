@@ -716,7 +716,10 @@ private function calculateInvoiceSummary($ownerId, $column)
                 // Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
                 if (Auth::user()->type == 'company') {
                     $this->createInvoiceJournalVoucher($invoice);
-                    $this->approveInvoice($invoice->id);
+                    // $this->approveInvoice($invoice->id);
+                    $invoice->status = 6; // Approved
+                    $invoice->save();
+                    Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Create Invoice', 'Invoice Created & Approved');
                 }
 
                 // Webhook

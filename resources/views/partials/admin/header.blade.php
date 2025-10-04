@@ -394,34 +394,37 @@
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
-                success: function() {
-                    console.log(`Notification ${notificationId} marked as seen.`);
+
+                success: function(response) {
+                    // Mark notification as seen
+                    markAsSeen(notificationId);
+                    
+                    // Show success message
+                    if (response.message) {
+                        alert(response.message);
+                    } else {
+                        alert('Action processed successfully.');
+                        window.location.reload();
+                    }
+                    
+                    // Remove the notification from view
+                    notificationElement.style.opacity = '0.5';
+                    setTimeout(() => {
+                        notificationElement.remove();
+                    }, 300);
                 },
-                error: function(xhr, status, error) {
-                    console.error('Error marking notification as seen:', error);
-                }
-            });
-        }
+                error: function(xhr, status, error) {                    
+                    // Re-enable button
+                    button.disabled = false;
+                    button.textContent = originalText;
+                    
+                    // Show error message
+                    let errorMessage = 'Something went wrong ...';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    alert(errorMessage);
 
-        // Handle notification clicks (for navigation)
-        document.querySelectorAll('.notification_model').forEach(function(element) {
-            element.addEventListener('click', function(event) {
-                // Check if the clicked element is a button or inside a form
-                if (event.target.tagName === 'BUTTON' || event.target.closest('form')) {
-                    return; // Don't handle navigation if it's a button click
-                }
-
-                event.preventDefault();
-
-                const link = this.getAttribute('data-link');
-                const notificationType = this.getAttribute('data-type');
-                const notificationId = this.getAttribute('data-notificationId');
-
-                // Mark as seen and navigate
-                markAsSeen(notificationId);
-
-                if (link && link !== '#') {
-                    window.location.href = link;
                 }
             });
         });

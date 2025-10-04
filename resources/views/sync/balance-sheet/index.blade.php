@@ -745,6 +745,7 @@
                     $('#asOfDatePicker').val(chosen.format('MMM DD, YYYY'));
                 }
                 $('#asOfDate').val(chosen.format('YYYY-MM-DD'));
+                refreshTable();
                 updateAsOfDateDisplay();
             });
         }
@@ -842,6 +843,8 @@
                     data.asOfDate = $('#asOfDate').val() || moment().format('YYYY-MM-DD');
                     data.accounting_method = $('#accounting-method').val();
                 });
+
+                refreshTable();
 
                 // initial attach if table already drawn
                 attachToggleHandlers();
