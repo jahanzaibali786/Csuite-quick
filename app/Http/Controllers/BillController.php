@@ -663,6 +663,7 @@ class BillController extends Controller
                     $bill->status = 6;
                     $bill->save();
                     Utility::makeActivityLog(\Auth::user()->id, 'Bill', $bill->id, 'Create Bill', 'Bill Created & Approved');
+
                 }
                 // Webhook
                 $module = 'New Bill';

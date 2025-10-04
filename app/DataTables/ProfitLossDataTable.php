@@ -47,7 +47,7 @@ class ProfitLossDataTable extends DataTable
 
                     return '<span class="toggle-section" data-group="' . $row->group_key . '" style="cursor: ' . ($row->has_children ? 'pointer' : 'default') . ';">
                         ' . $chevronHtml . '
-                        <i class="toggle-chevron">▶</i>
+                        
                         <strong class="section-header">' . e($row->name) . '</strong>
                         <span class="section-total-display" data-group="' . $row->group_key . '" style="display: none; font-weight: normal; color: #6c757d; margin-left: 10px;">
                             (' . number_format($row->section_total ?? 0, 2) . ')

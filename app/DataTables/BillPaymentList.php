@@ -149,7 +149,7 @@ class BillPaymentList extends DataTable
             ->leftJoin('bill_payments', 'bill_payments.bill_id', '=', 'bills.id')
             ->leftJoin('bank_accounts', 'bank_accounts.id', '=', 'bill_payments.account_id')
             ->where('bills.created_by', \Auth::user()->creatorId())
-            ->where('bills.status', '!=', 'Paid')
+            ->whereIn('bills.status', ['3', '4'])
             ->whereBetween('bills.bill_date', [$start, $end])
             ->groupBy('bills.id', 'bank_accounts.id');
     }

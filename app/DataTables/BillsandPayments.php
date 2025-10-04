@@ -51,16 +51,16 @@ class BillsandPayments extends DataTable
             }
 
             // Vendor subtotal row
-            $finalData->push((object) [
-                'vendor' => $vendor,
-                'id' => null,
-                'bill_date' => '',
-                'transaction' => '<strong>Subtotal for ' . $vendor . '</strong>',
-                'type' => '',
-                'total_amount' => $subtotalAmount,
-                'open_balance' => $subtotalOpen,
-                'isSubtotal' => true,
-            ]);
+            // $finalData->push((object) [
+            //     'vendor' => $vendor,
+            //     'id' => null,
+            //     'bill_date' => '',
+            //     'transaction' => '<strong>Subtotal for ' . $vendor . '</strong>',
+            //     'type' => '',
+            //     'total_amount' => $subtotalAmount,
+            //     'open_balance' => $subtotalOpen,
+            //     'isSubtotal' => true,
+            // ]);
 
             $finalData->push((object) [
                 'vendor' => $vendor,
@@ -79,16 +79,16 @@ class BillsandPayments extends DataTable
         }
 
         // Grand total row
-        $finalData->push((object) [
-            'vendor' => '',
-            'id' => null,
-            'bill_date' => '',
-            'transaction' => '<strong>Grand Total</strong>',
-            'type' => '',
-            'total_amount' => $grandTotalAmount,
-            'open_balance' => $grandOpenBalance,
-            'isGrandTotal' => true,
-        ]);
+        // $finalData->push((object) [
+        //     'vendor' => '',
+        //     'id' => null,
+        //     'bill_date' => '',
+        //     'transaction' => '<strong>Grand Total</strong>',
+        //     'type' => '',
+        //     'total_amount' => $grandTotalAmount,
+        //     'open_balance' => $grandOpenBalance,
+        //     'isGrandTotal' => true,
+        // ]);
 
         return datatables()
             ->collection($finalData)

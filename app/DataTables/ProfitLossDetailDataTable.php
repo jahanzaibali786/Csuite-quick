@@ -47,7 +47,6 @@ class ProfitLossDetailDataTable extends DataTable
 
                     return '<span class="toggle-section" data-group="' . $row->group_key . '" style="cursor: ' . ($row->has_children ? 'pointer' : 'default') . ';">
                         ' . $chevronHtml . '
-                        <i class="toggle-chevron">▶</i>
                         <strong class="section-header">' . e($row->name) . '</strong>
                         <span class="section-total-display" data-group="' . $row->group_key . '" style="display: none; font-weight: normal; color: #6c757d; margin-left: 10px;">
                             (' . number_format($row->section_total ?? 0, 2) . ')
@@ -266,66 +265,67 @@ class ProfitLossDetailDataTable extends DataTable
         ]);
 
         // ---------------- OTHER INCOME ----------------
-        $otherIncomeAccounts = $accounts->where('account_type', 'Other Income')->map(function ($acc) {
-            $acc->group_key = 'other_income';
-            $acc->is_child = true;
-            $acc->amount = $acc->total_credit - $acc->total_debit;
-            return $acc;
-        });
-        $otherIncomeTotal = $otherIncomeAccounts->sum('amount');
+        // $otherIncomeAccounts = $accounts->where('account_type', 'Other Income')->map(function ($acc) {
+        //     $acc->group_key = 'other_income';
+        //     $acc->is_child = true;
+        //     $acc->amount = $acc->total_credit - $acc->total_debit;
+        //     return $acc;
+        // });
+        // $otherIncomeTotal = $otherIncomeAccounts->sum('amount');
 
-        $report->push((object) [
-            'name' => 'Other Income',
-            'is_section_header' => true,
-            'group_key' => 'other_income',
-            'has_children' => $otherIncomeAccounts->count() > 0,
-            'section_total' => $otherIncomeTotal
-        ]);
-        $report = $report->merge($otherIncomeAccounts);
-        $report->push((object) [
-            'name' => 'Total Other Income',
-            'account_type' => 'subtotal',
-            'net' => $otherIncomeTotal,
-            'is_subtotal' => true,
-            'group_key' => 'other_income'
-        ]);
+        // $report->push((object) [
+        //     'name' => 'Other Income',
+        //     'is_section_header' => true,
+        //     'group_key' => 'other_income',
+        //     'has_children' => $otherIncomeAccounts->count() > 0,
+        //     'section_total' => $otherIncomeTotal
+        // ]);
+        // $report = $report->merge($otherIncomeAccounts);
+        // $report->push((object) [
+        //     'name' => 'Total Other Income',
+        //     'account_type' => 'subtotal',
+        //     'net' => $otherIncomeTotal,
+        //     'is_subtotal' => true,
+        //     'group_key' => 'other_income'
+        // ]);
 
-        // ---------------- OTHER EXPENSES ----------------
-        $otherExpenseAccounts = $accounts->where('account_type', 'Other Expense')->map(function ($acc) {
-            $acc->group_key = 'other_expenses';
-            $acc->is_child = true;
-            $acc->amount = $acc->total_debit - $acc->total_credit;
-            return $acc;
-        });
-        $otherExpenseTotal = $otherExpenseAccounts->sum('amount');
+        // // ---------------- OTHER EXPENSES ----------------
+        // $otherExpenseAccounts = $accounts->where('account_type', 'Other Expense')->map(function ($acc) {
+        //     $acc->group_key = 'other_expenses';
+        //     $acc->is_child = true;
+        //     $acc->amount = $acc->total_debit - $acc->total_credit;
+        //     return $acc;
+        // });
+        // $otherExpenseTotal = $otherExpenseAccounts->sum('amount');
 
-        $report->push((object) [
-            'name' => 'Other Expenses',
-            'is_section_header' => true,
-            'group_key' => 'other_expenses',
-            'has_children' => $otherExpenseAccounts->count() > 0,
-            'section_total' => $otherExpenseTotal
-        ]);
-        $report = $report->merge($otherExpenseAccounts);
-        $report->push((object) [
-            'name' => 'Total Other Expenses',
-            'account_type' => 'subtotal',
-            'net' => $otherExpenseTotal,
-            'is_subtotal' => true,
-            'group_key' => 'other_expenses'
-        ]);
+        // $report->push((object) [
+        //     'name' => 'Other Expenses',
+        //     'is_section_header' => true,
+        //     'group_key' => 'other_expenses',
+        //     'has_children' => $otherExpenseAccounts->count() > 0,
+        //     'section_total' => $otherExpenseTotal
+        // ]);
+        // $report = $report->merge($otherExpenseAccounts);
+        // $report->push((object) [
+        //     'name' => 'Total Other Expenses',
+        //     'account_type' => 'subtotal',
+        //     'net' => $otherExpenseTotal,
+        //     'is_subtotal' => true,
+        //     'group_key' => 'other_expenses'
+        // ]);
 
-        // ---------------- NET OTHER INCOME ----------------
-        $netOther = $otherIncomeTotal - $otherExpenseTotal;
-        $report->push((object) [
-            'name' => 'NET OTHER INCOME',
-            'account_type' => 'net_other_income',
-            'net' => $netOther,
-            'is_total' => true
-        ]);
+        // // ---------------- NET OTHER INCOME ----------------
+        // $netOther = $otherIncomeTotal - $otherExpenseTotal;
+        // $report->push((object) [
+        //     'name' => 'NET OTHER INCOME',
+        //     'account_type' => 'net_other_income',
+        //     'net' => $netOther,
+        //     'is_total' => true
+        // ]);
 
         // ---------------- FINAL NET INCOME ----------------
-        $finalNet = $netOrdinary + $netOther;
+        // $finalNet = $netOrdinary + $netOther;
+        $finalNet = $netOrdinary;
         $report->push((object) [
             'name' => 'NET INCOME',
             'account_type' => 'net_income',

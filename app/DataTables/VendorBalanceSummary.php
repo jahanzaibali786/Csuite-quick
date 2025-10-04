@@ -42,14 +42,14 @@ class VendorBalanceSummary extends DataTable
             $balance = $vendorBalance - $row['debit_price'];
 
             $totalBalance += $balance;
-            $grandTotal += $vendorTotal;
+            $grandTotal += $balance;
 
             $data->push([
                 'name' => $row['name'],
                 'price' => number_format($vendorBalance, 2),
                 'debit_price' => number_format($row['debit_price'], 2),
                 'balance' => number_format($balance, 2),
-                'total' => number_format($vendorTotal, 2),
+                'total' => number_format($balance, 2),
             ]);
         }
 
