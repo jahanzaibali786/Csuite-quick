@@ -51,6 +51,7 @@
             {{ Form::label('sale_chartaccount_id', __('Income Account'), ['class' => 'form-label']) }}
             <select name="sale_chartaccount_id" class="form-control" required="required" data-create-url="{{ route('chart-of-account.create') }}" data-create-title="{{ __('Create New Account') }}">
                 <option value="add_new">➕  Add New</option>
+                <option value="0" selected>Select Account</option>                
                 @foreach ($incomeChartAccounts as $key => $chartAccount)
                     <option value="{{ $key }}" class="subAccount">{{ $chartAccount }}</option>
                     @foreach ($incomeSubAccounts as $subAccount)
@@ -74,6 +75,7 @@
             {{ Form::label('expense_chartaccount_id', __('Expense Account'), ['class' => 'form-label']) }}
             <select name="expense_chartaccount_id" class="form-control" required="required" data-create-url="{{ route('chart-of-account.create') }}" data-create-title="{{ __('Create New Account') }}">
                 <option value="add_new">➕  Add New</option>
+                <option value="0" selected>Select Account</option>                
                 @foreach ($expenseChartAccounts as $key => $chartAccount)
                     <option value="{{ $key }}" class="subAccount">{{ $chartAccount }}</option>
                     @foreach ($expenseSubAccounts as $subAccount)
@@ -89,17 +91,17 @@
 
         <div class="form-group col-md-6">
             {{ Form::label('tax_id', __('Tax'), ['class' => 'form-label']) }}
-            {{ Form::select('tax_id[]',  ['add_new' => '➕  Add New'] + $tax->toArray(), null, ['class' => 'form-control select2', 'data-create-url' => route('taxes.create'), 'data-create-title' => __('Create New Tax')]) }}
+            {{ Form::select('tax_id[]',   $tax->toArray(), null, ['class' => 'form-control select2', 'data-create-url' => route('taxes.create'), 'data-create-title' => __('Create New Tax')]) }}
             <!-- {{ Form::select('tax_id[]', $tax, null, ['class' => 'form-control select2', 'id' => 'choices-multiple1', 'multiple']) }} -->
         </div>
         <div class="form-group col-md-6">
             {{ Form::label('category_id', __('Category'), ['class' => 'form-label']) }}<span class="text-danger">*</span>
-            {{ Form::select('category_id', ['add_new' => '➕  Add New'] + $category->toArray() , null, ['class' => 'form-control select', 'required' => 'required',  'data-create-url' => route('product-category.create'), 'data-create-title' => __('Create New Category')]) }}
+            {{ Form::select('category_id', $category->toArray() , null, ['class' => 'form-control select', 'required' => 'required',  'data-create-url' => route('product-category.create'), 'data-create-title' => __('Create New Category')]) }}
 
         </div>
         <div class="form-group col-md-6">
             {{ Form::label('unit_id', __('Unit'), ['class' => 'form-label']) }}<span class="text-danger">*</span>
-            {{ Form::select('unit_id', ['add_new' => '➕  Add New'] + $unit->toArray(), null, ['class' => 'form-control select', 'required' => 'required',  'data-create-url' => route('product-unit.create'), 'data-create-title' => __('Create New Unit')]) }}
+            {{ Form::select('unit_id',  $unit->toArray(), null, ['class' => 'form-control select', 'required' => 'required',  'data-create-url' => route('product-unit.create'), 'data-create-title' => __('Create New Unit')]) }}
         </div>
         <div class="col-md-6 form-group">
             {{ Form::label('pro_image', __('Product Image'), ['class' => 'form-label']) }}

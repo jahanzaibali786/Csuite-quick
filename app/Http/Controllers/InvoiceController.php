@@ -139,56 +139,58 @@ class InvoiceController extends Controller
         return view('invoice.recurring_invoices_orPayments', compact('invoices', 'customer', 'status', 'invoiceData', 'recurringType'));
     }
 
-    private function calculateInvoiceSummary($ownerId, $column)
-    {
-        $invoices = Invoice::where($column, '=', $ownerId)->get();
+private function calculateInvoiceSummary($ownerId, $column)
+{
+    $now  = Carbon::today();
+    $from = $now->copy()->subDays(365);
 
-        $data = [
-            'draft' => ['amount' => 0, 'count' => 0],
-            'sent' => ['amount' => 0, 'count' => 0],
-            'unpaid' => ['amount' => 0, 'count' => 0],
-            'partially_paid' => ['amount' => 0, 'count' => 0],
-            'paid' => ['amount' => 0, 'count' => 0],
-            'overdue' => ['amount' => 0, 'count' => 0],
-        ];
+    $invoices = Invoice::where($column, '=', $ownerId)->get();
 
-        foreach ($invoices as $invoice) {
-            $total = $invoice->getTotal();
-            $due = $invoice->getDue();
+    $data = [
+        'draft'          => ['amount' => 0, 'count' => 0],
+        'sent'           => ['amount' => 0, 'count' => 0],
+        'unpaid'         => ['amount' => 0, 'count' => 0],
+        'partially_paid' => ['amount' => 0, 'count' => 0],
+        'paid'           => ['amount' => 0, 'count' => 0],
+        'overdue'        => ['amount' => 0, 'count' => 0],     // windowed (365d)
+        'not_due_yet'    => ['amount' => 0, 'count' => 0],     // windowed (365d)
+    ];
 
-            // Check if overdue (unpaid and past due date)
-            if ($due > 0 && $invoice->due_date < date('Y-m-d')) {
+    foreach ($invoices as $invoice) {
+        $total = $invoice->getTotal();
+        $due   = $invoice->getDue();
+
+        $issueAt = $invoice->issue_date ? Carbon::parse($invoice->issue_date) : null;
+        $dueAt   = $invoice->due_date   ? Carbon::parse($invoice->due_date)   : null;
+
+        $inWindow = $issueAt ? $issueAt->betweenIncluded($from, $now) : false;
+
+        // ---- Left panel buckets (apply 365d window) ----
+        if ($due > 0 && $dueAt && $inWindow) {
+            if ($dueAt->lt($now)) {
+                // unpaid & past due
                 $data['overdue']['amount'] += $due;
                 $data['overdue']['count']++;
+            } elseif ($dueAt->gt($now)) {
+                // unpaid & due in future, regardless of status (draft/sent/partially paid/unpaid)
+                $data['not_due_yet']['amount'] += $due;
+                $data['not_due_yet']['count']++;
             }
-
-            // Categorize by status
-            switch ($invoice->status) {
-                case 0: // Draft
-                    $data['draft']['amount'] += $total;
-                    $data['draft']['count']++;
-                    break;
-                case 1: // Sent
-                    $data['sent']['amount'] += $total;
-                    $data['sent']['count']++;
-                    break;
-                case 2: // Unpaid
-                    $data['unpaid']['amount'] += $due;
-                    $data['unpaid']['count']++;
-                    break;
-                case 3: // Partially Paid
-                    $data['partially_paid']['amount'] += $due;
-                    $data['partially_paid']['count']++;
-                    break;
-                case 4: // Paid
-                    $data['paid']['amount'] += $total;
-                    $data['paid']['count']++;
-                    break;
-            }
+            // due today -> neither bucket
         }
 
-        return $data;
+        // ---- Status buckets (leave as-is) ----
+        switch ((int) $invoice->status) {
+            case 0: $data['draft']['amount'] += $total;            $data['draft']['count']++; break;
+            case 1: $data['sent']['amount'] += $total;             $data['sent']['count']++; break;
+            case 2: $data['unpaid']['amount'] += $due;             $data['unpaid']['count']++; break;
+            case 3: $data['partially_paid']['amount'] += $due;     $data['partially_paid']['count']++; break;
+            case 4: $data['paid']['amount'] += $total;             $data['paid']['count']++; break;
+        }
     }
+
+    return $data;
+}
 
     public function create($customerId)
     {
@@ -712,10 +714,12 @@ class InvoiceController extends Controller
                 // StockReport::where('type', '=', 'invoice')->where('type_id', '=', $invoice->id)->delete();
                 // $description = $invoiceProduct->quantity . '  ' . __(' quantity sold in invoice') . ' ' . \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
                 // Utility::addProductStock($invoiceProduct->product_id, $invoiceProduct->quantity, $type, $description, $type_id);
-                if(Auth::user()->type == 'company')
-                {
+                if (Auth::user()->type == 'company') {
                     $this->createInvoiceJournalVoucher($invoice);
-                    $this->approveInvoice($invoice->id);
+                    // $this->approveInvoice($invoice->id);
+                    $invoice->status = 6; // Approved
+                    $invoice->save();
+                    Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Create Invoice', 'Invoice Created & Approved');
                 }
 
                 // Webhook
@@ -932,9 +936,10 @@ class InvoiceController extends Controller
             $user = \Auth::user();
             $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
             $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
-            $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id');
-            $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id');
-            $category->prepend('Select Category', '');
+            $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
+            $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
+            $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
+            $category =  ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $invoice->customField = CustomField::getData($invoice, 'invoice');
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'invoice')->get();

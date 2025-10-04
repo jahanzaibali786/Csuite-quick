@@ -149,8 +149,8 @@ class BalanceSheetStandardDataTable extends DataTable
                 'chart_of_account_sub_types.name as sub_type_name',
                 'chart_of_account_types.id as type_id',
                 'chart_of_account_types.name as type_name',
-                DB::raw('COALESCE(SUM(journal_items.debit), 0) as total_debit'),
-                DB::raw('COALESCE(SUM(journal_items.credit), 0) as total_credit'),
+                    DB::raw("COALESCE(SUM(CASE WHEN journal_items.created_at <= '{$this->asOfDate->format('Y-m-d 23:59:59')}' THEN journal_items.debit ELSE 0 END), 0) as total_debit"),
+                    DB::raw("COALESCE(SUM(CASE WHEN journal_items.created_at <= '{$this->asOfDate->format('Y-m-d 23:59:59')}' THEN journal_items.credit ELSE 0 END), 0) as total_credit"),
             ])
             ->groupBy(
                 'chart_of_accounts.id',
@@ -160,12 +160,10 @@ class BalanceSheetStandardDataTable extends DataTable
                 'chart_of_account_sub_types.name',
                 'chart_of_account_types.id',
                 'chart_of_account_types.name'
-            )
-            ->get();
-
+            )->get();
         // Calculate balances
         $accounts = $accounts->map(function($acc) {
-            if ($acc->type_name === 'Asset') {
+            if ($acc->type_name === 'Assets') {
                 $acc->balance = $acc->total_debit - $acc->total_credit;
             } else {
                 $acc->balance = $acc->total_credit - $acc->total_debit;
