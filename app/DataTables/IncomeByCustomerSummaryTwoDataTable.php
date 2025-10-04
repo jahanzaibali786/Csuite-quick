@@ -14,49 +14,78 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
     {
         $user = Auth::user();
 
-        return datatables()
+        // Get all rows first so we can manipulate and add a grand total row
+        $rows = collect($query->get());
+
+        // Calculate grand totals
+        $grandIncome = $rows->sum('income');
+        $grandExpenses = $rows->sum('expenses');
+        $grandNet = $grandIncome - $grandExpenses;
+
+        // Push grand total row
+        $rows->push((object) [
+            'customer' => '<strong>Grand Total</strong>',
+            'income' => $grandIncome,
+            'expenses' => $grandExpenses,
+            'net_income' => $grandNet,
+            'isGrandTotal' => true,
+        ]);
+
+        /*return datatables()
             ->eloquent($query)
             ->addColumn('customer', fn($r) => $r->name ?? '-')
-            ->addColumn('income', fn($r) => $user->priceFormat($r->income ?? 0))
-            ->addColumn('expenses', fn($r) => $user->priceFormat($r->expenses ?? 0))
-            ->addColumn('net_income', fn($r) => $user->priceFormat(($r->income ?? 0) - ($r->expenses ?? 0)))
+            ->addColumn('income', fn($r) => number_format($r->income ?? 0))
+            ->addColumn('expenses', fn($r) => number_format($r->expenses ?? 0))
+            ->addColumn('net_income', fn($r) => number_format(($r->income ?? 0) - ($r->expenses ?? 0)))
             ->with('totals', function () use ($query) {
                 // Compute totals on the same base query
                 try {
                     $rows = (clone $query)->get();
-                    $income   = (float) $rows->sum('income');
+                    $income = (float) $rows->sum('income');
                     $expenses = (float) $rows->sum('expenses');
-                    $net      = $income - $expenses;
-                    
+                    $net = $income - $expenses;
+
                     \Log::info('DataTable Totals calculated:', compact('income', 'expenses', 'net'));
-                    
+
                     return compact('income', 'expenses', 'net');
                 } catch (\Exception $e) {
                     \Log::error('Error calculating totals: ' . $e->getMessage());
                     return ['income' => 0, 'expenses' => 0, 'net' => 0];
                 }
             })
+            ->rawColumns(['customer', 'income', 'expenses', 'net_income']);*/
+
+        return datatables()
+            ->collection($rows)
+            ->addColumn('customer', fn($r) => $r->isGrandTotal ?? false ? $r->customer : ($r->name ?? '-'))
+            ->addColumn('income', fn($r) => number_format($r->income ?? 0))
+            ->addColumn('expenses', fn($r) => number_format($r->expenses ?? 0))
+            ->addColumn('net_income', fn($r) => number_format($r->net_income ?? 0))
             ->rawColumns(['customer', 'income', 'expenses', 'net_income']);
     }
 
     public function query()
     {
-        $user    = Auth::user();
+        $user = Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
         $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
 
-        // Get date range filters
-        $startDate = request('start_date');
-        $endDate = request('end_date');
+        // Get start and end dates from request, fallback to defaults
+        $startDate = request()->get('start_date')
+            ?? request()->get('startDate')
+            ?? date('Y-01-01');
+        $endDate = request()->get('end_date')
+            ?? request()->get('endDate')
+            ?? date('Y-m-d');
         $reportPeriod = request('report_period', 'all_dates');
-        
+
         // Calculate date range based on report period (only if not 'all_dates')
         if ($reportPeriod && $reportPeriod !== 'all_dates' && $reportPeriod !== 'custom') {
             $dates = $this->calculateDateRange($reportPeriod);
             $startDate = $dates['start'];
             $endDate = $dates['end'];
         }
-        
+
         // Debug the date values
         \Log::info('Date Filters Applied:', [
             'report_period' => $reportPeriod,
@@ -87,7 +116,7 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
             )
             ->where('i.created_by', $ownerId)
             ->where('i.status', '!=', 0);
-            
+
         // Apply date filters to income subquery (only if dates are provided)
         if ($startDate && $startDate !== '') {
             $incomeSubquery->whereDate('i.issue_date', '>=', $startDate);
@@ -97,7 +126,7 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
             $incomeSubquery->whereDate('i.issue_date', '<=', $endDate);
             \Log::info('Applied income end date filter: ' . $endDate);
         }
-        
+
         $incomeSubquery->groupBy('i.customer_id');
 
         // Create subquery for expenses calculation
@@ -120,7 +149,7 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
             ->where('b.created_by', $ownerId)
             ->where('b.user_type', 'customer')
             ->where('b.status', '!=', 0);
-            
+
         // Apply date filters to expense subquery (only if dates are provided)
         if ($startDate && $startDate !== '') {
             $expenseSubquery->whereDate('b.bill_date', '>=', $startDate);
@@ -130,17 +159,17 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
             $expenseSubquery->whereDate('b.bill_date', '<=', $endDate);
             \Log::info('Applied expense end date filter: ' . $endDate);
         }
-        
+
         $expenseSubquery->groupBy('b.vender_id');
 
         // Main query using Eloquent Customer model
         $model = new \App\Models\Customer();
         $q = $model->newQuery()
             ->where('customers.' . $column, $ownerId)
-            ->leftJoinSub($incomeSubquery, 'inc', function($join) {
+            ->leftJoinSub($incomeSubquery, 'inc', function ($join) {
                 $join->on('customers.id', '=', 'inc.customer_id');
             })
-            ->leftJoinSub($expenseSubquery, 'exp', function($join) {
+            ->leftJoinSub($expenseSubquery, 'exp', function ($join) {
                 $join->on('customers.id', '=', 'exp.customer_id');
             })
             ->select([
@@ -156,11 +185,11 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
 
         return $q;
     }
-    
+
     private function calculateDateRange($period)
     {
         $today = \Carbon\Carbon::today();
-        
+
         switch ($period) {
             case 'today':
                 return ['start' => $today->format('Y-m-d'), 'end' => $today->format('Y-m-d')];
@@ -205,16 +234,16 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
             ->minifiedAjax()
             ->dom('rt')
             ->parameters([
-                'responsive'     => true,
-                'autoWidth'      => false,
-                'paging'         => false,
-                'searching'      => false,
-                'info'           => false,
-                'ordering'       => false,
-                'colReorder'     => true,
-                'fixedHeader'    => true, // Enable fixed header
-                'scrollY'        => '400px', // Set scroll height for data area
-                'scrollX'        => false,
+                'responsive' => true,
+                'autoWidth' => false,
+                'paging' => false,
+                'searching' => false,
+                'info' => false,
+                'ordering' => false,
+                'colReorder' => true,
+                'fixedHeader' => true, // Enable fixed header
+                'scrollY' => '400px', // Set scroll height for data area
+                'scrollX' => false,
                 'scrollCollapse' => true,
             ]);
     }

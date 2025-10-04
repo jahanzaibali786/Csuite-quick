@@ -25,8 +25,8 @@ class DepositDetailDataTable extends DataTable
             ->editColumn('transaction_type', function ($row) {
                 $type = $row->transaction_type ?? 'Deposit';
                 // Add badges for different transaction types
-                $badgeClass = $type === 'Payment' ? 'badge-success' : 'badge-info';
-                return '<span class="badge ' . $badgeClass . '">' . $type . '</span>';
+                $badgeClass = $type === 'Payment' ? 'badge-successs' : 'badge-infos';
+                return '<span class="badges ' . $badgeClass . '">' . $type . '</span>';
             })
             ->editColumn('num', function ($row) {
                 return $row->num ?? '-';
@@ -44,13 +44,13 @@ class DepositDetailDataTable extends DataTable
             })
             ->editColumn('cleared', function ($row) {
                 $cleared = $row->cleared ?? 'Uncleared';
-                $badgeClass = $cleared === 'Cleared' ? 'badge-success' : 'badge-warning';
-                return '<span class="badge ' . $badgeClass . '">' . $cleared . '</span>';
+                $badgeClass = $cleared === 'Cleared' ? 'badge-successs' : 'badge-warnings';
+                return '<span class="badges ' . $badgeClass . '">' . $cleared . '</span>';
             })
             ->editColumn('amount', function ($row) {
                 try {
                     $amount = is_object($row) ? ($row->amount ?? 0) : (isset($row['amount']) ? $row['amount'] : 0);
-                    $formattedAmount = \Auth::user()->priceFormat((float)$amount);
+                    $formattedAmount = \Auth::user()->priceFormat((float) $amount);
                     return '<span class="text-success font-weight-bold">' . $formattedAmount . '</span>';
                 } catch (\Exception $e) {
                     return '<span class="text-muted">$0.00</span>';
@@ -63,9 +63,14 @@ class DepositDetailDataTable extends DataTable
     {
         $user = Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        
-        $start = request('start_date', date('Y-01-01'));
-        $end = request('end_date', date('Y-m-d'));
+
+        // Get start and end dates from request, fallback to defaults
+        $start = request()->get('start_date')
+            ?? request()->get('startDate')
+            ?? date('Y-01-01');
+        $end = request()->get('end_date')
+            ?? request()->get('endDate')
+            ?? date('Y-m-d');
         $selectedCustomer = request('customer_name', '');
         $selectedVendor = request('vendor_name', '');
 
@@ -86,11 +91,11 @@ class DepositDetailDataTable extends DataTable
                 ->join('invoices', 'invoices.id', '=', 'invoice_payments.invoice_id')
                 ->where('invoices.created_by', $ownerId)
                 ->count();
-            
+
             $revenueCount = DB::table('revenues')
                 ->where('created_by', $ownerId)
                 ->count();
-                
+
             \Log::info('Data availability check', [
                 'invoice_payments' => $invoicePaymentCount,
                 'revenues' => $revenueCount
@@ -134,7 +139,7 @@ class DepositDetailDataTable extends DataTable
 
             // Apply customer filter
             if (!empty($selectedCustomer)) {
-                $query->where(function($q) use ($selectedCustomer) {
+                $query->where(function ($q) use ($selectedCustomer) {
                     $q->where('customers.name', 'LIKE', '%' . $selectedCustomer . '%');
                 });
             }
@@ -159,7 +164,7 @@ class DepositDetailDataTable extends DataTable
             }
 
             return $finalQuery;
-            
+
         } catch (\Exception $e) {
             \Log::error('DepositDetail Query Exception', [
                 'message' => $e->getMessage(),
@@ -167,7 +172,7 @@ class DepositDetailDataTable extends DataTable
                 'file' => $e->getFile(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             // Return empty query to prevent 500 error
             return DB::table('invoice_payments')
                 ->select([
@@ -187,7 +192,7 @@ class DepositDetailDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('deposit-detail-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('rt')
@@ -197,7 +202,7 @@ class DepositDetailDataTable extends DataTable
                 'paging' => false,
                 'searching' => false,
                 'info' => false,
-                'ordering' => true,
+                'ordering' => false,
                 'order' => [[0, 'asc']], // Sort by Transaction Date ascending
                 'colReorder' => true,
                 'fixedHeader' => true,
@@ -211,8 +216,8 @@ class DepositDetailDataTable extends DataTable
                     ]
                 ],
                 'language' => [
-                    'emptyTable' => 'No deposit or payment data found for the selected period. Try expanding your date range or check if there are any customer payments recorded.',
-                    'zeroRecords' => 'No deposits found for the selected criteria. Customer payments and direct deposits will appear here when available.'
+                    'emptyTable' => 'No data found for the selected period.',
+                    'zeroRecords' => 'No data found.'
                 ]
             ]);
     }
@@ -233,6 +238,6 @@ class DepositDetailDataTable extends DataTable
 
     protected function filename(): string
     {
-        return 'DepositDetail_'.date('YmdHis');
+        return 'DepositDetail_' . date('YmdHis');
     }
 }

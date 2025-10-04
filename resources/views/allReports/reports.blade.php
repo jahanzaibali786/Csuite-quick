@@ -100,14 +100,14 @@
 
         /* .accordion-item:first-child .accordion-button {
 
-                                border-top-left-radius: 0.375rem;
-                                border-top-right-radius: 0.375rem;
-                            }
+                                    border-top-left-radius: 0.375rem;
+                                    border-top-right-radius: 0.375rem;
+                                }
 
-                            .accordion-item:last-child .accordion-button.collapsed {
-                                border-bottom-left-radius: 0.375rem;
-                                border-bottom-right-radius: 0.375rem;
-                            } */
+                                .accordion-item:last-child .accordion-button.collapsed {
+                                    border-bottom-left-radius: 0.375rem;
+                                    border-bottom-right-radius: 0.375rem;
+                                } */
 
 
         /* Responsive grid adjustments */
@@ -520,12 +520,12 @@
 
                             // ================== Added Reports ==================
                             ['route' => null, 'label' => 'Estimates & Progress Invoicing Summary by Customer'],
-                            ['route' => null, 'label' => 'Customer Contact List'],
+                            ['route' => 'customercontact.list', 'label' => 'Customer Contact List'],
                             [
                                 'route' => 'productservice.incomeByCustomerSummaryTwo',
                                 'label' => 'Income by Customer Summary',
                             ],
-                            ['route' => null, 'label' => 'Customer Phone List'],
+                            ['route' => 'customercontact.list.phone.numbers', 'label' => 'Customer Phone List'],
                             ['route' => 'report.sales.salesByCustomerSummary', 'label' => 'Sales by Customer Summary'],
                             ['route' => 'report.sales.salesByCustomerDetail', 'label' => 'Sales by Customer Detail'],
                             ['route' => 'report.depositDetail', 'label' => 'Deposit Detail'],
@@ -714,6 +714,53 @@
                             </div>
                         </div>
                     </div>
+
+                    @php
+                        $employeeReports = [
+                            ['route' => 'employees.employeecontactlist', 'label' => 'Employee Contact List'],
+                            
+                        ];
+                    @endphp
+
+                    <div class="accordion pb-2" id="reportsAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="EmployeesHeading">
+                                <button class="accordion-button {{ Request::segment(1) == 'report' ? '' : 'collapsed' }}"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#Employees"
+                                    aria-expanded="{{ Request::segment(1) == 'report' ? 'true' : 'false' }}"
+                                    aria-controls="Employees">
+                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                    {{ __('Employees') }}
+                                </button>   
+                            </h2>
+                            <div id="Employees"
+                                class="accordion-collapse collapse {{ Request::segment(1) == 'report' ? 'show' : '' }}"
+                                aria-labelledby="Employees" data-bs-parent="#reportsAccordion">
+                                <div class="accordion-body p-0">
+                                    <ul class="list-unstyled mb-0 row g-0">
+                                        @foreach ($employeeReports as $report)
+                                            <li
+                                                class="col-6 report-item {{ Request::route()->getName() == $report['route'] ? 'active' : '' }}">
+                                                <a class="report-link d-flex align-items-center justify-content-between p-3"
+                                                    href="{{ route($report['route']) }}">
+                                                    <span class="d-flex align-items-center">
+                                                        <i class="bi bi-file-earmark-text me-2"></i>
+                                                        {{ __($report['label']) }}
+                                                    </span>
+                                                    <span class="report-actions">
+                                                        <i class="bi bi-star text-muted"></i>
+                                                        <i class="bi bi-three-dots-vertical text-muted ms-1"></i>
+                                                    </span>
+                                                </a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
 
 
                     {{-- ================== ACCOUNTING ================== --}}

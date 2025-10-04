@@ -14,19 +14,39 @@ class SalesByCustomerSummaryDataTable extends DataTable
 {
     public function dataTable($query)
     {
-        return datatables()
+
+        // Get all rows first so we can manipulate and add a grand total row
+        $rows = collect($query->get());
+
+        // Calculate grand total
+        $grandTotal = $rows->sum('total');
+
+        // Push grand total row
+        $rows->push((object) [
+            'customer_name' => '<strong>Grand Total</strong>',
+            'total' => $grandTotal,
+            'isGrandTotal' => true,
+        ]);
+
+        /*return datatables()
             ->of($query)
             ->addColumn('customer_name', function ($row) {
                 return $row->customer_name ?: '-';
             })
             ->addColumn('total', function ($row) {
                 $amount = (float) ($row->total ?: 0);
-                return \Auth::user()->priceFormat($amount);
+                return number_format($amount);
             })
             ->rawColumns(['customer_name', 'total'])
             ->with([
                 'totals' => $this->calculateTotals($query)
-            ]);
+            ]);*/
+
+        return datatables()
+            ->collection($rows)
+            ->addColumn('customer_name', fn($r) => $r->isGrandTotal ?? false ? $r->customer_name : ($r->customer_name ?: '-'))
+            ->addColumn('total', fn($r) => $r->isGrandTotal ?? false ? '<strong>' . number_format($r->total ?? 0) . '</strong>' : number_format($r->total ?? 0))
+            ->rawColumns(['customer_name', 'total']);
     }
 
     private function calculateTotals($query)
@@ -40,7 +60,7 @@ class SalesByCustomerSummaryDataTable extends DataTable
             $totalSales = $query->sum('total');
             $customerCount = $query->count();
         }
-        
+
         return [
             'total_sales' => $totalSales,
             'customer_count' => $customerCount
@@ -51,9 +71,14 @@ class SalesByCustomerSummaryDataTable extends DataTable
     {
         $user = Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        
-        $start = request('start_date', date('Y-01-01'));
-        $end = request('end_date', date('Y-m-d'));
+
+        // Get start and end dates from request, fallback to defaults
+        $start = request()->get('start_date')
+            ?? request()->get('startDate')
+            ?? date('Y-01-01');
+        $end = request()->get('end_date')
+            ?? request()->get('endDate')
+            ?? date('Y-m-d');
 
         // Query based on memory knowledge: invoices don't have 'total' field
         // Must calculate from invoice_products: (price * quantity - discount) + tax
@@ -76,11 +101,11 @@ class SalesByCustomerSummaryDataTable extends DataTable
                     ) as total'
                 )
             ])
-            ->leftJoin('invoices', function($join) use ($ownerId, $start, $end) {
+            ->leftJoin('invoices', function ($join) use ($ownerId, $start, $end) {
                 $join->on('customers.id', '=', 'invoices.customer_id')
-                     ->where('invoices.created_by', $ownerId)
-                     ->whereBetween('invoices.issue_date', [$start, $end])
-                     ->whereIn('invoices.status', [1, 2, 3, 4]); // Exclude draft (0)
+                    ->where('invoices.created_by', $ownerId)
+                    ->whereBetween('invoices.issue_date', [$start, $end])
+                    ->whereIn('invoices.status', [1, 2, 3, 4]); // Exclude draft (0)
             })
             ->leftJoin('invoice_products', 'invoice_products.invoice_id', '=', 'invoices.id')
             ->where('customers.created_by', $ownerId)
@@ -100,7 +125,7 @@ class SalesByCustomerSummaryDataTable extends DataTable
         // Get results and log count
         $results = $query->get();
         \Log::info('Query Results Count: ' . $results->count());
-        
+
         if ($results->count() > 0) {
             \Log::info('Sample results:', $results->take(3)->toArray());
         } else {
@@ -113,7 +138,7 @@ class SalesByCustomerSummaryDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('sales-by-customer-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('rt') // Only table, no pagination or search
@@ -123,7 +148,7 @@ class SalesByCustomerSummaryDataTable extends DataTable
                 'paging' => false,
                 'searching' => false,
                 'info' => false,
-                'ordering' => true,
+                'ordering' => false,
                 'order' => [[1, 'desc']], // Sort by Total descending
                 'columnDefs' => [
                     [
@@ -153,6 +178,6 @@ class SalesByCustomerSummaryDataTable extends DataTable
 
     protected function filename(): string
     {
-        return 'SalesByCustomerSummary_'.date('YmdHis');
+        return 'SalesByCustomerSummary_' . date('YmdHis');
     }
 }
