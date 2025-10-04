@@ -104,10 +104,6 @@ class ProductServiceCategoryController extends Controller
     }
 
 
-    return redirect()->route('product-category.index')->with('success', __('Category successfully created.'));
-}
-
-
     public function edit($id)
     {
 

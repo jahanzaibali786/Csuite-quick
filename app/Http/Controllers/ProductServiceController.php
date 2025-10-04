@@ -543,10 +543,12 @@ private function computePeriod(?string $reportPeriod, ?string $start, ?string $e
 
         if (\Auth::user()->can('edit product & service')) {
             if ($productService->created_by == \Auth::user()->creatorId()) {
-                $category = ProductServiceCategory::where('created_by', '=', \Auth::user()->creatorId())->where('type', '=', 'product & service')->get()->pluck('name', 'id');
-                $unit = ProductServiceUnit::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-                $tax = Tax::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-                $tax = $tax->prepend('Select Tax', '');
+                $category = ProductServiceCategory::where('created_by', '=', \Auth::user()->creatorId())->where('type', '=', 'product & service')->get()->pluck('name', 'id')->toArray();
+                $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
+                $unit = ProductServiceUnit::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id')->toArray();
+                $unit = ['__add__' => '➕ Add new unit'] + ['' => 'Select Unit'] + $unit;
+                $tax = Tax::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id')->toArray();
+                $tax = ['__add__' => '➕ Add new tax'] + ['' => 'Select Tax'] + $tax;
                 $productService->customField = CustomField::getData($productService, 'product');
                 $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'product')->get();
                 $productService->tax_id = explode(',', $productService->tax_id);

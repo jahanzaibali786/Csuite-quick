@@ -1,3 +1,4 @@
+{{-- create.blade.php --}}
 {{ Form::open(['route' => ['projects.tasks.store',$project_id,$stage_id],'id' => 'create_task']) }}
 <div class="modal-body">
     {{-- start for ai module--}}

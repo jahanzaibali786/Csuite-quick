@@ -196,6 +196,14 @@ Route::get('/reports', [ReportController::class, 'reports'])->name('allReports')
 Route::get('/ai-sql', [AiSqlController::class, 'index'])->name('ai-sql.index')->middleware(['auth', 'XSS', 'revalidate']);
 Route::post('/ai-sql', [AiSqlController::class, 'ask'])->name('ai-sql.ask')->middleware(['auth', 'XSS', 'revalidate']);
 
+// for Project Task button in Dashboard
+Route::get('/taskCreationOnDashboard-list', [ProjectTaskController::class, 'taskCreationOnDashboardList'])->name('task-Creation-On-Dashboard-List')->middleware(['auth', 'XSS', 'revalidate']);
+Route::get('/task-Creation-On-Dashboard-create', [ProjectTaskController::class, 'taskCreationOnDashboardCreate'])->name('task-Creation-On-Dashboard-Create')->middleware(['auth', 'XSS', 'revalidate']);
+Route::get('/task-Creation-On-Dashboard-edit', [ProjectTaskController::class, 'taskCreationOnDashboardEdit'])->name('task-Creation-On-Dashboard-Edit')->middleware(['auth', 'XSS', 'revalidate']);
+Route::delete('/tasks/{task}', [ProjectTaskController::class, 'taskCreationOnDashboardDestroy'])->name('task-Creation-On-Dashboard-Delete')->middleware(['auth','XSS','revalidate']);
+Route::post('/task-Creation-On-Dashboard-store', [ProjectTaskController::class, 'taskCreationOnDashboardStore'])->name('task-Creation-On-Dashboard-Store')->middleware(['auth', 'XSS', 'revalidate']);
+Route::post('/task-Creation-On-Dashboard-update', [ProjectTaskController::class, 'taskCreationOnDashboardUpdate'])->name('task-Creation-On-Dashboard-Update')->middleware(['auth', 'XSS', 'revalidate']);
+
 // Plaid Payments
 Route::get('/createLinkToken', 'App\Http\Controllers\PlaidController@createLinkToken')->name('createLinkToken');
 Route::post('/storePlaidAccount', 'App\Http\Controllers\PlaidController@storePlaidAccount')->name('linkPlaidAccount');

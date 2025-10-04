@@ -81,9 +81,9 @@ class ProposalController extends Controller
             $customFields    = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'proposal')->get();
             $proposal_number = \Auth::user()->proposalNumberFormat($this->proposalNumber());
             $customers       = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $customers       = ['' => 'Select Customer'] + $customers + ['__add__' => '➕ Add new customer'];
+            $customers       = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
             $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
-            $category = ['' => 'Select Category'] + $category + ['__add__' => '➕ Add new category'];
+            $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $product_services->prepend('--', '');
 
@@ -209,9 +209,10 @@ class ProposalController extends Controller
             $id              = Crypt::decrypt($ids);
             $proposal        = Proposal::find($id);
             $proposal_number = \Auth::user()->proposalNumberFormat($proposal->proposal_id);
-            $customers       = Customer::where($column, $ownerId)->get()->pluck('name', 'id');
-            $category        = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id');
-            $category->prepend('Select Category', '');
+            $customers       = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
+            $customers       = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
+            $category        = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
+            $category        = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $proposal->customField = CustomField::getData($proposal, 'proposal');
             $customFields          = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'proposal')->get();
