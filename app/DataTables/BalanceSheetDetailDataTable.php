@@ -195,6 +195,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 'chart_of_account_sub_types.name as subtype_name',
                 'chart_of_account_types.name as type_name',
             ])
+
             ->orderBy('chart_of_account_sub_types.name')
             ->orderBy('chart_of_accounts.parent')
             ->orderBy('chart_of_accounts.name')
@@ -261,7 +262,86 @@ class BalanceSheetDetailDataTable extends DataTable
             if ($typeName === 'Liabilities') $totalLiabilities = $typeTotal;
             if ($typeName === 'Equity') {
                 $totalEquity = $typeTotal;
-                // Add accumulated profit/loss like original (unchanged)
+
+                // === Profit/Loss Section ===
+                $plEntries = DB::table('journal_items')
+                    ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+                    ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+                    ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
+                    ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.type', '=', 'chart_of_account_types.id')
+                    ->where("journal_entries.{$this->owner}", $this->companyId)
+                    ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate))) // Convert to date format for MySQL compatibility
+                    // ->where('journal_entries.status', 'draft')
+                    ->whereIn('chart_of_account_types.name', ['Income', 'Expenses', 'Costs of Goods Sold'])
+                    ->select([
+                        'journal_entries.id as journal_id',
+                        'journal_entries.date',
+                        'journal_entries.voucher_type as transaction_type',
+                        'journal_entries.reference as num',
+                        'journal_entries.description as memo',
+                        'journal_items.debit',
+                        'journal_items.credit',
+                        DB::raw('0 as amount'),
+                        'chart_of_accounts.id as account_id',
+                        'chart_of_accounts.name as account_name',
+                        'chart_of_accounts.code as account_code',
+                        'chart_of_accounts.parent as parent_id',
+                        'chart_of_account_sub_types.id as subtype_db_id',
+                        'chart_of_account_sub_types.name as subtype_name',
+                        'chart_of_account_types.name as type_name',
+                    ])
+                    ->orderBy('chart_of_account_types.name')
+                    ->orderBy('chart_of_account_sub_types.name')
+                    ->orderBy('chart_of_accounts.parent')
+                    ->orderBy('chart_of_accounts.name')
+                    ->orderBy('journal_entries.date')
+                    ->get();
+
+                $netProfit = $plEntries->sum(function ($l) {
+                    if ($l->type_name === 'Income') {
+                        return ($l->credit ?? 0) - ($l->debit ?? 0);
+                    } elseif ($l->type_name === 'Expenses' || $l->type_name === 'Costs of Goods Sold') {
+                        return -1 * (($l->debit ?? 0) - ($l->credit ?? 0));
+                    }
+                    return 0;
+                });
+
+                // === Show Accumulated Profit/Loss Section ===
+                $plSubtypeId = 'subtype_accumulated_profit_loss';
+                $report->push((object)[
+                    'is_subtype_header' => true,
+                    'account_name' => "Accumulated (Loss) / Profit",
+                    'subtype_id' => $plSubtypeId,
+                    'has_children' => $plEntries->count() > 0,
+                    'level' => 1,
+                ]);
+
+                $report = $this->processAccounts($plEntries, $report, null, 2, $plSubtypeId);
+
+                $report->push((object)[
+                    'is_subtype_total' => true,
+                    'account_name' => "Accumulated (Loss) / Profit",
+                    'parent_subtype_id' => $plSubtypeId,
+                    'balance' => $netProfit,
+                    'level' => 1,
+                ]);
+
+                $totalEquity += $netProfit;
+
+                // spacing
+                $report->push((object)[
+                    'account_name' => '',
+                    'balance' => null,
+                ]);
+
+                // === FINAL LIABILITIES & EQUITY TOTAL ===
+                $report->push((object)[
+                    'is_type_total' => true,
+                    'account_name' => " Liabilities & Equity ",
+                    'balance' => $totalLiabilities + $totalEquity,
+                    'level' => 0,
+                ]);
+
             }
         }
 

@@ -442,16 +442,19 @@ class ProductServiceController extends Controller
         if (\Auth::user()->can('create product & service')) {
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'product')->get();
             $category = ProductServiceCategory::where('created_by', '=', \Auth::user()->creatorId())->where('type', '=', 'product & service')->get()->pluck('name', 'id');
+            $category->prepend('➕  Add New', 'add_new');
             $unit = ProductServiceUnit::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            $unit->prepend('➕  Add New', 'add_new');
             $tax = Tax::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
             $tax = $tax->prepend('Select Tax', '');
+            $tax->prepend('➕  Add New', 'add_new');
             $incomeChartAccounts = ChartOfAccount::select(\DB::raw('CONCAT(chart_of_accounts.code, " - ", chart_of_accounts.name) AS code_name, chart_of_accounts.id as id'))
                 ->leftjoin('chart_of_account_types', 'chart_of_account_types.id', 'chart_of_accounts.type')
                 ->where('chart_of_account_types.name', 'income')
                 ->where('parent', '=', 0)
                 ->where('chart_of_accounts.created_by', \Auth::user()->creatorId())->get()
                 ->pluck('code_name', 'id');
-            $incomeChartAccounts->prepend('Select Account', 0);
+            // $incomeChartAccounts->prepend('Select Account', 0);
 
             $incomeSubAccounts = ChartOfAccount::select(\DB::raw('CONCAT(chart_of_accounts.code, " - ", chart_of_accounts.name) AS code_name,chart_of_accounts.id, chart_of_accounts.code, chart_of_account_parents.account'));
             $incomeSubAccounts->leftjoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id');
@@ -467,7 +470,7 @@ class ProductServiceController extends Controller
                 ->whereIn('chart_of_account_types.name', ['Expenses', 'Costs of Goods Sold'])
                 ->where('chart_of_accounts.created_by', \Auth::user()->creatorId())->get()
                 ->pluck('code_name', 'id');
-            $expenseChartAccounts->prepend('Select Account', '');
+            // $expenseChartAccounts->prepend('Select Account', '');
 
             $expenseSubAccounts = ChartOfAccount::select(\DB::raw('CONCAT(chart_of_accounts.code, " - ", chart_of_accounts.name) AS code_name,chart_of_accounts.id, chart_of_accounts.code, chart_of_account_parents.account'));
             $expenseSubAccounts->leftjoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id');

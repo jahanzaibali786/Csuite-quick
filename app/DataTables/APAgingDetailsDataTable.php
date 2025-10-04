@@ -44,7 +44,7 @@ class APAgingDetailsDataTable extends DataTable
                 return 'Current';
             }
 
-            $age = $end->diffInDays($due, false);
+            $age = $due->diffInDays($end, false);
 
             if ($age <= 0) {
                 return 'Current';
