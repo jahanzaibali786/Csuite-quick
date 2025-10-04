@@ -653,9 +653,8 @@ class ExpenseController extends Controller
                         $type_id = $expense->id;
                         $description = $products[$i]['quantity'] . '  ' . __('quantity purchase in bill') . ' ' . \Auth::user()->expenseNumberFormat($expense->bill_id);
                         Utility::addProductStock($products[$i]['item'], $products[$i]['quantity'], $type, $description, $type_id);
-                        $total_amount = (float)$total_amount 
-              + ((float)$expenseProduct->quantity * (float)$expenseProduct->price) 
-              + (float)$expenseTotal;
+
+                        $total_amount = (float)$total_amount + ((float)$expenseProduct->quantity * (float)$expenseProduct->price) + (float)$expenseTotal;
 
                     }
                 }
@@ -842,9 +841,11 @@ class ExpenseController extends Controller
                 if(Auth::user()->type == 'company')
                 {
                     $this->createExpenseVoucher($expense);
-                    // $this->approveExpense($expense->id);
+
                     $expense->status = 6;
                     $expense->save();
+                    Utility::makeActivityLog(\Auth::user()->id, 'Expense', $expense->id, 'Create Expense', 'Expense Created & Approved');
+
                 }
                 // Webhook
                 $module = 'New Bill';
@@ -863,13 +864,15 @@ class ExpenseController extends Controller
                 }
 
                 Utility::makeActivityLog(\Auth::user()->id, 'Expense', $expense->id, 'Create Expense', 'Expense Created (Pending Approval)');
-
+                // dd($expense);
+                $expense->save();
                 \DB::commit();
                 return redirect()->route('expense.index', $expense->id)->with('success', __('Expense successfully created and waiting for approval.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
         } catch (\Exception $e) {
+            dd($e);
             \DB::rollback();
             dd($e);
             return redirect()->back()->with('error', $e->getMessage());

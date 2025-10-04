@@ -137,7 +137,9 @@
                     </div>
 
                     <!-- Action buttons row -->
-                    <div class="d-flex align-items-end gap-2 mt-4" style="justify-content: end;">
+
+                    <div class="d-flex align-items-end gap-2 mt-1" style="justify-content: end;">
+
 
                         <button class="btn btn-outline" id="columns-btn">
                             <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
@@ -1077,7 +1079,7 @@
 
         /* Table enhancements */
         .text-right {
-            text-align: right;
+            text-align: right !important;
         }
 
         .negative-amount {
@@ -1687,7 +1689,6 @@
                 data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.account_id = $('#filter-account').val();
                 data.accounting_method = $('#accounting-method').val();
-
                 data.reportOptions = window.reportOptions;
             });
 

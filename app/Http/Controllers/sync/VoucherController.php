@@ -340,7 +340,8 @@ class VoucherController extends Controller
             'pageTitle' => $this->pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day'))),
-            'accounting_method' => true
+            'accounting_method' => true,
+
         ]);
 
     }
@@ -372,6 +373,7 @@ class VoucherController extends Controller
         // return $dataTable->render('sync.balance-sheet-detail.index', $this->data);
         return $dataTable->render('sync.customerbalance.index', [
             'pageTitle' => $this->pageTitle,
+            'accounting_method' => true,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
         ]);
