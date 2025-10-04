@@ -137,6 +137,9 @@ class CustomerBalanceDetailReport extends DataTable
                     2 => 'nbg-danger',
                     3 => 'nbg-info',
                     4 => 'nbg-primary',
+                    5 => 'nbg-primary',
+                    6 => 'nbg-primary',
+                    7 => 'nbg-primary',
                 ];
                 return '<span class="status_badger badger text-whit ' . ($classes[$status] ?? 'bg-secondary') . ' p-2 px-3 rounded">'
                     . __($labels[$status] ?? '-') . '</span>';

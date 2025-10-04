@@ -176,7 +176,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 'chart_of_account_sub_types.name as subtype_name',
                 'chart_of_account_types.name as type_name',
             ])
-            ->orderBy('chart_of_account_types.name')
+            // ->orderBy('chart_of_account_types.name')
             ->orderBy('chart_of_account_sub_types.name')
             ->orderBy('chart_of_accounts.parent')
             ->orderBy('chart_of_accounts.name')
@@ -329,7 +329,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 // === FINAL LIABILITIES & EQUITY TOTAL ===
                 $report->push((object)[
                     'is_type_total' => true,
-                    'account_name' => "TOTAL LIABILITIES & EQUITY",
+                    'account_name' => " Liabilities & Equity ",
                     'balance' => $totalLiabilities + $totalEquity,
                     'level' => 0,
                 ]);

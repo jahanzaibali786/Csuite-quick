@@ -660,7 +660,9 @@ class BillController extends Controller
                 if(Auth::user()->type == 'company')
                 {
                     $this->createBillJournalVoucher($bill);
-                    $this->approveBill($bill->id);
+                    // $this->approveBill($bill->id);
+                    $bill->status = 6; // Approved
+                    $bill->save();
                 }
                 // Webhook
                 $module = 'New Bill';

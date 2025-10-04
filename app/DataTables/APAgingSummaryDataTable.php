@@ -112,91 +112,91 @@ class APAgingSummaryDataTable extends DataTable
 
             // Current
             ->selectRaw("
-SUM(CASE
-WHEN DATEDIFF('$end', bills.due_date) <= 0 THEN ( (bill_products.price * bill_products.quantity -
-    bill_products.discount) + COALESCE(( SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100)) FROM
-    bill_products bp LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax)> 0
-    WHERE bp.id = bill_products.id
-    ),0)
-    )
-    ELSE 0 END
-    ) as current
-    ")
+                SUM(CASE
+                WHEN DATEDIFF('$end', bills.due_date) <= 0 THEN ( (bill_products.price * bill_products.quantity -
+                    bill_products.discount) + COALESCE(( SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100)) FROM
+                    bill_products bp LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax)> 0
+                    WHERE bp.id = bill_products.id
+                    ),0)
+                    )
+                    ELSE 0 END
+                    ) as current
+                    ")
 
             // 1–30
             ->selectRaw("
-    SUM(CASE
-    WHEN DATEDIFF('$end', bills.due_date) BETWEEN 1 AND 30
-    THEN (
-    (bill_products.price * bill_products.quantity - bill_products.discount)
-    + COALESCE((
-    SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100))
-    FROM bill_products bp
-    LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax) > 0
-    WHERE bp.id = bill_products.id
-    ),0)
-    )
-    ELSE 0 END
-    ) as days_1_30
-    ")
+                SUM(CASE
+                WHEN DATEDIFF('$end', bills.due_date) BETWEEN 1 AND 30
+                THEN (
+                (bill_products.price * bill_products.quantity - bill_products.discount)
+                + COALESCE((
+                SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100))
+                FROM bill_products bp
+                LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax) > 0
+                WHERE bp.id = bill_products.id
+                ),0)
+                )
+                ELSE 0 END
+                ) as days_1_30
+                ")
 
-            // 31–60
-            ->selectRaw("
-    SUM(CASE
-    WHEN DATEDIFF('$end', bills.due_date) BETWEEN 31 AND 60
-    THEN (
-    (bill_products.price * bill_products.quantity - bill_products.discount)
-    + COALESCE((
-    SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100))
-    FROM bill_products bp
-    LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax) > 0
-    WHERE bp.id = bill_products.id
-    ),0)
-    )
-    ELSE 0 END
-    ) as days_31_60
-    ")
+                        // 31–60
+                ->selectRaw("
+                SUM(CASE
+                WHEN DATEDIFF('$end', bills.due_date) BETWEEN 31 AND 60
+                THEN (
+                (bill_products.price * bill_products.quantity - bill_products.discount)
+                + COALESCE((
+                SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100))
+                FROM bill_products bp
+                LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax) > 0
+                WHERE bp.id = bill_products.id
+                ),0)
+                )
+                ELSE 0 END
+                ) as days_31_60
+                ")
 
             // 61–90
             ->selectRaw("
-    SUM(CASE
-    WHEN DATEDIFF('$end', bills.due_date) BETWEEN 61 AND 90
-    THEN (
-    (bill_products.price * bill_products.quantity - bill_products.discount)
-    + COALESCE((
-    SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100))
-    FROM bill_products bp
-    LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax) > 0
-    WHERE bp.id = bill_products.id
-    ),0)
-    )
-    ELSE 0 END
-    ) as days_61_90
-    ")
+            SUM(CASE
+            WHEN DATEDIFF('$end', bills.due_date) BETWEEN 61 AND 90
+            THEN (
+            (bill_products.price * bill_products.quantity - bill_products.discount)
+            + COALESCE((
+            SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100))
+            FROM bill_products bp
+            LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax) > 0
+            WHERE bp.id = bill_products.id
+            ),0)
+            )
+            ELSE 0 END
+            ) as days_61_90
+            ")
 
-            // >90
-            ->selectRaw("
-    SUM(CASE
-    WHEN DATEDIFF('$end', bills.due_date) > 90
-    THEN (
-    (bill_products.price * bill_products.quantity - bill_products.discount)
-    + COALESCE((
-    SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100))
-    FROM bill_products bp
-    LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax) > 0
-    WHERE bp.id = bill_products.id
-    ),0)
-    )
-    ELSE 0 END
-    ) as days_90_plus
-    ")
+                    // >90
+                    ->selectRaw("
+            SUM(CASE
+            WHEN DATEDIFF('$end', bills.due_date) > 90
+            THEN (
+            (bill_products.price * bill_products.quantity - bill_products.discount)
+            + COALESCE((
+            SELECT SUM((bp.price * bp.quantity - bp.discount) * (t.rate / 100))
+            FROM bill_products bp
+            LEFT JOIN taxes t ON FIND_IN_SET(t.id, bp.tax) > 0
+            WHERE bp.id = bill_products.id
+            ),0)
+            )
+            ELSE 0 END
+            ) as days_90_plus
+            ")
 
-            // Payments total
-            ->selectRaw("(
-    SELECT COALESCE(SUM(bpay.amount), 0)
-    FROM bill_payments bpay
-    WHERE bpay.bill_id = bills.id
-    ) as pay_price")
+                    // Payments total
+                    ->selectRaw("(
+            SELECT COALESCE(SUM(bpay.amount), 0)
+            FROM bill_payments bpay
+            WHERE bpay.bill_id = bills.id
+            ) as pay_price")
 
             ->leftJoin('venders', 'venders.id', '=', 'bills.vender_id')
             ->leftJoin('bill_products', 'bill_products.bill_id', '=', 'bills.id')

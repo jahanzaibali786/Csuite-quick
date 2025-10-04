@@ -60,15 +60,15 @@ class InvoicesandReceivedPaymentsDataTable extends DataTable
             }
 
             // Subtotal row
-            $finalData->push((object) [
-                'customer' => $customer,
-                'transaction' => '<strong>Subtotal for ' . $customer . '</strong>',
-                'issue_date' => '',
-                'type' => '',
-                'total_amount' => $subtotal,
-                'memo' => '',
-                'isSubtotal' => true,
-            ]);
+            // $finalData->push((object) [
+            //     'customer' => $customer,
+            //     'transaction' => '<strong>Subtotal for ' . $customer . '</strong>',
+            //     'issue_date' => '',
+            //     'type' => '',
+            //     'total_amount' => $subtotal,
+            //     'memo' => '',
+            //     'isSubtotal' => true,
+            // ]);
 
             // Spacer row
             $finalData->push((object) [
@@ -83,14 +83,14 @@ class InvoicesandReceivedPaymentsDataTable extends DataTable
 
 
         // Grand total
-        $finalData->push((object) [
-            'transaction' => '<strong>Grand Total</strong>',
-            'issue_date' => '',
-            'type' => '',
-            'total_amount' => $grandTotal,
-            'memo' => '',
-            'isGrandTotal' => true,
-        ]);
+        // $finalData->push((object) [
+        //     'transaction' => '<strong>Grand Total</strong>',
+        //     'issue_date' => '',
+        //     'type' => '',
+        //     'total_amount' => $grandTotal,
+        //     'memo' => '',
+        //     'isGrandTotal' => true,
+        // ]);
 
         return datatables()
             ->collection($finalData)
