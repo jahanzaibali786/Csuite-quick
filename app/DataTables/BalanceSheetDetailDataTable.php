@@ -12,16 +12,21 @@ class BalanceSheetDetailDataTable extends DataTable
     protected $asOfDate;
     protected $companyId;
     protected $owner;
+    protected $accountingMethod;
 
     public function __construct()
     {
-        // parent::__construct();
-
         $this->asOfDate = request('endDate')
             ? Carbon::parse(request('endDate'))->endOfDay()
             : Carbon::now()->endOfDay();
-        $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
+
+        $this->companyId = \Auth::user()->type === 'company'
+            ? \Auth::user()->creatorId()
+            : \Auth::user()->ownedId();
+
         $this->owner = \Auth::user()->type === 'company' ? 'created_by' : 'owned_by';
+
+        $this->accountingMethod = request('accounting_method') ?? 'accrual'; // default accrual
     }
 
     public function dataTable($query)
@@ -30,41 +35,26 @@ class BalanceSheetDetailDataTable extends DataTable
             ->collection($query)
             ->addColumn('account', function ($row) {
                 $indent = str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', $row->level ?? 0);
-                
-                // Main Type Headers (Asset, Liability, Equity)
+
                 if ($row->is_type_header ?? false) {
                     return '<h4><strong>' . e($row->account_name) . '</strong></h4>';
                 }
-                
-                // Sub Type Headers (Accounts Receivable, Cash, etc.) - Level 1
                 if ($row->is_subtype_header ?? false) {
                     $hasChildren = $row->has_children ?? false;
                     $subtypeId = $row->subtype_id ?? 'subtype_' . str_replace(' ', '_', strtolower($row->account_name));
-                    $chevron = '';
-                    
-                    if ($hasChildren) {
-                        $chevron = '<i class=" chevron-icon" data-parent-type="subtype" data-parent-id="' . $subtypeId . '" style="margin-right: 8px; cursor: pointer;">▼</i>';
-                    }
-                    
+                    $chevron = $hasChildren
+                        ? '<i class=" chevron-icon" data-parent-type="subtype" data-parent-id="' . $subtypeId . '" style="margin-right: 8px; cursor: pointer;">▼</i>'
+                        : '';
                     return $indent . $chevron . '<strong>' . e($row->account_name) . '</strong>';
                 }
-                
-                // Chart of Account Headers (1100 - Accounts Receivable, etc.) - Level 2
                 if ($row->is_account_header ?? false) {
                     $hasChildren = $row->has_children ?? false;
                     $accountId = $row->account_id ?? 0;
-                    $chevron = '';
-                    
-                    if ($hasChildren) {
-                        $chevron = '<i class=" chevron-icon" data-parent-type="account" data-parent-id="' . $accountId . '" style="margin-right: 8px; cursor: pointer;">▼</i>';
-                    } else {
-                        $chevron = '<span style="margin-right: 20px;"></span>';
-                    }
-                    
+                    $chevron = $hasChildren
+                        ? '<i class=" chevron-icon" data-parent-type="account" data-parent-id="' . $accountId . '" style="margin-right: 8px; cursor: pointer;">▼</i>'
+                        : '<span style="margin-right: 20px;"></span>';
                     return $indent . $chevron . e($row->account_code . ' - ' . $row->account_name);
                 }
-                
-                // Total rows
                 if ($row->is_account_total ?? false) {
                     return '<strong>' . $indent . 'Total ' . e($row->account_name) . '</strong>';
                 }
@@ -74,7 +64,6 @@ class BalanceSheetDetailDataTable extends DataTable
                 if ($row->is_type_total ?? false) {
                     return '<strong>Total ' . e($row->account_name) . '</strong>';
                 }
-
                 return '';
             })
             ->addColumn('date', fn($row) => $row->date ?? '')
@@ -82,13 +71,12 @@ class BalanceSheetDetailDataTable extends DataTable
             ->addColumn('num', fn($row) => $row->num ?? '')
             ->addColumn('memo', fn($row) => $row->memo ?? '')
             ->addColumn('split', fn($row) => $row->split_account ?? '')
-            ->addColumn('debit', fn($row) => ($row->debit ?? null) ? number_format($row->debit, 2) : '')
-            ->addColumn('credit', fn($row) => ($row->credit ?? null) ? number_format($row->credit, 2) : '')
-            ->addColumn('amount', fn($row) => isset($row->amount) ? number_format($row->amount, 2) : '')
-            ->addColumn('balance', fn($row) => isset($row->balance) ? number_format($row->balance, 2) : '')
+            ->addColumn('debit', fn($row) => ($row->debit ?? null) ? number_format($row->debit, 2) : '&nbsp;')
+            ->addColumn('credit', fn($row) => ($row->credit ?? null) ? number_format($row->credit, 2) : '&nbsp;')
+            ->addColumn('amount', fn($row) => isset($row->amount) ? number_format($row->amount, 2) : '&nbsp;')
+            ->addColumn('balance', fn($row) => isset($row->balance) ? number_format($row->balance, 2) : '&nbsp;')
             ->addColumn('DT_RowClass', function($row) {
                 $classes = [];
-                
                 if ($row->is_type_header ?? false) $classes[] = 'type-header-row';
                 if ($row->is_subtype_header ?? false) {
                     $classes[] = 'subtype-header-row';
@@ -127,12 +115,10 @@ class BalanceSheetDetailDataTable extends DataTable
                         $classes[] = 'child-of-subtype-' . $row->parent_subtype_id;
                     }
                 }
-                
                 return implode(' ', $classes);
             })
             ->addColumn('DT_RowData', function($row) {
                 $data = [];
-                
                 if ($row->is_transaction ?? false) {
                     $data['transaction-id'] = $row->transaction_id ?? 0;
                 }
@@ -142,23 +128,56 @@ class BalanceSheetDetailDataTable extends DataTable
                 if ($row->subtype_id ?? false) {
                     $data['subtype-id'] = $row->subtype_id;
                 }
-                
                 return $data;
             })
-            ->rawColumns(['account']);
+            ->rawColumns(['account', 'debit', 'credit', 'amount', 'balance']);
     }
 
     public function query()
     {
+        // ---- CASH BASIS filter logic ----
+        $voucherIds = [];
+        $excludeAccounts = [];
+        // dd($this->accountingMethod);
+        if ($this->accountingMethod === 'cash') {
+            $invoicePaymentVouchers = DB::table('invoice_payments')
+                ->where('date', '<=', $this->asOfDate)
+                ->whereNotNull('voucher_id')
+                ->pluck('voucher_id')
+                ->toArray();
+
+            $billPaymentVouchers = DB::table('bill_payments')
+                ->where('date', '<=', $this->asOfDate)
+                ->whereNotNull('voucher_id')
+                ->pluck('voucher_id')
+                ->toArray();
+            // dd($invoicePaymentVouchers, $billPaymentVouchers);
+            $voucherIds = array_merge($invoicePaymentVouchers, $billPaymentVouchers);
+
+            if (!empty($voucherIds)) {
+                $excludeAccounts = DB::table('journal_items as ji')
+                    ->join('journal_entries as je', 'ji.journal', '=', 'je.id')
+                    ->whereIn('je.id', $voucherIds)
+                    ->whereIn('je.voucher_type', ['BPV', 'CPV']) // payment vouchers only
+                    ->pluck('ji.account')
+                    ->toArray();
+            }
+        }
+
         $entries = DB::table('journal_items')
             ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
             ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
             ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
             ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.type', '=', 'chart_of_account_types.id')
             ->where("journal_entries.{$this->owner}", $this->companyId)
-            ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate))) // Convert to date format for MySQL compatibility
-            // ->where('journal_entries.status', 'draft')
+            ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate)))
             ->whereIn('chart_of_account_types.name', ['Assets', 'Liabilities', 'Equity'])
+            ->when($this->accountingMethod === 'cash' && !empty($voucherIds), function($q) use ($voucherIds, $excludeAccounts) {
+                $q->whereIn('journal_entries.id', $voucherIds);
+                if (!empty($excludeAccounts)) {
+                    $q->whereNotIn('chart_of_accounts.id', $excludeAccounts);
+                }
+            })
             ->select([
                 'journal_entries.id as journal_id',
                 'journal_entries.date',
@@ -176,21 +195,20 @@ class BalanceSheetDetailDataTable extends DataTable
                 'chart_of_account_sub_types.name as subtype_name',
                 'chart_of_account_types.name as type_name',
             ])
-            // ->orderBy('chart_of_account_types.name')
+
             ->orderBy('chart_of_account_sub_types.name')
             ->orderBy('chart_of_accounts.parent')
             ->orderBy('chart_of_accounts.name')
             ->orderBy('journal_entries.date')
             ->get();
 
+        // Grouping + formatting remains same
         $groupedByType = $entries->groupBy('type_name');
         $report = collect();
-
         $totalLiabilities = 0;
         $totalEquity = 0;
 
         foreach ($groupedByType as $typeName => $typeEntries) {
-            // === Type Header (Asset, Liability, Equity) ===
             $report->push((object)[
                 'is_type_header' => true,
                 'account_name' => $typeName,
@@ -200,11 +218,7 @@ class BalanceSheetDetailDataTable extends DataTable
             $groupedBySubType = $typeEntries->groupBy('subtype_name');
             foreach ($groupedBySubType as $subTypeName => $subEntries) {
                 $subtypeId = 'subtype_' . str_replace(' ', '_', strtolower($subTypeName ?: 'uncategorized'));
-                
-                // Check if this subtype has accounts
                 $hasAccounts = $subEntries->groupBy('account_id')->count() > 0;
-                
-                // === SubType Header (Accounts Receivable, Cash, etc.) ===
                 $report->push((object)[
                     'is_subtype_header' => true,
                     'account_name' => $subTypeName ?: 'Uncategorized',
@@ -213,10 +227,8 @@ class BalanceSheetDetailDataTable extends DataTable
                     'level' => 1,
                 ]);
 
-                // Process accounts within this subtype
                 $report = $this->processAccounts($subEntries, $report, null, 2, $subtypeId);
 
-                // === SubType Total ===
                 $subTypeTotal = $subEntries->sum(function ($l) use ($subEntries) {
                     $accountType = $subEntries->first()->type_name;
                     return in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
@@ -233,7 +245,6 @@ class BalanceSheetDetailDataTable extends DataTable
                 ]);
             }
 
-            // === Type Total ===
             $typeTotal = $typeEntries->sum(function ($l) use ($typeEntries) {
                 $accountType = $typeEntries->first()->type_name;
                 return in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
@@ -248,10 +259,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 'level' => 0,
             ]);
 
-            if ($typeName === 'Liabilities') {
-                $totalLiabilities = $typeTotal;
-            }
-
+            if ($typeName === 'Liabilities') $totalLiabilities = $typeTotal;
             if ($typeName === 'Equity') {
                 $totalEquity = $typeTotal;
 
@@ -333,29 +341,22 @@ class BalanceSheetDetailDataTable extends DataTable
                     'balance' => $totalLiabilities + $totalEquity,
                     'level' => 0,
                 ]);
+
             }
         }
 
         return $report;
     }
 
-    // Enhanced recursive function to process account tree with hierarchy tracking
     protected function processAccounts($accounts, $report, $parentId = null, $level = 0, $subtypeId = null)
     {
         $grouped = $accounts->where('parent_id', $parentId)->groupBy('account_id');
-
         foreach ($grouped as $accountId => $lines) {
             $balance = 0;
-            
-            // Check if this account has child transactions
             $hasTransactions = $lines->count() > 0;
-            
-            // Check if this account has child accounts
             $hasChildAccounts = $accounts->where('parent_id', $accountId)->count() > 0;
-            
             $hasChildren = $hasTransactions || $hasChildAccounts;
 
-            // === Account Header (1100 - Accounts Receivable, etc.) ===
             $report->push((object)[
                 'is_account_header' => true,
                 'account_name' => $lines->first()->account_name,
@@ -366,19 +367,13 @@ class BalanceSheetDetailDataTable extends DataTable
                 'level' => $level,
             ]);
 
-            // Add individual transaction lines
             foreach ($lines as $line) {
                 $accountType = $lines->first()->type_name;
+                $amount = in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
+                    ? (($line->debit ?? 0) - ($line->credit ?? 0))
+                    : (($line->credit ?? 0) - ($line->debit ?? 0));
+                $balance += $amount;
 
-                if (in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])) {
-                    $amount = (($line->debit ?? 0) - ($line->credit ?? 0));
-                    $balance += $amount;
-                } else {
-                    $amount = (($line->credit ?? 0) - ($line->debit ?? 0));
-                    $balance += $amount;
-                }
-
-                // Find opposite (split) accounts
                 $splitAccounts = DB::table('journal_items')
                     ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
                     ->where('journal_items.journal', $line->journal_id)
@@ -389,7 +384,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 $report->push((object)[
                     'is_transaction' => true,
                     'parent_account_id' => $accountId,
-                    'parent_subtype_id' => $subtypeId, // CRITICAL: Add subtype relationship to transactions
+                    'parent_subtype_id' => $subtypeId,
                     'transaction_id' => $line->journal_id,
                     'date' => $line->date,
                     'transaction_type' => $line->transaction_type,
@@ -404,23 +399,20 @@ class BalanceSheetDetailDataTable extends DataTable
                 ]);
             }
 
-            // === Account Total ===
             $report->push((object)[
                 'is_account_total' => true,
                 'account_name' => $lines->first()->account_name,
                 'parent_account_id' => $accountId,
-                'parent_subtype_id' => $subtypeId, // CRITICAL: Add subtype relationship to account totals
+                'parent_subtype_id' => $subtypeId,
                 'balance' => $balance,
                 'level' => $level,
             ]);
 
-            // === Process Child Accounts recursively ===
             $childAccounts = $accounts->where('parent_id', $accountId);
             if ($childAccounts->count() > 0) {
                 $report = $this->processAccounts($accounts, $report, $accountId, $level + 1, $subtypeId);
             }
         }
-
         return $report;
     }
 
@@ -430,7 +422,6 @@ class BalanceSheetDetailDataTable extends DataTable
             ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            // ->dom('Bfrtip')
             ->parameters([
                 'paging' => false,
                 'searching' => false,

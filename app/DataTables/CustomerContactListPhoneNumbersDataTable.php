@@ -116,7 +116,7 @@ class CustomerContactListPhoneNumbersDataTable extends DataTable
                 'ordering'   => false,
                 'colReorder' => true,
                 'fixedHeader'=> true,
-                'scrollY'    => '420px',
+                // 'scrollY'    => '420px',
                 'scrollX'    => true,
                 'scrollCollapse' => true,
             ]);

@@ -115,7 +115,7 @@ class ProposalsByCustomerDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('proposals-by-customer-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('rt')

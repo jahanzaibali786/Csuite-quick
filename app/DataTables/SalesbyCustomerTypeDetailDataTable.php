@@ -52,7 +52,7 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
             })
             ->addColumn('sales_with_tax_raw', function ($row) {
                 $baseAmount = (float) (($row->price ?? 0) * ($row->quantity ?? 0));
-                $discount   = (float) ($row->discount ?? 0);
+                $discount = (float) ($row->discount ?? 0);
                 $tax = 0.0;
 
                 if ($row->tax) {
@@ -83,7 +83,7 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
             })
             ->addColumn('sales_with_tax', function ($row) {
                 $baseAmount = ($row->price ?? 0) * ($row->quantity ?? 0);
-                $discount   = $row->discount ?? 0;
+                $discount = $row->discount ?? 0;
                 $tax = 0;
 
                 if ($row->tax) {
@@ -99,9 +99,13 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
             });
     }
 
-    public function query(InvoiceProduct $model)
+    /*public function query(InvoiceProduct $model)
     {
         $query = $model->with(['invoice.customer']);
+
+        // I want to use these variables later, please adjust it
+        $start = request()->get('start_date') ?? request()->get('startDate') ?? Carbon::now()->startOfYear()->format('Y-m-d');
+        $end = request()->get('end_date') ?? request()->get('endDate') ?? Carbon::now()->endOfDay()->format('Y-m-d');
 
         // Date filter
         if (request()->filled('start_date') && request()->filled('end_date')) {
@@ -125,27 +129,53 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
         });
 
         return $query->orderBy('id', 'desc');
+    }*/
+
+    public function query(InvoiceProduct $model)
+    {
+        $query = $model->with(['invoice.customer']);
+
+        // Get start and end dates from request, fallback to defaults
+        $start = request()->get('start_date')
+            ?? request()->get('startDate')
+            ?? date('Y-01-01');
+        $end = request()->get('end_date')
+            ?? request()->get('endDate')
+            ?? date('Y-m-d');
+
+        // Ensure the query filters by date
+        $query->whereHas('invoice', function ($q) use ($start, $end) {
+            $q->whereBetween(\DB::raw('DATE(issue_date)'), [$start, $end]);
+        });
+
+        // Filter by created_by through invoice relationship
+        $query->whereHas('invoice', function ($q) {
+            $q->where('created_by', \Auth::user()->creatorId());
+        });
+
+        return $query->orderBy('id', 'desc');
     }
+
 
     public function html()
     {
         return $this->builder()
-            ->setTableId('ledger-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('t')
             ->orderBy(1, 'desc')
             ->parameters([
                 'responsive' => false,
-                'autoWidth'  => false,
-                'paging'     => false,
-                'searching'  => false,
-                'info'       => false,
-                'ordering'   => false,
+                'autoWidth' => false,
+                'paging' => false,
+                'searching' => false,
+                'info' => false,
+                'ordering' => false,
                 'processing' => true,
                 'serverSide' => true,
-                'scrollX'    => true,
-                'scrollY'    => '420px',
+                'scrollX' => true,
+                'scrollY' => '420px',
                 'scrollCollapse' => true,
             ]);
     }

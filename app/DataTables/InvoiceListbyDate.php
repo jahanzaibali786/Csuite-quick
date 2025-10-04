@@ -42,7 +42,7 @@ class InvoiceListbyDate extends DataTable
         // ✅ Add grand total row
         $finalData->push((object) [
             // 'customer' => '<strong>Grand Total</strong>',
-            'transaction' => '',
+            'transaction' => '<strong>Grand Total</strong>',
             'due_date' => '',
             'customer' => '',
             'past_due' => '',

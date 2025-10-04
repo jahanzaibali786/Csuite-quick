@@ -118,17 +118,13 @@
                         <input type="date" class="form-control " name="end_date" id="filter-end-date"
                             value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
                     </div>
-
-                    @if (isset($accounting_method) && $accounting_method)
-                        <div class="filter-item col-md-3">
-                            <label class="filter-label">Accounting method</label>
-                            <select id="accounting-method" class="form-control">
-                                <option value="accrual" selected>Accrual</option>
-                                <option value="cash">Cash</option>
-                            </select>
-                        </div>
-                    @endif
-
+                    <div class="filter-item col-md-3">
+                        <label class="filter-label">Accounting method</label>
+                        <select id="accounting-method" class="form-control">
+                            <option value="accrual" selected>Accrual</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                    </div>
                     <div class="filter-item col-md-2 mt-4">
                         <button class="btn btn-view-options" id="view-options-btn"
                             style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
@@ -137,9 +133,7 @@
                     </div>
 
                     <!-- Action buttons row -->
-
-                    <div class="d-flex align-items-end gap-2 mt-1" style="justify-content: end;">
-
+                    <div class="d-flex align-items-end gap-2 mt-4" style="justify-content: end;">
 
                         <button class="btn btn-outline" id="columns-btn">
                             <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
@@ -1079,7 +1073,7 @@
 
         /* Table enhancements */
         .text-right {
-            text-align: right !important;
+            text-align: right;
         }
 
         .negative-amount {
@@ -1126,10 +1120,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                                                                                                                    flex-direction: column;
-                                                                                                                                                                                                                                                    width: 100%;
-                                                                                                                                                                                                                                                    gap: 16px;
-                                                                                                                                                                                                                                                } */
+                                                                                                                                                                                                                                                flex-direction: column;
+                                                                                                                                                                                                                                                width: 100%;
+                                                                                                                                                                                                                                                gap: 16px;
+                                                                                                                                                                                                                                            } */
 
             .filter-item {
                 width: 100%;
@@ -1607,34 +1601,6 @@
                 refreshData();
             }
 
-            const $last = $('.last-updated');
-            let lastUpdatedAt = Date.now();
-            let tickerId = null;
-
-            function formatRelative(ts) {
-                const s = Math.floor((Date.now() - ts) / 1000);
-                if (s < 5) return 'just now';
-                if (s < 60) return `${s} seconds ago`;
-                const m = Math.floor(s / 60);
-                if (m < 60) return m === 1 ? '1 minute ago' : `${m} minutes ago`;
-                const h = Math.floor(m / 60);
-                if (h < 24) return h === 1 ? '1 hour ago' : `${h} hours ago`;
-                const d = Math.floor(h / 24);
-                return d === 1 ? '1 day ago' : `${d} days ago`;
-            }
-
-            function updateLabel() {
-                $last.text(`Last updated ${formatRelative(lastUpdatedAt)}`);
-            }
-
-            function markNow() {
-                lastUpdatedAt = Date.now();
-                updateLabel();
-                if (tickerId) clearInterval(tickerId);
-                tickerId = setInterval(updateLabel, 30 * 1000);
-            }
-            markNow();
-
             // Update date display
             function updateDateDisplay() {
                 const startDate = moment($('#filter-start-date').val());
@@ -1689,6 +1655,7 @@
                 data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.account_id = $('#filter-account').val();
                 data.accounting_method = $('#accounting-method').val();
+
                 data.reportOptions = window.reportOptions;
             });
 

@@ -45,14 +45,14 @@ class SalesByCustomerDetailDataTable extends DataTable
             })
             ->editColumn('sales_price', function ($row) {
                 try {
-                    return \Auth::user()->priceFormat((float)($row->sales_price ?? 0));
+                    return number_format((float)($row->sales_price ?? 0));
                 } catch (\Exception $e) {
                     return '$0.00';
                 }
             })
             ->editColumn('amount', function ($row) {
                 try {
-                    return \Auth::user()->priceFormat((float)($row->amount ?? 0));
+                    return number_format((float)($row->amount ?? 0));
                 } catch (\Exception $e) {
                     return '$0.00';
                 }
@@ -72,8 +72,13 @@ class SalesByCustomerDetailDataTable extends DataTable
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
         $ownerColumn = $user->type === 'company' ? 'created_by' : 'owned_by';
 
-        $start = request('start_date', date('Y-01-01'));
-        $end = request('end_date', date('Y-m-d'));
+        // Get start and end dates from request, fallback to defaults
+        $start = request()->get('start_date')
+            ?? request()->get('startDate')
+            ?? date('Y-01-01');
+        $end = request()->get('end_date')
+            ?? request()->get('endDate')
+            ?? date('Y-m-d');
         $selectedCustomer = request('customer_name', '');
 
         // Debug logging
@@ -131,7 +136,7 @@ class SalesByCustomerDetailDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('sales-by-customer-detail-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('rt')
@@ -141,7 +146,7 @@ class SalesByCustomerDetailDataTable extends DataTable
                 'paging' => false,
                 'searching' => false,
                 'info' => false,
-                'ordering' => true,
+                'ordering' => false,
                 'order' => [[0, 'asc']], // Sort by Transaction Date ascending
                 'colReorder' => true,
                 'fixedHeader' => true,
@@ -155,8 +160,8 @@ class SalesByCustomerDetailDataTable extends DataTable
                     ]
                 ],
                 'language' => [
-                    'emptyTable' => 'No sales data found for the selected period. Check your date range or ensure there are invoices with products for your customers.',
-                    'zeroRecords' => 'No detailed sales found for the selected criteria.'
+                    'emptyTable' => 'No Data Found for the selected period.',
+                    'zeroRecords' => 'No Data Found'
                 ]
             ]);
     }

@@ -37,11 +37,11 @@ class DepartmentController extends Controller
 
             if ($user->type == 'company') {
                 $branch = Branch::where('created_by', $user->creatorId())->get()->pluck('name', 'id');
-                $branch->prepend('Select Branch','');
+                $branch->prepend('Select Branch', '');
             } else {
                 $branch = Branch::where('id', \Auth::user()->id)->get()->pluck('name', 'id');
-                if($branch){
-                    $branch = User::where('created_by', $user->creatorId())->where('id',$user->id)->get()->pluck('name', 'id');
+                if ($branch) {
+                    $branch = User::where('created_by', $user->creatorId())->where('id', $user->id)->get()->pluck('name', 'id');
                 }
             }
             return view('department.create', compact('branch'));
@@ -53,33 +53,53 @@ class DepartmentController extends Controller
 
     public function store(Request $request)
     {
-        if (\Auth::user()->can('create department')) {
-
-            $validator = \Validator::make(
-                $request->all(),
-                [
-                    'branch_id' => 'required',
-                    'name' => 'required|max:20',
-                ]
-            );
-            if ($validator->fails()) {
-                $messages = $validator->getMessageBag();
-
-                return redirect()->back()->with('error', $messages->first());
+        if (!\Auth::user()->can('create department')) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => __('Permission denied.')], 403);
             }
-
-            $department = new Department();
-            $department->branch_id = $request->branch_id;
-            $department->name = $request->name;
-            $department->created_by = \Auth::user()->creatorId();
-            $department->owned_by = \Auth::user()->ownedId();
-            $department->save();
-            Utility::makeActivityLog(\Auth::user()->id, 'Department', $department->id, 'Create Department', $department->name);
-            return redirect()->route('department.index')->with('success', __('Department  successfully created.'));
-        } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
+
+        $validator = \Validator::make($request->all(), [
+            'branch_id' => 'required',
+            'name'      => 'required|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message' => 'Validation error',
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+            $messages = $validator->getMessageBag();
+            return redirect()->back()->with('error', $messages->first());
+        }
+
+        $department              = new Department();
+        $department->branch_id   = $request->branch_id;
+        $department->name        = $request->name;
+        $department->created_by  = \Auth::user()->creatorId();
+        $department->owned_by    = \Auth::user()->ownedId();
+        $department->save();
+
+        Utility::makeActivityLog(\Auth::user()->id, 'Department', $department->id, 'Create Department', $department->name);
+
+        // AJAX success → JSON for appending/selecting without refresh
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'id'        => $department->id,
+                'name'      => $department->name,
+                'branch_id' => $department->branch_id,
+                'data'      => $department->toArray(),
+                'success'   => true,
+            ], 201);
+        }
+
+        // Non-AJAX → keep existing redirect
+        return redirect()->route('department.index')->with('success', __('Department  successfully created.'));
     }
+
 
     public function show(Department $department)
     {
@@ -94,11 +114,11 @@ class DepartmentController extends Controller
 
                 if ($user->type == 'company') {
                     $branch = Branch::where('created_by', $user->creatorId())->get()->pluck('name', 'id');
-                    $branch->prepend('Select Branch','');
+                    $branch->prepend('Select Branch', '');
                 } else {
                     $branch = Branch::where('id', \Auth::user()->id)->get()->pluck('name', 'id');
-                    if($branch){
-                        $branch = User::where('created_by', $user->creatorId())->where('id',$user->id)->get()->pluck('name', 'id');
+                    if ($branch) {
+                        $branch = User::where('created_by', $user->creatorId())->where('id', $user->id)->get()->pluck('name', 'id');
                     }
                 }
                 return view('department.edit', compact('department', 'branch'));

@@ -270,25 +270,844 @@
         }
     </style>
 
+    <style>
+        /* ===== Base / Layout ===== */
+        .quickbooks-report {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            min-height: 100vh;
+            color: #262626;
+            width: 100%;
+            /* stay inside viewport */
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Header */
+        .report-header {
+            background: #fff;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e6e6e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .report-header h4 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .last-updated {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: .2s;
+        }
+
+        .btn-icon {
+            background: transparent;
+            color: #6b7280;
+            width: 32px;
+            height: 32px;
+            justify-content: center;
+        }
+
+        .btn-icon:hover {
+            background: #f3f4f6;
+            color: #262626;
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .btn-success:hover {
+            background: #16a34a;
+        }
+
+        .btn-save {
+            padding: 8px 16px;
+        }
+
+        /* Controls row */
+        .controls-bar {
+            background: #fff;
+            padding: 8px 24px;
+            border-bottom: 1px solid #e6e6e6;
+            overflow: hidden;
+        }
+
+        .controls-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: nowrap;
+            max-width: 100%;
+        }
+
+        .left-controls {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: nowrap;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+
+        .right-controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+
+        .btn-qb-option {
+            background: transparent;
+            border: none;
+            color: #0066cc;
+            padding: 6px 10px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+            transition: .15s;
+            white-space: nowrap;
+        }
+
+        .btn-qb-option:hover {
+            background: #f0f7ff;
+            color: #0052a3;
+        }
+
+        .btn-qb-option i {
+            margin-right: 4px;
+            font-size: 12px;
+        }
+
+        .btn-qb-action {
+            background: transparent;
+            border: none;
+            color: #6b7280;
+            padding: 6px 10px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+            transition: .15s;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .btn-qb-action:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-qb-action i {
+            margin-right: 4px;
+            font-size: 12px;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex-shrink: 0;
+        }
+
+        .filter-label {
+            font-size: 11px;
+            color: #374151;
+            margin-bottom: 2px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .form-select,
+        .form-control {
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 12px;
+            height: 32px;
+            background: #fff;
+            color: #374151;
+        }
+
+        .form-select:focus,
+        .form-control:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, .2);
+        }
+
+        @media (max-width:1020px) {
+            .controls-bar {
+                overflow-x: auto;
+            }
+
+            .controls-inner {
+                min-width: max-content;
+            }
+        }
+
+        /* Report content */
+        .report-content {
+            background: #fff;
+            margin: 0;
+            border-radius: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+            overflow: hidden;
+        }
+
+        .report-title-section {
+            text-align: center;
+            padding: 32px 24px 24px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+
+        .report-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 8px;
+        }
+
+        .company-name {
+            font-size: 16px;
+            color: #6b7280;
+            margin: 0 0 12px;
+        }
+
+        .date-range {
+            font-size: 14px;
+            color: #374151;
+            margin: 0;
+        }
+
+        /* Table (edge-to-edge, fixed layout) */
+        .table-container {
+            background: #fff;
+            max-height: calc(100vh - 260px);
+            overflow-y: auto;
+            overflow-x: auto !important;
+        }
+
+        #sales-tax-liability-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        #sales-tax-liability-table th {
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .025em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        #sales-tax-liability-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #262626;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        #sales-tax-liability-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        #sales-tax-liability-table .text-right {
+            text-align: right;
+        }
+
+        /* Lock column widths so children align perfectly */
+        #sales-tax-liability-table th:first-child,
+        #sales-tax-liability-table td:first-child {
+            width: 44px !important;
+            min-width: 44px !important;
+            max-width: 44px !important;
+        }
+
+        #sales-tax-liability-table th:nth-child(3),
+        #sales-tax-liability-table td:nth-child(3) {
+            width: 180px !important;
+        }
+
+        #sales-tax-liability-table th:nth-child(4),
+        #sales-tax-liability-table td:nth-child(4) {
+            width: 160px !important;
+        }
+
+        /* Child rows (no header; only amounts aligned to last two columns) */
+        .child-wrap {
+            padding: 0;
+        }
+
+        .child-table {
+            width: 100%;
+            table-layout: fixed;
+            font-size: 12px;
+            border-collapse: collapse;
+        }
+
+        .child-table td {
+            padding: 8px 16px;
+            border-bottom: 1px dashed #e5e7eb;
+            white-space: nowrap;
+        }
+
+        .child-table td:nth-child(1) {
+            width: 44px;
+        }
+
+        /* toggle column space */
+        .child-table td:nth-child(3) {
+            width: 180px;
+            text-align: right;
+        }
+
+        .child-table td:nth-child(4) {
+            width: 160px;
+            text-align: right;
+        }
+
+        .toggle-child {
+            padding: 4px 8px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            border-radius: 4px;
+        }
+
+        .shown .toggle-child {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+        }
+
+        /* Drawer-style Modals */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .5);
+            z-index: 1050;
+            overflow-y: auto;
+        }
+
+        .filter-modal,
+        .general-options-modal,
+        .columns-modal,
+        .view-options-modal {
+            background: #fff;
+            margin: 50px auto;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .3);
+        }
+
+        .modal-header {
+            padding: 20px 25px 15px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h5 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-close:hover {
+            color: #666;
+        }
+
+        .modal-content {
+            padding: 20px 25px 25px;
+        }
+
+        .modal-subtitle {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .filter-group {
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #2c3e50;
+            font-size: 13px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            background: #fff;
+            color: #262626;
+            height: 36px;
+        }
+
+        /* Options blocks */
+        .option-section {
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+        }
+
+        .section-title {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c3e50;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .option-group {
+            padding: 15px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #2c3e50;
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 8px;
+            width: auto;
+        }
+
+        /* Drawer override (slide-in right) */
+        .modal-overlay.drawer-open {
+            display: block;
+            background: rgba(0, 0, 0, .5);
+        }
+
+        .modal-overlay.drawer-open .filter-modal,
+        .modal-overlay.drawer-open .general-options-modal,
+        .modal-overlay.drawer-open .columns-modal,
+        .modal-overlay.drawer-open .view-options-modal {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            height: 100%;
+            width: 360px;
+            max-width: 90vw;
+            margin: 0;
+            border-radius: 0;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, .1);
+            overflow-y: auto;
+            animation: slideInRight .18s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* QB columns UI */
+        .qb-columns-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .qb-columns-help {
+            color: #6b7280;
+            font-size: 13px;
+            margin: 8px 0 16px;
+        }
+
+        #qb-columns-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .qb-col-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 6px;
+            border-radius: 6px;
+        }
+
+        .qb-col-item:hover {
+            background: #f8fafc;
+        }
+
+        .qb-handle {
+            color: #9ca3af;
+            width: 18px;
+            text-align: center;
+            cursor: grab;
+        }
+
+        .qb-handle:active {
+            cursor: grabbing;
+        }
+
+        .qb-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .qb-pill input {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .qb-pill .pill {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #d1d5db;
+            background: #fff;
+        }
+
+        .qb-pill .pill i {
+            font-size: 12px;
+            color: #fff;
+            opacity: 0;
+            transition: opacity .12s ease;
+        }
+
+        .qb-pill input:checked+.pill {
+            background: #22c55e;
+            border-color: #16a34a;
+        }
+
+        .qb-pill input:checked+.pill i {
+            opacity: 1;
+        }
+
+        .qb-col-name {
+            font-size: 14px;
+            color: #111827;
+        }
+
+        .qb-ghost {
+            opacity: .6;
+            background: #eef2ff;
+        }
+
+        .qb-chosen {
+            background: #f1f5f9;
+        }
+
+        /* Print */
+        @media print {
+
+            .report-header,
+            .controls-bar {
+                display: none !important;
+            }
+
+            .quickbooks-report {
+                background: #fff !important;
+            }
+
+            .report-content {
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+
+            #sales-tax-liability-table {
+                font-size: 11px;
+            }
+
+            #sales-tax-liability-table th,
+            #sales-tax-liability-table td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+
+    <div class="report-header">
+        <h4 class="mb-0">{{ __('Profit & Loss by Month') }}</h4>
+        <div class="header-actions">
+            <span class="last-updated">Last updated just now</span>
+            <div class="actions">
+                <button class="btn btn-icon" title="Refresh" id="btn-refresh"><i class="fa fa-sync"></i></button>
+                <button class="btn btn-icon"
+                    onclick="exportDataTable('profit-loss-table', '{{ __('Profit & Loss by Month') }}', 'print')"><i
+                        class="fa fa-print"></i></button>
+                <button class="btn btn-icon" title="Export" id="btn-export"><i class="fa fa-external-link-alt"></i></button>
+                <button class="btn btn-icon" title="More options" id="btn-more"><i class="fa fa-ellipsis-v"></i></button>
+                <button class="btn btn-success btn-save" id="btn-save">Save As</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Modal -->
+    <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content p-0">
+                <div class="modal-header">
+                    <h5 class="modal-title">Choose Export Format</h5> <button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center row">
+                    <div class="col-md-6">
+                        <button onclick="exportDataTable('profit-loss-table', '{{ __('Profit & Loss by Month') }}')"
+                            class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                            data-action="excel">Export to
+                            Excel</button>
+                    </div>
+                    <div class="col-md-6">
+                        <button onclick="exportDataTable('profit-loss-table', '{{ __('Profit & Loss by Month') }}', 'pdf')"
+                            class="btn btn-success mx-auto w-75 justify-content-center text-center" data-action="pdf">Export
+                            to
+                            PDF</button>
+                    </div>
+                    {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show modal on export button click
+        $('.btn-icon[title="Export"]').on('click', function() {
+            $('#exportModal').modal('show');
+        });
+
+        // Handle export actions
+        $('#exportModal button[data-action]').on('click', function() {
+            // Hide modal after action
+            $('#exportModal').modal('hide');
+        });
+    </script>
+
+    <script>
+        let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        {{-- console.log([window.Header, window.footerAlignment]) --}}
+
+        function exportDataTable(tableId, pageTitle, format = 'excel') {
+            let table = $('#' + tableId).DataTable();
+
+            // Only get visible columns (skip auto-index)
+            let columns = [];
+            $('#' + tableId + ' thead th:visible').each(function() {
+                columns.push($(this).text().trim());
+            });
+
+            // Get visible data rows
+            let data = [];
+
+            const getRealtimeTableData = () => {
+
+                let data = [];
+
+
+                table.rows({
+                    search: 'applied'
+                }).every(function() {
+                    let rowData = this.data();
+
+                    if (typeof rowData === 'object') {
+                        // Only keep values for visible columns
+                        let rowArray = [];
+                        table.columns(':visible').every(function(colIdx) {
+                            let val = rowData[this.dataSrc()] ?? '-';
+                            rowArray.push(val);
+                        });
+                        rowData = rowArray;
+                    }
+                    data.push(rowData);
+                });
+
+                return data
+
+            }
+
+            // Get visible data rows (rendered DOM text, not raw data)
+            $('#' + tableId + ' tbody tr:visible').each(function() {
+                let rowArray = [];
+                $(this).find('td:visible').each(function() {
+                    // Skip td's where all child elements are hidden
+                    if ($(this).find(':visible').length === 0) {
+                        return; // continue to next td
+                    }
+
+                    let cellContent;
+
+                    if ($(this).find('h4').length > 0 || $(this).find('strong').length > 0) {
+                        // If <h4> or <strong> exists, keep HTML (preserve h4/strong)
+                        cellContent = $(this).html()
+                            .replace(/[\n\r]+/g, ' ')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+                    } else {
+                        // Otherwise, use plain text
+                        cellContent = $(this).text()
+                            .replace(/[\n\r]+/g, ' ')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+                    }
+
+                    rowArray.push(cellContent);
+                });
+
+                data.push(rowArray);
+            });
+
+
+
+            // Send to universal export route
+            $.ajax({
+                url: '{{ route('export.datatable') }}',
+                method: 'POST',
+                data: {
+                    columns: columns,
+                    data: data,
+                    pageTitle: pageTitle,
+                    ReportPeriod: $("#date-range-display").text(),
+                    HeaderFooterAlignment: ['center', 'center'],
+                    format: format,
+                    _token: '{{ csrf_token() }}'
+                },
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                success: function(blob, status, xhr) {
+                    let filename = xhr.getResponseHeader('Content-Disposition')
+                        .split('filename=')[1]
+                        .replace(/"/g, ''); //"
+
+                    if (format === "print") {
+                        let fileURL = URL.createObjectURL(blob);
+                        let printWindow = window.open(fileURL);
+                        printWindow.onload = function() {
+                            printWindow.focus();
+                            printWindow.print();
+                        };
+                    } else {
+                        let link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(blob);
+                        link.download = filename;
+                        link.click();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Export failed:', xhr.responseText);
+                    alert('Export failed! Check console.');
+                }
+            });
+        }
+    </script>
     <div class="filter-controls">
         <div class="filter-row">
             <div class="filter-group row mb-2">
                 <div class="filter-item col-md-3">
                     <label class="filter-label">From Date</label>
-                    <input type="date" id="filter-start-date" class="form-control" 
+                    <input type="date" id="filter-start-date" class="form-control"
                         value="{{ request('startDate', Carbon\Carbon::now()->subMonths(2)->startOfMonth()->format('Y-m-d')) }}">
                 </div>
 
                 <div class="filter-item col-md-3">
                     <label class="filter-label">To Date</label>
-                    <input type="date" id="filter-end-date" class="form-control" 
+                    <input type="date" id="filter-end-date" class="form-control"
                         value="{{ request('endDate', Carbon\Carbon::now()->format('Y-m-d')) }}">
                 </div>
 
                 <div class="filter-item col-md-3">
                     <label class="filter-label">Accounting method</label>
                     <select id="accounting-method" class="form-control">
-                        <option value="accrual" {{ request('accountingMethod', 'accrual') == 'accrual' ? 'selected' : '' }}>Accrual</option>
+                        <option value="accrual" {{ request('accountingMethod', 'accrual') == 'accrual' ? 'selected' : '' }}>
+                            Accrual</option>
                         <option value="cash" {{ request('accountingMethod') == 'cash' ? 'selected' : '' }}>Cash</option>
                     </select>
                 </div>
@@ -329,9 +1148,14 @@
                 <p class="date-range">
                     <span id="date-range-display">
                         @php
-                            $displayStart = request('startDate', Carbon\Carbon::now()->subMonths(2)->startOfMonth()->format('Y-m-d'));
+                            $displayStart = request(
+                                'startDate',
+                                Carbon\Carbon::now()->subMonths(2)->startOfMonth()->format('Y-m-d'),
+                            );
                             $displayEnd = request('endDate', Carbon\Carbon::now()->format('Y-m-d'));
-                            echo Carbon\Carbon::parse($displayStart)->format('F j, Y') . ' - ' . Carbon\Carbon::parse($displayEnd)->format('F j, Y');
+                            echo Carbon\Carbon::parse($displayStart)->format('F j, Y') .
+                                ' - ' .
+                                Carbon\Carbon::parse($displayEnd)->format('F j, Y');
                         @endphp
                     </span>
                 </p>
@@ -453,7 +1277,7 @@
 
         function applyViewState() {
             const $reportContent = $('#report-content');
-            
+
             // Remove compact view class
             $reportContent.removeClass('compact-view');
 
@@ -472,10 +1296,10 @@
 
         function updateViewCheckmarks() {
             $('.view-option-item').removeClass('active');
-            
+
             // Mark view type as active
             $('.view-option-item[data-value="' + window.viewState.viewType + '"]').addClass('active');
-            
+
             // Mark expand state as active
             $('.view-option-item[data-value="' + window.viewState.expandState + '"]').addClass('active');
         }
@@ -483,7 +1307,7 @@
         function handleExpandAll() {
             $('.child-row, .subtotal-row').show();
             $('.toggle-chevron').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-            
+
             // Hide section totals when expanded
             $('.section-month-total, .section-total-amount').hide();
         }
@@ -491,7 +1315,7 @@
         function handleCollapseAll() {
             $('.child-row, .subtotal-row').hide();
             $('.toggle-chevron').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-            
+
             // Show section totals when collapsed
             $('.section-month-total, .section-total-amount').show();
         }
@@ -508,7 +1332,7 @@
             const group = $this.data('group');
             const $chevron = $this.find('.toggle-chevron');
             const $childRows = $('.group-' + group);
-            
+
             // Get section totals for this group
             const $sectionMonthTotals = $('.section-month-total[data-group="' + group + '"]');
             const $sectionTotalAmount = $('.section-total-amount[data-group="' + group + '"]');
@@ -519,7 +1343,7 @@
                 // Collapse this section
                 $childRows.hide();
                 $chevron.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                
+
                 // Show section totals when collapsed
                 $sectionMonthTotals.show();
                 $sectionTotalAmount.show();
@@ -527,7 +1351,7 @@
                 // Expand this section
                 $childRows.show();
                 $chevron.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                
+
                 // Hide section totals when expanded
                 $sectionMonthTotals.hide();
                 $sectionTotalAmount.hide();
@@ -537,7 +1361,7 @@
         function initializeTableState() {
             // Show all rows by default
             $('.child-row, .subtotal-row').show();
-            
+
             // Set all chevrons to expanded state
             $('.toggle-chevron').removeClass('fa-chevron-right').addClass('fa-chevron-down');
 
