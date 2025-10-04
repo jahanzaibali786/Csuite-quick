@@ -369,205 +369,148 @@
         });
     </script>
     <script>
-        (function() {
+        $(document).ready(function() {
+            var currentSelect = null;
 
-            // ---------- helpers ----------
-            function ensureAddOption(select, label) {
-                if (!select) return;
-                var exists = Array.from(select.options).some(function(o) {
-                    return o.value === '__add__';
+            function openAddNewModal($select) {
+                if ($select.val() !== '__add__') return;
+                $select.val(''); // reset dropdown
+                currentSelect = $select; // save reference
+                var url = $select.data('create-url');
+                var title = $select.data('create-title') || 'Create New';
+
+                // prevent duplicate modal
+                if ($('#globalAddNewModal').length) {
+                    $('#globalAddNewModal').modal('show');
+                    return;
+                }
+
+                var $modal = $(`
+                    <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">${title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <div class="modal-body">Loading...</div>
+                        </div>
+                      </div>
+                    </div>
+                `);
+
+                $('body').append($modal);
+
+                $.get(url, function(html) {
+                    $modal.find('.modal-body').html(html);
+
+                    // z-index stacking
+                    var zIndex = 1070 + ($('.modal:visible').length * 10);
+                    $modal.css('z-index', zIndex);
+                    setTimeout(function() {
+                        $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                            'modal-stack');
+                    }, 0);
+
+                    $modal.modal('show');
                 });
-                if (!exists) {
-                    var opt = new Option(label, '__add__', false, false);
-                    select.add(opt);
-                }
-            }
 
-            function openHiddenLauncher(launcherId) {
-                var a = document.getElementById(launcherId);
-                if (a) a.click();
-            }
-
-            function selectSetValue(select, value) {
-                if (window.jQuery && jQuery.fn && jQuery.fn.select2) {
-                    jQuery(select).val(String(value)).trigger('change');
-                } else {
-                    select.value = String(value);
-                    select.dispatchEvent(new Event('change'));
-                }
-            }
-
-            function insertBeforeAddOption(select, option) {
-                var addIdx = Array.from(select.options).findIndex(function(o) {
-                    return o.value === '__add__';
+                $modal.on('hidden.bs.modal', function() {
+                    $modal.remove();
                 });
-                if (addIdx >= 0) select.add(option, select.options[addIdx]);
-                else select.add(option);
             }
 
-            // ---------- locate selects on this Proposal blade ----------
-            var customerSelect = document.getElementById('customer'); // you already have id="customer"
-            var categorySelect = document.querySelector(
-                'select[name="category_id"]'); // category field (no id in your snippet)
-
-            // Ensure special "Add…" options exist (in case controller didn't add them)
-            ensureAddOption(customerSelect, '➕ Add new customer…');
-            ensureAddOption(categorySelect, '➕ Add new category…');
-
-            // ---------- change handlers to open modals ----------
-            document.addEventListener('change', function(e) {
-                // Customer
-                if (e.target === customerSelect && e.target.value === '__add__') {
-                    selectSetValue(customerSelect, ''); // reset away from special option
-                    openHiddenLauncher('launchAddCustomer'); // MUST exist somewhere in layout
+            // Ensure Add New exists for Branch & Department on load (in case server array missed it)
+            function ensureAddNewOption($select) {
+                if ($select.find('option[value="__add__"]').length === 0) {
+                    $select.prepend('<option value="__add__">➕  Add New</option>');
                 }
-                // Category
-                if (e.target === categorySelect && e.target.value === '__add__') {
-                    selectSetValue(categorySelect, ''); // reset away
-                    openHiddenLauncher('launchAddCategory'); // MUST exist somewhere in layout
+            }
+            ensureAddNewOption($('#branch_id'));
+            ensureAddNewOption($('#department_id'));
+
+            // Detect "Add New" selection for any select with data-create-url
+            $(document).on('change', 'select[data-create-url]', function() {
+                var $select = $(this);
+                if ($select.val() === '__add__') {
+                    openAddNewModal($select);
                 }
             });
 
-            // ---------- intercept modal submits (dynamic content) ----------
-            document.addEventListener('submit', function(e) {
-                var form = e.target;
+            // AJAX submit for dynamic modal
+            $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+                e) {
+                e.preventDefault();
+                var $form = $(this);
+                var $modal = $form.closest('#globalAddNewModal');
 
-                // A) Customer modal form (id="customerForm")
-                if (form && form.id === 'customerForm') {
-                    e.preventDefault();
+                // Find the select that triggered this modal
+                var $select = currentSelect;
 
-                    var fd = new FormData(form);
-                    fetch(form.getAttribute('action') || '{{ url('customer') }}', {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json'
-                            },
-                            body: fd
-                        })
-                        .then(async (res) => {
-                            const data = await res.json().catch(() => ({}));
-                            if (!res.ok) {
-                                const msg = (data.errors && Object.values(data.errors)[0][0]) || data
-                                    .message || 'Request failed';
-                                throw new Error(msg);
-                            }
-                            return data; // { id, name }
-                        })
-                        .then(function(data) {
-                            if (!customerSelect) return;
-
-                            // add if not present
-                            var exists = Array.from(customerSelect.options).some(function(o) {
-                                return String(o.value) === String(data.id);
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: $form.attr('method') || 'POST',
+                    data: $form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            var $newOption = $('<option>', {
+                                value: response.data.id,
+                                text: response.data.name
                             });
-                            if (!exists) {
-                                var opt = new Option(data.name, data.id, true, true);
-                                insertBeforeAddOption(customerSelect, opt);
-                            }
 
-                            // select it
-                            selectSetValue(customerSelect, data.id);
-
-                            // close modal (Bootstrap 5)
-                            var modalEl = form.closest('.modal');
-                            if (modalEl) {
-                                var inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(
-                                    modalEl);
-                                inst.hide();
-                            }
-
-                            // refresh proposal customer detail panel if endpoint given
-                            var url = customerSelect.getAttribute('data-url'); // route('proposal.customer')
-                            if (url) {
-                                fetch(url, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                            'Accept': 'text/html'
-                                        },
-                                        body: JSON.stringify({
-                                            customer_id: data.id
-                                        })
-                                    })
-                                    .then(res => res.text())
-                                    .then(function(html) {
-                                        var box = document.getElementById('customer_detail');
-                                        if (box) {
-                                            box.innerHTML = html;
-                                            box.classList.remove('d-none');
+                            // append and select
+                            $select.append($newOption);
+                            
+                            // Handle both Choices.js and regular selects
+                            if ($select.hasClass('select2')) {
+                                var selectId = $select.attr('id');
+                                if (selectId) {
+                                    // Destroy existing Choices instance if it exists
+                                    if (window.Choices) {
+                                        var choicesInstance = document.querySelector('#' + selectId);
+                                        if (choicesInstance && choicesInstance.choices) {
+                                            choicesInstance.choices.destroy();
                                         }
-                                    })
-                                    .catch(console.error);
+                                    }
+                                    
+                                    // Set the value
+                                    $select.val(response.data.id);
+                                    
+                                    // Reinitialize Choices
+                                    if (window.Choices) {
+                                        new Choices('#' + selectId, {
+                                            removeItemButton: true,
+                                        });
+                                    }
+                                } else {
+                                    $select.val(response.data.id).trigger('change');
+                                }
+                            } else {
+                                $select.val(response.data.id).trigger('change');
                             }
 
-                            form.reset();
-                        })
-                        .catch(function(err) {
-                            alert(err.message ||
-                                "{{ __('Could not create customer. Please try again.') }}");
-                        });
-                }
-
-                // B) Category modal form (prefer id="categoryCreateForm"; fallback to action contains product-category)
-                if (form && (form.id === 'categoryCreateForm' || (form.action && form.action.indexOf(
-                        'product-category') !== -1))) {
-                    e.preventDefault();
-
-                    var fd2 = new FormData(form);
-                    fetch(form.getAttribute('action') || '{{ route('product-category.store') }}', {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json'
-                            },
-                            body: fd2
-                        })
-                        .then(async (res) => {
-                            const data = await res.json().catch(() => ({}));
-                            if (!res.ok) {
-                                const msg = (data.errors && Object.values(data.errors)[0][0]) || data
-                                    .message || 'Request failed';
-                                throw new Error(msg);
-                            }
-                            return data; // { id, name }
-                        })
-                        .then(function(data) {
-                            if (!categorySelect) return;
-
-                            // add if not present
-                            var exists = Array.from(categorySelect.options).some(function(o) {
-                                return String(o.value) === String(data.id);
+                            $modal.modal('hide');
+                        } else {
+                            alert(response.message || 'Something went wrong!');
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            var errors = xhr.responseJSON.errors;
+                            $form.find('.invalid-feedback').remove();
+                            $.each(errors, function(key, msgs) {
+                                $form.find('[name="' + key + '"]').after(
+                                    `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                                );
                             });
-                            if (!exists) {
-                                var opt = new Option(data.name, data.id, true, true);
-                                insertBeforeAddOption(categorySelect, opt);
-                            }
-
-                            // select it
-                            selectSetValue(categorySelect, data.id);
-
-                            // close modal (Bootstrap 5)
-                            var modalEl = form.closest('.modal');
-                            if (modalEl) {
-                                var inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(
-                                    modalEl);
-                                inst.hide();
-                            }
-
-                            form.reset();
-                        })
-                        .catch(function(err) {
-                            alert(err.message ||
-                                "{{ __('Could not create category. Please try again.') }}");
-                        });
-                }
+                        } else {
+                            alert('Server error!');
+                        }
+                    }
+                });
             });
 
-        })();
+        });
     </script>
 @endpush
 @section('content')
@@ -581,7 +524,7 @@
                         <div class="col-md-6">
                             <div class="form-group" id="customer-box">
                                 {{ Form::label('customer_id', __('Customer'), ['class' => 'form-label']) }}
-                                {{ Form::select('customer_id', $customers, $customerId, ['class' => 'form-control select', 'id' => 'customer', 'data-url' => route('proposal.customer'), 'required' => 'required']) }}
+                                {{ Form::select('customer_id', $customers, $customerId, ['class' => 'form-control select', 'id' => 'customer', 'data-url' => route('proposal.customer'), 'data-create-url' => route('customer.create'), 'data-create-title' => __('Create Customer'), 'required' => 'required']) }}
                             </div>
 
                             <a href="#" id="launchAddCustomer" data-size="lg"
@@ -605,7 +548,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         {{ Form::label('category_id', __('Category'), ['class' => 'form-label']) }}
-                                        {{ Form::select('category_id', $category, null, ['class' => 'form-control select', 'required' => 'required']) }}
+                                        {{ Form::select('category_id', $category, null, ['class' => 'form-control select', 'required' => 'required', 'data-create-url' => route('product-category.create'), 'data-create-title' => __('Create New Category'), 'id' => 'category']) }}
                                     </div>
                                     <a href="#" id="launchAddCategory" data-size="lg"
                                         data-url="{{ route('product-category.create') }}" data-ajax-popup="true"

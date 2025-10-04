@@ -258,25 +258,62 @@
 
         <div class="accordion-content show" id="accordionContent">
             <div class="financial-row">
-                <!-- Left Section - Unpaid -->
+                {{-- Left Section - Unpaid (mirrors Right section layout) --}}
+                @php
+                    $overdue = (float) ($invoiceData['overdue']['amount'] ?? 0);
+                    $notDueYet = (float) ($invoiceData['sent']['amount'] ?? 0); // invoices sent but not yet due
+                    $unpaidTotal = $overdue + $notDueYet;
+
+                    // progress ratios with sensible minimums for visibility
+                    $leftDenom = max(1, $overdue + $notDueYet);
+                    $pctOverdue = $overdue / $leftDenom; // orange
+                    $pctNotDue = $notDueYet / $leftDenom; // gray
+                @endphp
+                {{-- Right Section - Paid --}}
+                @php
+                    $notDeposited = (float) ($invoiceData['partially_paid']['amount'] ?? 0); // “Not deposited”
+                    $deposited = (float) ($invoiceData['paid']['amount'] ?? 0); // “Deposited”
+                    $rightTotal = $notDeposited + $deposited;
+
+                    $rightDenom = max(1, $rightTotal);
+                    $pctNotDeposited = $notDeposited / $rightDenom;
+                    $pctDeposited = $deposited / $rightDenom;
+                @endphp
+
                 <div class="financial-section">
                     <div class="section-header">
-                        <span
-                            class="amount-large">{{ Auth::user()->priceFormat(($invoiceData['unpaid']['amount'] ?? 0) + ($invoiceData['overdue']['amount'] ?? 0)) }}
-                            {{ __('Unpaid') }}</span>
+                        <span class="amount-large">
+                            {{ Auth::user()->priceFormat($unpaidTotal) }} {{ __('Unpaid') }}
+                        </span>
                         <span class="period-text">{{ __('Last 365 days') }}</span>
                     </div>
 
-                    <div class="main-amount">{{ Auth::user()->priceFormat($invoiceData['overdue']['amount'] ?? 0) }}</div>
-                    <div class="status-text">{{ __('Overdue') }}</div>
+                    <div class="amounts-row">
+                        <div class="amount-item">
+                            <div class="amount-value">
+                                {{ Auth::user()->priceFormat($overdue) }}
+                            </div>
+                            <div class="amount-label">{{ __('Overdue') }}</div>
+                        </div>
+                        <div class="amount-item">
+                            <div class="amount-value">
+                                {{ Auth::user()->priceFormat($notDueYet) }}
+                            </div>
+                            <div class="amount-label">{{ __('Not due yet') }}</div>
+                        </div>
+                    </div>
 
                     <div class="progress-container">
-                        <div class="progress-bar-orange"
-                            style="flex: {{ max(0.3, ($invoiceData['overdue']['amount'] ?? 0) / max(1, ($invoiceData['overdue']['amount'] ?? 0) + ($invoiceData['sent']['amount'] ?? 0))) }}">
+                        {{-- Not due yet (gray) --}}
+                        <div class="progress-bar-gray" style="flex: {{ max(0.1, $pctNotDue) }};">
                         </div>
-                        {{-- <div class="progress-bar-gray" style="flex: {{ max(0.1, ($invoiceData['sent']['amount'] ?? 0) / max(1, ($invoiceData['overdue']['amount'] ?? 0) + ($invoiceData['sent']['amount'] ?? 0))) }}"></div> --}}
+
+                        {{-- Overdue (orange) --}}
+                        <div class="progress-bar-orange" style="flex: {{ max(0.1, $pctOverdue) }};">
+                        </div>
                     </div>
                 </div>
+
 
                 <!-- Right Section - Paid -->
                 <div class="financial-section right-section">
@@ -300,10 +337,10 @@
                     </div>
 
                     <div class="progress-container2">
-                        {{-- <div class="progress-bar-light-green" style="flex: {{ max(0.1, ($invoiceData['partially_paid']['amount'] ?? 0) / max(1, ($invoiceData['partially_paid']['amount'] ?? 0) + ($invoiceData['paid']['amount'] ?? 0))) }}"></div> --}}
-                        <div class="progress-bar-dark-green"
-                            style="flex: {{ max(0.6, ($invoiceData['paid']['amount'] ?? 0) / max(1, ($invoiceData['partially_paid']['amount'] ?? 0) + ($invoiceData['paid']['amount'] ?? 0))) }}">
-                        </div>
+                        {{-- Not deposited (light green) --}}
+                        <div class="progress-bar-light-green" style="flex: {{ max(0.1, $pctNotDeposited) }};"></div>
+                        {{-- Deposited (dark green) --}}
+                        <div class="progress-bar-dark-green" style="flex: {{ max(0.1, $pctDeposited) }};"></div>
                     </div>
                 </div>
             </div>

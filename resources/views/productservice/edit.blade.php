@@ -70,17 +70,18 @@
 
         <div class="form-group  col-md-6">
             {{ Form::label('tax_id', __('Tax'),['class'=>'form-label']) }}
-            {{ Form::select('tax_id[]', $tax,null, array('class' => 'form-control select2')) }}
+            {{ Form::select('tax_id[]', $tax,null, array('class' => 'form-control select2', 'data-create-url'=>route('taxes.create'),'data-create-title'=>__('Create New Tax'))) }}
            <!-- {{ Form::select('tax_id[]', $tax,null, array('class' => 'form-control select2','id'=>'choices-multiple1','multiple'=>'')) }} -->
         </div>
 
         <div class="form-group  col-md-6">
             {{ Form::label('category_id', __('Category'),['class'=>'form-label']) }}<span class="text-danger">*</span>
-            {{ Form::select('category_id', $category,null, array('class' => 'form-control select','required'=>'required')) }}
+            {{ Form::select('category_id', $category,null, array('class' => 'form-control select',
+            'required'=>'required', 'data-create-url'=>route('product-category.create'),'data-create-title'=>__('Create New Category'))) }}
         </div>
         <div class="form-group  col-md-6">
             {{ Form::label('unit_id', __('Unit'),['class'=>'form-label']) }}<span class="text-danger">*</span>
-            {{ Form::select('unit_id', $unit,null, array('class' => 'form-control select','required'=>'required')) }}
+            {{ Form::select('unit_id', $unit,null, array('class' => 'form-control select','required'=>'required','data-create-url'=>route('product-unit.create'),'data-create-title'=>__('Create New Unit'))) }}
         </div>
 
         <div class="col-md-6 form-group">
@@ -162,4 +163,118 @@
         }
     });
 </script>
+    <script>
+        $(document).ready(function() {
+            var currentSelect = null;
+
+            function openAddNewModal($select) {
+                if ($select.val() !== '__add__') return;
+                $select.val(''); // reset dropdown
+                currentSelect = $select; // save reference
+                var url = $select.data('create-url');
+                var title = $select.data('create-title') || 'Create New';
+
+                // prevent duplicate modal
+                if ($('#globalAddNewModal').length) {
+                    $('#globalAddNewModal').modal('show');
+                    return;
+                }
+
+                var $modal = $(`
+            <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">${title}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">Loading...</div>
+                </div>
+              </div>
+            </div>
+        `);
+
+                $('body').append($modal);
+
+                $.get(url, function(html) {
+                    $modal.find('.modal-body').html(html);
+
+                    // z-index stacking
+                    var zIndex = 1070 + ($('.modal:visible').length * 10);
+                    $modal.css('z-index', zIndex);
+                    setTimeout(function() {
+                        $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                            'modal-stack');
+                    }, 0);
+
+                    $modal.modal('show');
+                });
+
+                $modal.on('hidden.bs.modal', function() {
+                    $modal.remove();
+                });
+            }
+
+            // Detect "Add New" selection
+            $(document).on('change', 'select', function() {
+                var $select = $(this);
+                if ($select.val() === '__add__') {
+                    openAddNewModal($select);
+                }
+            });
+
+            // AJAX submit for dynamic modal
+            $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+                e) {
+                e.preventDefault();
+                var $form = $(this);
+                var $modal = $form.closest('#globalAddNewModal');
+
+                // Find the select that triggered this modal
+                var $select = currentSelect;
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: $form.attr('method') || 'POST',
+                    data: $form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            // 🔹 Insert new option before the "Add New" of the same select
+                            var $addNewOption = $select.find('option[value="__add__"]').first();
+                            var $newOption = $('<option>', {
+                                value: response.data.id,
+                                text: response.data.name
+                            });
+
+                            if ($addNewOption.length) {
+                                $select.append($newOption);
+                                // $newOption.insertBefore($addNewOption);
+                            } else {
+                                $select.append($newOption);
+                            }
+
+                            $select.val(response.data.id).trigger('change');
+                            $modal.modal('hide');
+                        } else {
+                            alert(response.message || 'Something went wrong!');
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            var errors = xhr.responseJSON.errors;
+                            $form.find('.invalid-feedback').remove();
+                            $.each(errors, function(key, msgs) {
+                                $form.find('[name="' + key + '"]').after(
+                                    `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                                );
+                            });
+                        } else {
+                            alert('Server error!');
+                        }
+                    }
+                });
+            });
+
+        });
+    </script>
 
