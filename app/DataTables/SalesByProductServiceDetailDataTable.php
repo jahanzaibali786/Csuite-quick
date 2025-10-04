@@ -22,41 +22,41 @@ class SalesByProductServiceDetailDataTable extends DataTable
             ->addColumn('customer_full_name', fn($r) => $r->customer_name ?? '-')
             ->addColumn('memo_description', fn($r) => $r->description ?? '-')
             ->addColumn('quantity', fn($r) => number_format($r->quantity ?? 0, 2))
-            ->addColumn('sales_price', fn($r) => $user->priceFormat($r->price ?? 0))
-            ->addColumn('amount', function($r) use ($user) {
+            ->addColumn('sales_price', fn($r) => number_format($r->price ?? 0))
+            ->addColumn('amount', function ($r) use ($user) {
                 // Calculate amount: (price * quantity) - discount + tax
                 $baseAmount = ($r->price ?? 0) * ($r->quantity ?? 0);
                 $discount = $r->discount ?? 0;
                 $taxAmount = $this->calculateTaxAmount($r);
                 $amount = $baseAmount - $discount + $taxAmount;
-                return $user->priceFormat($amount);
+                return number_format($amount);
             })
-            ->addColumn('balance', function($r) use ($user) {
+            ->addColumn('balance', function ($r) use ($user) {
                 // Running balance calculation will be handled by grouping
                 $baseAmount = ($r->price ?? 0) * ($r->quantity ?? 0);
                 $discount = $r->discount ?? 0;
                 $taxAmount = $this->calculateTaxAmount($r);
                 $amount = $baseAmount - $discount + $taxAmount;
-                return $user->priceFormat($amount);
+                return number_format($amount);
             })
             ->with('groupedData', function () use ($query) {
                 // Group data by product/service for the hierarchical display
                 try {
                     $rows = (clone $query)->get();
                     $grouped = $rows->groupBy('product_name');
-                    
+
                     $groupedData = [];
                     foreach ($grouped as $productName => $transactions) {
                         $totalAmount = 0;
                         $transactionData = [];
-                        
+
                         foreach ($transactions as $transaction) {
                             $baseAmount = ($transaction->price ?? 0) * ($transaction->quantity ?? 0);
                             $discount = $transaction->discount ?? 0;
                             $taxAmount = $this->calculateTaxAmount($transaction);
                             $amount = $baseAmount - $discount + $taxAmount;
                             $totalAmount += $amount;
-                            
+
                             $transactionData[] = [
                                 'transaction_date' => $transaction->transaction_date,
                                 'transaction_type' => $transaction->transaction_type ?? 'Invoice',
@@ -69,19 +69,19 @@ class SalesByProductServiceDetailDataTable extends DataTable
                                 'balance' => $totalAmount // Running total for this product
                             ];
                         }
-                        
+
                         $groupedData[$productName] = [
                             'transactions' => $transactionData,
                             'total' => $totalAmount,
                             'count' => count($transactionData)
                         ];
                     }
-                    
+
                     \Log::info('SalesByProductService Detail grouped data calculated:', [
                         'products' => count($groupedData),
                         'total_transactions' => $rows->count()
                     ]);
-                    
+
                     return $groupedData;
                 } catch (\Exception $e) {
                     \Log::error('Error calculating sales by product service detail data: ' . $e->getMessage());
@@ -96,17 +96,17 @@ class SalesByProductServiceDetailDataTable extends DataTable
         if (empty($transaction->tax)) {
             return 0;
         }
-        
+
         $taxIds = explode(',', $transaction->tax);
         $totalTaxRate = 0;
-        
+
         foreach ($taxIds as $taxId) {
             $tax = DB::table('taxes')->where('id', $taxId)->first();
             if ($tax) {
                 $totalTaxRate += $tax->rate;
             }
         }
-        
+
         $baseAmount = ($transaction->price ?? 0) * ($transaction->quantity ?? 0) - ($transaction->discount ?? 0);
         return ($baseAmount * $totalTaxRate) / 100;
     }
@@ -117,17 +117,22 @@ class SalesByProductServiceDetailDataTable extends DataTable
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
 
         // Get date range filters
-        $startDate = request('start_date');
-        $endDate = request('end_date');
+        // Get start and end dates from request, fallback to defaults
+        $startDate = request()->get('start_date')
+            ?? request()->get('startDate')
+            ?? date('Y-01-01');
+        $endDate = request()->get('end_date')
+            ?? request()->get('endDate')
+            ?? date('Y-m-d');
         $reportPeriod = request('report_period', 'all_dates');
-        
+
         // Calculate date range based on report period (only if not 'all_dates')
         if ($reportPeriod && $reportPeriod !== 'all_dates' && $reportPeriod !== 'custom') {
             $dates = $this->calculateDateRange($reportPeriod);
             $startDate = $dates['start'];
             $endDate = $dates['end'];
         }
-        
+
         // Debug the date values
         \Log::info('SalesByProductService Detail Date Filters Applied:', [
             'report_period' => $reportPeriod,
@@ -153,7 +158,7 @@ class SalesByProductServiceDetailDataTable extends DataTable
             ])
             ->where('i.created_by', $ownerId)
             ->where('i.status', '!=', 0); // Only include non-draft invoices
-            
+
         // Apply date filters (only if dates are provided)
         if ($startDate && $startDate !== '') {
             $q->whereDate('i.issue_date', '>=', $startDate);
@@ -185,13 +190,13 @@ class SalesByProductServiceDetailDataTable extends DataTable
         }
 
         return $q->orderBy('ps.name', 'ASC')
-                ->orderBy('i.issue_date', 'DESC');
+            ->orderBy('i.issue_date', 'DESC');
     }
-    
+
     private function calculateDateRange($period)
     {
         $today = \Carbon\Carbon::today();
-        
+
         switch ($period) {
             case 'today':
                 return ['start' => $today->format('Y-m-d'), 'end' => $today->format('Y-m-d')];
@@ -231,21 +236,21 @@ class SalesByProductServiceDetailDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('sales-by-product-service-detail-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('rt')
             ->parameters([
-                'responsive'     => true,
-                'autoWidth'      => false,
-                'paging'         => false,
-                'searching'      => false,
-                'info'           => false,
-                'ordering'       => false,
-                'colReorder'     => true,
-                'fixedHeader'    => true,
-                'scrollY'        => '400px',
-                'scrollX'        => true,
+                'responsive' => true,
+                'autoWidth' => false,
+                'paging' => false,
+                'searching' => false,
+                'info' => false,
+                'ordering' => false,
+                'colReorder' => true,
+                'fixedHeader' => true,
+                'scrollY' => '400px',
+                'scrollX' => true,
                 'scrollCollapse' => true,
             ]);
     }
