@@ -632,7 +632,7 @@
         })
     </script>
     {{--   end for user select --}}
-        <script>
+    <script>
         $(document).ready(function() {
             var currentSelect = null;
 
@@ -694,7 +694,7 @@
 
             // AJAX submit for dynamic modal
             $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
-            e) {
+                e) {
                 e.preventDefault();
                 var $form = $(this);
                 var $modal = $form.closest('#globalAddNewModal');
@@ -735,7 +735,7 @@
                             $.each(errors, function(key, msgs) {
                                 $form.find('[name="' + key + '"]').after(
                                     `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
-                                    );
+                                );
                             });
                         } else {
                             alert('Server error!');
@@ -776,8 +776,9 @@
 
                             <div class="col employee">
                                 <div class="form-group" id="employee-box">
-                                    {{ Form::label('employee_id', __('Payee'),['class'=>'form-label']) }}
-                                    {{ Form::select('employee_id', $employees,null, array('class' => 'form-control select','id'=>'employee','data-url'=>route('expense.employee'))) }}
+                                    {{ Form::label('employee_id', __('Payee'), ['class' => 'form-label']) }}
+                                    {{ Form::select('employee_id', $employees, null, ['class' => 'form-control select', 'id' => 'employee',
+                                     'data-url' => route('expense.employee'), 'data-create-url' => route('employee.create'), 'data-create-title' => __('Create New Employee')]) }}
                                 </div>
                                 <div id="employee_detail" class="d-none">
                                 </div>
@@ -898,8 +899,7 @@
                                     </td>
                                     <td>
                                         @can('delete proposal product')
-                                            <a href="#"
-                                                class="ti ti-trash text-white repeater-action-btn bg-danger ms-2"
+                                            <a href="#" class="ti ti-trash text-white repeater-action-btn bg-danger ms-2"
                                                 data-repeater-delete></a>
                                         @endcan
                                     </td>

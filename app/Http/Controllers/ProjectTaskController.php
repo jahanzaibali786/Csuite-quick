@@ -54,7 +54,6 @@ class ProjectTaskController extends Controller
             } else {
                 return redirect()->route('projects.index')->with('error', __('Projeat not found'));
             }
-
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
@@ -72,6 +71,31 @@ class ProjectTaskController extends Controller
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
+
+    // app/Http/Controllers/ProjectTaskController.php
+    public function taskCreationOnDashboardCreate()
+    {
+        if (\Auth::user()->can('create project task')) {
+            $settings     = Utility::settings();
+            $customFields = CustomField::where('created_by', \Auth::user()->creatorId())
+                ->where('module', 'task')
+                ->get();
+
+            // No project/stage context for this simple modal
+            $project = null;
+            $hrs     = null;
+            $project_id = null;
+            $stage_id   = null;
+
+            return view(
+                'project_task.taskCreationOnDashboard',
+                compact('project_id', 'stage_id', 'project', 'hrs', 'settings', 'customFields')
+            );
+        }
+
+        return redirect()->back()->with('error', __('Permission Denied.'));
+    }
+
 
     public function store(Request $request, $project_id, $stage_id)
     {
@@ -227,13 +251,12 @@ class ProjectTaskController extends Controller
                                             }
                                         }
                                     }
-
                                 }
                             }
                             if ($us_mail == 'true') {
                                 // email send
                             }
-                            if($us_notify == 'true' || $us_approve == 'true'){
+                            if ($us_notify == 'true' || $us_approve == 'true') {
                                 // notification generate
                                 if (count($usr_Notification) > 0) {
                                     $usr_Notification[] = Auth::user()->creatorId();
@@ -243,10 +266,10 @@ class ProjectTaskController extends Controller
                                             "data_id" => $task->id,
                                             "name" => $task->name,
                                         ];
-                                        if($us_notify == 'true'){
-                                            Utility::makeNotification($usrLead,'create_task',$data,$task->id,'create Task');
-                                        }elseif($us_approve == 'true'){
-                                            Utility::makeNotification($usrLead,'approve_task',$data,$task->id,'For Approval Task');
+                                        if ($us_notify == 'true') {
+                                            Utility::makeNotification($usrLead, 'create_task', $data, $task->id, 'create Task');
+                                        } elseif ($us_approve == 'true') {
+                                            Utility::makeNotification($usrLead, 'approve_task', $data, $task->id, 'For Approval Task');
                                         }
                                     }
                                 } else {
@@ -257,12 +280,11 @@ class ProjectTaskController extends Controller
                                             "data_id" => $task->id,
                                             "name" => $task->name,
                                         ];
-                                        if($us_notify == 'true'){
-                                            Utility::makeNotification($user->id,'assign_task',$data,$task->id,'Assign Task');
+                                        if ($us_notify == 'true') {
+                                            Utility::makeNotification($user->id, 'assign_task', $data, $task->id, 'Assign Task');
                                         }
                                     }
                                 }
-
                             }
                         }
                     }
@@ -318,6 +340,250 @@ class ProjectTaskController extends Controller
         }
     }
 
+    public function taskCreationOnDashboardStore(Request $request, $project_id = null, $stage_id = null)
+    {
+        \DB::beginTransaction();
+        try {
+            if (!\Auth::user()->can('create project task')) {
+                return redirect()->back()->with('error', __('Permission Denied.'));
+            }
+
+            $validator = Validator::make($request->all(), [
+                'name'          => 'required',
+                'estimated_hrs' => 'required',
+                'priority'      => 'required',
+            ]);
+            if ($validator->fails()) {
+                return redirect()->back()->with('error', Utility::errorFormat($validator->getMessageBag()));
+            }
+
+            $usr = Auth::user();
+
+            // NEW: only find project if an id is present
+            $project = $project_id ? Project::find($project_id) : null;
+
+            // NEW: last stage logic only if we have a project
+            $last_stage = null;
+            if ($project) {
+                // (Your original code had $project->first()->id which is incorrect on a single Model)
+                // If you intended "last stage id", fetch it from relation or fallback to current $stage_id
+                $last_stage = $stage_id; // keep same behavior minimally; adjust if you actually need real "last stage"
+            }
+
+            $post = $request->all();
+            // NEW: keep projectless task possible
+            $post['assign_to']  = $request->assign_to;
+            $post['created_by'] = \Auth::user()->creatorId();
+            $post['owned_by']   = \Auth::user()->ownedId();
+            $post['start_date'] = $request->start_date ? date("Y-m-d H:i:s", strtotime($request->start_date)) : null;
+            $post['end_date']   = $request->end_date ? date("Y-m-d H:i:s", strtotime($request->end_date)) : null;
+
+            if ($stage_id && $last_stage && $stage_id == $last_stage) {
+                $post['marked_at'] = date('Y-m-d');
+            }
+
+            $task = ProjectTask::create($post);
+            $task->owned_by = \Auth::user()->ownedId();
+            $task->save();
+
+            $assignToIds = explode(',', $post['assign_to'] ?? '');
+            $assignToIds = array_filter($assignToIds, fn($v) => $v !== '' && $v !== null);
+            $userarr = array_unique(array_merge([\Auth::user()->id], $assignToIds));
+
+            $dataarr = [
+                "updated_by" => Auth::user()->id,
+                "data_id"    => $task->id,
+                "name"       => @$task->name,
+            ];
+            foreach ($userarr as $notifyto) {
+                Utility::makeNotification($notifyto, 'task', $dataarr, $task->id, 'created Task');
+            }
+
+            CustomField::saveData($task, $request->customField);
+
+            // Activity log: allow null project id
+            ActivityLog::create([
+                'user_id'    => $usr->id,
+                'task_id'    => $task->id,
+                'log_type'   => 'Create Task',
+                'remark'     => json_encode(['title' => $task->name]),
+            ]);
+
+            $setting = Utility::settings(\Auth::user()->creatorId());
+
+            // NEW: project_name only if project exists
+            $project_name = $project ? $project->project_name : null;
+            $users = explode(',', $task->assign_to ?? '');
+
+            if (isset($setting['new_task']) && $setting['new_task'] == 1) {
+                foreach ($users as $userId) {
+                    if (!$userId) continue;
+                    $user = User::find($userId);
+                    if (!$user) continue;
+
+                    $taskArr = [
+                        'task_user'      => @$user->name,
+                        'task_name'      => @$task->name,
+                        'project_name'   => $project_name,   // may be null
+                        'task_start_date' => @$task->start_date,
+                        'task_end_date'  => @$task->end_date,
+                        'hours'          => @$task->estimated_hrs,
+                    ];
+                    Utility::sendEmailTemplate('new_task', [@$user->id => @$user->email], $taskArr);
+                }
+            }
+
+            // Workflow (kept intact; tiny fix so it doesn't blow up projectless)
+            $us_mail = 'false';
+            $us_notify = 'false';
+            $us_approve = 'false';
+            $usr_Notification = [];
+            $workflow = WorkFlow::where('created_by', \Auth::user()->creatorId())
+                ->where('module', 'project')->where('status', 1)->first();
+
+            if ($workflow) {
+                $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)
+                    ->where('status', 1)->get();
+                foreach ($workflowaction as $action) {
+                    $useraction = json_decode($action->assigned_users);
+                    if (strtolower('create-task') == $action->node_id) {
+                        if (!empty($useraction)) {
+                            $useraction = json_decode($useraction);
+                            foreach ($useraction as $anyaction) {
+                                if (($anyaction->type ?? null) == 'user') {
+                                    $usr_Notification[] = $anyaction->id;
+                                }
+                            }
+                        }
+
+                        $raw_json = trim($action->applied_conditions, '"');
+                        $cleaned_json = stripslashes($raw_json);
+                        $applied_conditions = json_decode($cleaned_json, true);
+
+                        if (isset($applied_conditions['conditions']) && is_array($applied_conditions['conditions'])) {
+                            $arr = [
+                                'name'     => 'name',
+                                'priority' => 'priority',
+                                'hours'    => 'estimated_hrs',
+                                'stage'    => 'stage_id',
+                            ];
+                            $relate = [
+                                'stage_id' => 'stage',
+                            ];
+
+                            // NEW: run conditions against the created task (not $project)
+                            $query = ProjectTask::where('id', $task->id);
+
+                            foreach ($applied_conditions['conditions'] as $conditionGroup) {
+                                if (in_array($conditionGroup['action'], ['send_email', 'send_notification', 'send_approval'])) {
+                                    foreach ($conditionGroup['conditions'] as $condition) {
+                                        $field = $condition['field'];
+                                        $operator = $condition['operator'];
+                                        $value = $condition['value'];
+
+                                        if (isset($arr[$field], $relate[$arr[$field]])) {
+                                            $relatedField = $arr[$field];
+                                            $relation = $relate[$relatedField];
+                                            $query->whereHas($relation, function ($relatedQuery) use ($relatedField, $operator, $value) {
+                                                $relatedQuery->where($relatedField, $operator, $value);
+                                            });
+                                        } else {
+                                            $query->where($arr[$field], $operator, $value);
+                                        }
+                                    }
+
+                                    $result = $query->first();
+                                    if (!empty($result)) {
+                                        if ($conditionGroup['action'] === 'send_email')       $us_mail = 'true';
+                                        elseif ($conditionGroup['action'] === 'send_notification') $us_notify = 'true';
+                                        elseif ($conditionGroup['action'] === 'send_approval')     $us_approve = 'true';
+                                    }
+                                }
+                            }
+                        }
+
+                        if ($us_mail == 'true') {
+                            // email send
+                        }
+                        if ($us_notify == 'true' || $us_approve == 'true') {
+                            if (count($usr_Notification) > 0) {
+                                $usr_Notification[] = Auth::user()->creatorId();
+                                foreach ($usr_Notification as $usrLead) {
+                                    $data = [
+                                        "updated_by" => Auth::user()->id,
+                                        "data_id"    => $task->id,
+                                        "name"       => $task->name,
+                                    ];
+                                    if ($us_notify == 'true') {
+                                        Utility::makeNotification($usrLead, 'create_task', $data, $task->id, 'create Task');
+                                    } elseif ($us_approve == 'true') {
+                                        Utility::makeNotification($usrLead, 'approve_task', $data, $task->id, 'For Approval Task');
+                                    }
+                                }
+                            } else {
+                                foreach ($users as $userId) {
+                                    if (!$userId) continue;
+                                    $user = User::find($userId);
+                                    if (!$user) continue;
+                                    $data = [
+                                        "updated_by" => Auth::user()->id,
+                                        "data_id"    => $task->id,
+                                        "name"       => $task->name,
+                                    ];
+                                    if ($us_notify == 'true') {
+                                        Utility::makeNotification($user->id, 'assign_task', $data, $task->id, 'Assign Task');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            $taskNotificationArr = [
+                'task_name'   => $task->name,
+                'project_name' => $project_name, // may be null
+                'user_name'   => \Auth::user()->name,
+            ];
+            if (isset($setting['task_notification']) && $setting['task_notification'] == 1) {
+                Utility::send_slack_msg('new_task', $taskNotificationArr);
+            }
+            if (isset($setting['telegram_task_notification']) && $setting['telegram_task_notification'] == 1) {
+                Utility::send_telegram_msg('new_task', $taskNotificationArr);
+            }
+
+            if ($request->get('synchronize_type') == 'google_calender') {
+                $type = 'task';
+                $request1 = new ProjectTask();
+                $request1->title = $request->name;
+                $request1->start_date = $request->start_date;
+                $request1->end_date = $request->end_date;
+                Utility::addCalendarData($request1, $type);
+            }
+
+            $module = 'New Task';
+            $webhook = Utility::webhookSetting($module);
+            if ($webhook) {
+                $parameter = json_encode($task);
+                $status = Utility::WebhookCall($webhook['url'], $parameter, $webhook['method']);
+                if ($status == true) {
+                    \DB::commit();
+                    return redirect()->back()->with('success', __('Task added successfully.'));
+                } else {
+                    \DB::rollBack();
+                    return redirect()->back()->with('error', __('Webhook call failed.'));
+                }
+            }
+
+            \DB::commit();
+            return redirect()->back()->with('success', __('Task added successfully.'));
+        } catch (\Exception $e) {
+            \DB::rollback();
+            // dd($e);  // avoid dumping in production
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
     // For Taskboard View
     public function taskBoard($view)
     {
@@ -339,7 +605,6 @@ class ProjectTaskController extends Controller
             if (\Auth::user()->type != 'company') {
                 if (\Auth::user()->type == 'client') {
                     $tasks->where('created_by', \Auth::user()->creatorId());
-
                 } else {
                     $tasks->whereRaw("find_in_set('" . $usr->id . "',assign_to)");
                 }
@@ -349,16 +614,21 @@ class ProjectTaskController extends Controller
                 } else {
                     $tasks->where('owned_by', \Auth::user()->ownedId());
                 }
-
             }
 
             $tasks = $tasks->get();
             return view('project_task.grid', compact('tasks', 'view'));
-
         }
 
         return redirect()->back()->with('error', __('Permission Denied.'));
+    }
 
+    public function taskCreationOnDashboardList(Request $request)
+    {
+        // fetch all data from project_tasks table where project_id is null or is 0
+        $tasks = ProjectTask::where('project_id', '=', 0)->get();
+        // dd($tasks);
+        return view('project_task.taskCreationOnDashboardList', compact('tasks'));
     }
 
 
@@ -379,7 +649,6 @@ class ProjectTaskController extends Controller
             if (\Auth::user()->type != 'company') {
                 if (\Auth::user()->type == 'client') {
                     $tasks->where('created_by', \Auth::user()->creatorId());
-
                 } else {
                     $tasks->whereRaw("find_in_set('" . $usr->id . "',assign_to)");
                 }
@@ -408,9 +677,9 @@ class ProjectTaskController extends Controller
 
 
                 //                if(in_array('see_my_tasks', $request->status) && \Auth::user()->type!='company')
-//                {
-//                    $tasks->whereRaw("find_in_set('" . $usr->id . "',assign_to)");
-//                }
+                //                {
+                //                    $tasks->whereRaw("find_in_set('" . $usr->id . "',assign_to)");
+                //                }
 
                 if (in_array('due_today', $request->status)) {
                     $tasks->where('end_date', $todaydate);
@@ -488,6 +757,40 @@ class ProjectTaskController extends Controller
         }
     }
 
+    public function taskCreationOnDashboardEdit(Request $request)
+    {
+        if (!\Auth::user()->can('edit project task')) {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
+
+        $taskId = $request->query('task_id');
+        if (!$taskId) {
+            return redirect()->back()->with('error', __('Missing task id.'));
+        }
+
+        $task = ProjectTask::find($taskId);
+        if (!$task) {
+            return redirect()->back()->with('error', __('Task not found.'));
+        }
+
+        $project = (!empty($task->project_id) && (int) $task->project_id !== 0)
+            ? Project::find($task->project_id)
+            : null;
+
+        $hrs = $project ? Project::projectHrs($project->id) : null;
+
+        $customFields = CustomField::where('created_by', \Auth::user()->creatorId())
+            ->where('module', 'task')->get();
+        $task->customField = CustomField::getData($task, 'task')->toArray();
+
+        $members = \App\Models\User::where('created_by', \Auth::user()->creatorId())
+            ->orderBy('name')->get();
+
+        return view('project_task.taskEditOnDashboard', compact('project', 'task', 'hrs', 'customFields', 'members'));
+    }
+
+
+
     public function update(Request $request, $project_id, $task_id)
     {
 
@@ -516,6 +819,51 @@ class ProjectTaskController extends Controller
         }
     }
 
+
+    public function taskCreationOnDashboardUpdate(Request $request)
+    {
+        if (!\Auth::user()->can('edit project task')) {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
+
+        // validate
+        $validator = \Validator::make($request->all(), [
+            'task_id'       => 'required|integer|exists:project_tasks,id',
+            'name'          => 'required|string|max:255',
+            'estimated_hrs' => 'required|numeric|min:0',
+            'priority'      => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->with('error', \App\Models\Utility::errorFormat($validator->getMessageBag()));
+        }
+
+        // fetch task
+        $task = \App\Models\ProjectTask::findOrFail($request->input('task_id'));
+
+        // remove project_id and stage_id from payload (and any form helpers)
+        $post = $request->except([
+            '_token',
+            '_method',
+            'task_id',
+            'project_id',
+            'stage_id',
+        ]);
+
+        // update only the intended fields (safer than blind mass-assign)
+        $task->update($post);
+
+        // custom fields (optional)
+        if ($request->has('customField')) {
+            \App\Models\CustomField::saveData($task, $request->input('customField'));
+        }
+
+        \App\Models\Utility::makeActivityLog(\Auth::id(), 'Project Task', $task->id, 'Update Project Task', $task->name);
+
+        return redirect()->back()->with('success', __('Task Updated successfully.'));
+    }
+
+
     public function destroy($project_id, $task_id)
     {
 
@@ -529,6 +877,28 @@ class ProjectTaskController extends Controller
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
+
+    public function taskCreationOnDashboardDestroy(Request $request, $task)
+    {
+        if (!\Auth::user()->can('delete project task')) {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
+
+        // Validate existence
+        \Validator::make(['task_id' => $task], [
+            'task_id' => 'required|integer|exists:project_tasks,id',
+        ])->validate();
+
+        \App\Models\ProjectTask::deleteTask([(int) $task]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['task_id' => (int) $task, 'status' => 'deleted']);
+        }
+
+        return redirect()->back()->with('success', __('Task deleted successfully.'));
+    }
+
+
 
     public function getStageTasks(Request $request, $stage_id)
     {
@@ -651,10 +1021,10 @@ class ProjectTaskController extends Controller
                 $checkList = TaskChecklist::find($checklistID);
                 if ($checkList->status == 0) {
                     $checkList->status = 1;
-                    $notificationMessage = 'Marked Checklist as completed'; 
+                    $notificationMessage = 'Marked Checklist as completed';
                 } else {
                     $checkList->status = 0;
-                    $notificationMessage = 'Unmarked Checklist'; 
+                    $notificationMessage = 'Unmarked Checklist';
                 }
                 $checkList->save();
                 $userarr = array_filter(array_unique([
@@ -670,7 +1040,7 @@ class ProjectTaskController extends Controller
                 foreach ($userarr as $notifyto) {
                     Utility::makeNotification($notifyto, 'checklist', $dataarr, $checklistID, $notificationMessage);
                 }
-                
+
                 // dd($dataarr);
                 $proj = ProjectTask::where('id', $checkList->task_id)->first();
                 // WorkFlow get which is active
@@ -695,9 +1065,9 @@ class ProjectTaskController extends Controller
                                 }
                             }
                         }
-                        $us_mail= 'true';
-                        $us_notify= 'true';
-                        $us_approve= 'true';
+                        $us_mail = 'true';
+                        $us_notify = 'true';
+                        $us_approve = 'true';
 
                         $raw_json = trim($action->applied_conditions, '"');
                         $cleaned_json = stripslashes($raw_json);
@@ -733,25 +1103,23 @@ class ProjectTaskController extends Controller
 
                         //     }
                         // }
-                        if($us_mail == 'true'){
+                        if ($us_mail == 'true') {
                             // email send
                         }
-                        if($us_notify == 'true' || $us_approve == 'true'){
+                        if ($us_notify == 'true' || $us_approve == 'true') {
                             // notification generate
-                            if(count($usr_Notification) > 0){
+                            if (count($usr_Notification) > 0) {
                                 $usr_Notification[] = Auth::user()->creatorId();
-                                foreach($usr_Notification as $usrLead)
-                                {
+                                foreach ($usr_Notification as $usrLead) {
                                     $data = [
                                         "updated_by" => Auth::user()->id,
                                         "data_id" => $proj->id,
                                         "name" => $proj->name,
                                     ];
-                                    if($us_notify == 'true'){
-                                        Utility::makeNotification($usrLead,'checklist_mark',$data,$proj->id,'Checklist Mark');
-                                    }elseif($us_approve == 'true'){
-                                        Utility::makeNotification($usrLead,'approve_checklist',$data,$proj->id,'For Approval Checklist');
-
+                                    if ($us_notify == 'true') {
+                                        Utility::makeNotification($usrLead, 'checklist_mark', $data, $proj->id, 'Checklist Mark');
+                                    } elseif ($us_approve == 'true') {
+                                        Utility::makeNotification($usrLead, 'approve_checklist', $data, $proj->id, 'For Approval Checklist');
                                     }
                                 }
                             }
@@ -920,7 +1288,6 @@ class ProjectTaskController extends Controller
             //Telegram Notification
             if (isset($setting['telegram_taskcomment_notification']) && $setting['telegram_taskcomment_notification'] == 1) {
                 Utility::send_telegram_msg('new_task_comment', $CommentNotificationArr);
-
             }
 
 
@@ -982,7 +1349,6 @@ class ProjectTaskController extends Controller
 
                             $task->order = $index;
                             $task->save();
-
                         }
                     }
                 }
@@ -1128,27 +1494,26 @@ class ProjectTaskController extends Controller
                                     }
                                 }
                             }
-                            if($us_mail == 'true'){
+                            if ($us_mail == 'true') {
                                 // email send
                             }
-                            if($us_notify == 'true' || $us_approve == 'true'){
+                            if ($us_notify == 'true' || $us_approve == 'true') {
                                 // notification generate
-                                if(count($usrTasks) > 0){
+                                if (count($usrTasks) > 0) {
                                     $usrTasks[] = Auth::user()->creatorId();
-                                    foreach($usrTasks as $usrDeal1)
-                                    {
+                                    foreach ($usrTasks as $usrDeal1) {
                                         $data = [
                                             "updated_by" => Auth::user()->id,
                                             "data_id" => $task->id,
                                             "name" => $task->name,
                                         ];
-                                        if($us_notify == 'true'){
-                                            Utility::makeNotification($usrDeal1,'task_stage_change',$data,$task->id,'Task Stage Change');
-                                        }elseif($us_approve == 'true'){
-                                            Utility::makeNotification($usrDeal1,'approve_task_stage_change',$data,$task->id,'For Approval Task Stage Change');
+                                        if ($us_notify == 'true') {
+                                            Utility::makeNotification($usrDeal1, 'task_stage_change', $data, $task->id, 'Task Stage Change');
+                                        } elseif ($us_approve == 'true') {
+                                            Utility::makeNotification($usrDeal1, 'approve_task_stage_change', $data, $task->id, 'For Approval Task Stage Change');
                                         }
                                     }
-                                }else{
+                                } else {
                                     foreach ($users as $key => $user) {
                                         $user = User::find($user);
 
@@ -1157,8 +1522,8 @@ class ProjectTaskController extends Controller
                                             "data_id" => $task->id,
                                             "name" => $task->name,
                                         ];
-                                        if($us_notify == 'true'){
-                                            Utility::makeNotification($user->id,'task_stage_change',$data,$task->id,'create Transfer');
+                                        if ($us_notify == 'true') {
+                                            Utility::makeNotification($user->id, 'task_stage_change', $data, $task->id, 'create Transfer');
                                         }
                                     }
                                 }
@@ -1184,88 +1549,87 @@ class ProjectTaskController extends Controller
                                                     }
                                                 }
 
-                                            $triger_mail= 'true';
-                                            $triger_notify= 'true';
-                                            $send_approval= 'true';
-                                            //  if user assign on this stage then check for mail and notification conditions
+                                                $triger_mail = 'true';
+                                                $triger_notify = 'true';
+                                                $send_approval = 'true';
+                                                //  if user assign on this stage then check for mail and notification conditions
 
-                                            // $raw_json = trim($row->applied_conditions, '"');
-                                            // $cleaned_json = stripslashes($raw_json);
-                                            // $applied_conditions = json_decode($cleaned_json, true);
+                                                // $raw_json = trim($row->applied_conditions, '"');
+                                                // $cleaned_json = stripslashes($raw_json);
+                                                // $applied_conditions = json_decode($cleaned_json, true);
 
-                                            // if (isset($applied_conditions['conditions']) && is_array($applied_conditions['conditions'])) {
-                                            //     $arr = [
-                                            //         'products' => 'App\Models\ProductService',
-                                            //         'sources' => 'App\Models\Source',
-                                            //     ];
-                                            //     foreach ($applied_conditions['conditions'] as $conditionGroup) {
-                                            //         if (in_array($conditionGroup['action'], ['send_email', 'send_notification','send_approval'])) {
-                                            //             $query = Lead::where('id',$post['lead_id']);
-                                            //             foreach ($conditionGroup['conditions'] as $condition) {
-                                            //                 $field = $condition['field'];
-                                            //                 $operator = $condition['operator'];
-                                            //                 $value = $condition['value'];
-                                            //                 if (array_key_exists($field, $arr)) {
-                                            //                     $a =$arr[$field]::where('name',$value)->pluck('id')->toArray();
-                                            //                     if(isset($a) && count($a) > 0){
-                                            //                         $query->where($field,$operator,$a);
-                                            //                     }
-                                            //                 }else{
-                                            //                     $query->where($field, $operator, $value);
-                                            //                 }
-                                            //             }
-                                            //             $result = $query->first();
-                                            //             if (!empty($result)) {
-                                            //                 if ($conditionGroup['action'] === 'send_email') {
-                                            //                     $us_mail = 'true';
-                                            //                 } elseif ($conditionGroup['action'] === 'send_notification') {
-                                            //                     $us_notify = 'true';
-                                            //                 }
-                                            //                 elseif ($conditionGroup['action'] === 'send_approval') {
-                                            //                     $us_approve = 'true';
-                                            //                 }
-                                            //             }
-                                            //         }
+                                                // if (isset($applied_conditions['conditions']) && is_array($applied_conditions['conditions'])) {
+                                                //     $arr = [
+                                                //         'products' => 'App\Models\ProductService',
+                                                //         'sources' => 'App\Models\Source',
+                                                //     ];
+                                                //     foreach ($applied_conditions['conditions'] as $conditionGroup) {
+                                                //         if (in_array($conditionGroup['action'], ['send_email', 'send_notification','send_approval'])) {
+                                                //             $query = Lead::where('id',$post['lead_id']);
+                                                //             foreach ($conditionGroup['conditions'] as $condition) {
+                                                //                 $field = $condition['field'];
+                                                //                 $operator = $condition['operator'];
+                                                //                 $value = $condition['value'];
+                                                //                 if (array_key_exists($field, $arr)) {
+                                                //                     $a =$arr[$field]::where('name',$value)->pluck('id')->toArray();
+                                                //                     if(isset($a) && count($a) > 0){
+                                                //                         $query->where($field,$operator,$a);
+                                                //                     }
+                                                //                 }else{
+                                                //                     $query->where($field, $operator, $value);
+                                                //                 }
+                                                //             }
+                                                //             $result = $query->first();
+                                                //             if (!empty($result)) {
+                                                //                 if ($conditionGroup['action'] === 'send_email') {
+                                                //                     $us_mail = 'true';
+                                                //                 } elseif ($conditionGroup['action'] === 'send_notification') {
+                                                //                     $us_notify = 'true';
+                                                //                 }
+                                                //                 elseif ($conditionGroup['action'] === 'send_approval') {
+                                                //                     $us_approve = 'true';
+                                                //                 }
+                                                //             }
+                                                //         }
 
-                                            //     }
-                                            // }
+                                                //     }
+                                                // }
 
-                                            if($triger_mail == 'true'){
-                                                // email send
-                                            }
-
-                                            if($triger_notify == 'true' || $send_approval= 'true'){
-                                                if($row->node_id =='create-task'){
-                                                    $type ='create_task';
-                                                }else if($row->node_id =='create-checklist'){
-                                                    $type ='create_checklist';
-                                                }else{
-                                                    $type ='other';
+                                                if ($triger_mail == 'true') {
+                                                    // email send
                                                 }
 
-                                                // notification generate
-                                                if(count($rowusrLeads) > 0){
-                                                    $rowusrLeads[] = Auth::user()->creatorId()  ;
+                                                if ($triger_notify == 'true' || $send_approval = 'true') {
+                                                    if ($row->node_id == 'create-task') {
+                                                        $type = 'create_task';
+                                                    } else if ($row->node_id == 'create-checklist') {
+                                                        $type = 'create_checklist';
+                                                    } else {
+                                                        $type = 'other';
+                                                    }
 
-                                                    foreach($rowusrLeads as $usrLead)
-                                                    {
-                                                        $data = [
-                                                            "updated_by" => Auth::user()->id,
-                                                            "data_id" => $task->id,
-                                                            "name" => $task->name,
-                                                        ];
-                                                        if($triger_notify == 'true'){
-                                                            Utility::makeNotification($usrLead,$type,$data,$task->id,$type);
-                                                        }elseif($send_approval == 'true'){
-                                                            Utility::makeNotification($usrLead,$type,$data,$task->id,$type);
+                                                    // notification generate
+                                                    if (count($rowusrLeads) > 0) {
+                                                        $rowusrLeads[] = Auth::user()->creatorId();
+
+                                                        foreach ($rowusrLeads as $usrLead) {
+                                                            $data = [
+                                                                "updated_by" => Auth::user()->id,
+                                                                "data_id" => $task->id,
+                                                                "name" => $task->name,
+                                                            ];
+                                                            if ($triger_notify == 'true') {
+                                                                Utility::makeNotification($usrLead, $type, $data, $task->id, $type);
+                                                            } elseif ($send_approval == 'true') {
+                                                                Utility::makeNotification($usrLead, $type, $data, $task->id, $type);
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                                break;
+                                    break;
                                 }
                             }
                         }
@@ -1313,12 +1677,12 @@ class ProjectTaskController extends Controller
             $html .= '</div>';
             $html .= '<div class="col-6 text-end">';
             //            if(str_replace('%', '', $task->taskProgress()['percentage']) > 0)
-//            {
-//                $html .= '<span class="text-sm">' . $task->taskProgress()['percentage'] . '</span> <div class="progress">
-//                                                    <div class="progress-bar bg-{{ $task->taskProgress()['color'] }}" role="progressbar"
-//                                                         style="width: {{ $task->taskProgress()['percentage'] }};"></div>
-//                                                </div>';
-//            }
+            //            {
+            //                $html .= '<span class="text-sm">' . $task->taskProgress()['percentage'] . '</span> <div class="progress">
+            //                                                    <div class="progress-bar bg-{{ $task->taskProgress()['color'] }}" role="progressbar"
+            //                                                         style="width: {{ $task->taskProgress()['percentage'] }};"></div>
+            //                                                </div>';
+            //            }
             if (\Auth::user()->can('view project task') || \Auth::user()->can('edit project task') || \Auth::user()->can('delete project task')) {
                 $html .= '<div class="dropdown action-item">
                                                             <a href="#" class="action-item" data-toggle="dropdown"><i class="ti ti-ellipsis-h"></i></a>
@@ -1435,8 +1799,6 @@ class ProjectTaskController extends Controller
 
             return json_encode($response);
         }
-
-
     }
 
     // Calendar View
@@ -1497,8 +1859,6 @@ class ProjectTaskController extends Controller
                     $arTasks['url'] = route('task.calendar.show', $task->id);
                     $arTasks['resize_url'] = route('task.calendar.drag', $task->id);
                     $arrTasks[] = $arTasks;
-
-
                 }
             }
 
@@ -1545,7 +1905,6 @@ class ProjectTaskController extends Controller
                         ->where('created_by', \Auth::user()->creatorId())
                         ->whereRaw("find_in_set('" . \Auth::user()->id . "',assign_to)")->get();
                 }
-
             }
 
             //            $data = ProjectTask::where('created_by', \Auth::user()->creatorId())->get();
@@ -1570,9 +1929,10 @@ class ProjectTaskController extends Controller
         return $arrayJson;
     }
 
-    public function task_add(Request $request){
+    public function task_add(Request $request)
+    {
         $usr = Auth::user();
-        $project = Project::where('id',$request->task['project_update'])->first();
+        $project = Project::where('id', $request->task['project_update'])->first();
         // dd($request->all());
         // $post = $request->all();
         $post['project_id'] = $project->id;

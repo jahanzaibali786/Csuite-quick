@@ -656,7 +656,7 @@
 
             // AJAX submit for dynamic modal
             $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
-            e) {
+                e) {
                 e.preventDefault();
                 var $form = $(this);
                 var $modal = $form.closest('#globalAddNewModal');
@@ -697,7 +697,7 @@
                             $.each(errors, function(key, msgs) {
                                 $form.find('[name="' + key + '"]').after(
                                     `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
-                                    );
+                                );
                             });
                         } else {
                             alert('Server error!');
@@ -780,26 +780,6 @@
                                         data-title="{{ __('Create New Category') }}" class="d-none">
                                     </a>
 
-
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            {{ Form::label('ref_number', __('Ref Number'), ['class' => 'form-label']) }}
-                                            <div class="form-icon-user">
-                                                <span><i class="ti ti-joint"></i></span>
-                                                {{ Form::text('ref_number', '', ['class' => 'form-control', 'placeholder' => __('Enter Ref NUmber')]) }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {{-- Recurring toggle --}}
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            {{ Form::label('recurring', __('Recurring'), ['class' => 'form-label']) }}
-                                            <div class="form-icon-user">
-                                                {{ Form::select('recurring', ['no' => 'No', 'yes' => 'Yes'], null, ['class' => 'form-control select', 'id' => 'recurring']) }}
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     {{--                                <div class="col-md-6"> --}}
                                     {{--                                    <div class="form-check custom-checkbox mt-4"> --}}
                                     {{--                                        <input class="form-check-input" type="checkbox" name="discount_apply" id="discount_apply"> --}}
@@ -820,8 +800,29 @@
                                         </div>
                                     @endif
                                 </div>
+                                
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            {{ Form::label('ref_number', __('Ref Number'), ['class' => 'form-label']) }}
+                                            <div class="form-icon-user">
+                                                <span><i class="ti ti-joint"></i></span>
+                                                {{ Form::text('ref_number', '', ['class' => 'form-control', 'placeholder' => __('Enter Ref NUmber')]) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {{-- Recurring toggle --}}
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            {{ Form::label('recurring', __('Recurring'), ['class' => 'form-label']) }}
+                                            <div class="form-icon-user">
+                                                {{ Form::select('recurring', ['no' => 'No', 'yes' => 'Yes'], null, ['class' => 'form-control select', 'id' => 'recurring']) }}
+                                            </div>
+                                        </div>
+                                    </div>
                             </div>
-                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 d-none" id="recurring-options">
+
+                        </div>
+                                                    <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 d-none" id="recurring-options">
                                 <div class="row">
                                     <div class="col-md-3">
                                         <div class="form-group">
@@ -871,7 +872,6 @@
 
                                 </div>
                             </div>
-                        </div>
 
                     </div>
                 </div>

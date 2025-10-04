@@ -8,7 +8,9 @@
         $lang = 'en';
     }
 
-    $notifications = \App\Models\Notification::where('user_id', Auth::user()->id)->where('is_read', 0)->get();
+    $notifications = \App\Models\Notification::where('user_id', Auth::user()->id)
+        ->where('is_read', 0)
+        ->get();
     // dd($notifications);
     // $LangName = \App\Models\Language::where('code',$lang)->first();
     // $LangName =\App\Models\Language::languageData($lang);
@@ -142,33 +144,38 @@
         cursor: pointer;
     }
 
-      @media (max-width: 600px) {
+    @media (max-width: 600px) {
         .dash-header .dash-h-item.drp-search {
             display: none;
         }
     }
+
     .noti {
-            top: 2px !important;
-            left: 4px;
+        top: 2px !important;
+        left: 4px;
     }
+
     @media (min-width: 280px) and (max-width: 479px) {
         .noti {
             left: -80px;
             max-width: 300px;
         }
     }
+
     @media (min-width: 480px) and (max-width: 767px) {
         .noti {
             left: -50px;
             max-width: 300px;
         }
     }
+
     @media (min-width: 768px) and (max-width: 1023px) {
         .noti {
             left: -15px;
             max-width: 300px;
         }
     }
+
     @media (min-width: 1025px) and (max-width: 1440px) {
         .noti {
             left: 0px;
@@ -215,9 +222,17 @@
                     <i class="fa fa-bell" style="color: #48494b;"></i>
                     <span
                         class="bg-danger dash-h-badge message-toggle-msg message-counter custom_messanger_counter beep">
-                        {{$notifications->count()}}
+                        {{ $notifications->count() }}
                         <span class="sr-only"></span>
                     </span>
+                </a>
+            </li>
+            {{-- Tasks button --}}
+            <li class="dropdown dash-h-item drp-company">
+                <a class="dash-head-link dropdown-toggle arrow-none me-0 border_none" id="openTaskModal"
+                    href="javascript:void(0);" data-size="lg" data-ajax-popup="true"
+                    data-url="{{ route('task-Creation-On-Dashboard-Create') }}">
+                    <i class="ti ti-list" style="font-size: 20px; color: var(--used-color);"></i>
                 </a>
             </li>
             @if (\Auth::user()->type == 'super admin')
@@ -288,10 +303,13 @@
 
                 @endif
             @endif
-            <div id="notification-dropdown-content" class="dropdown-content dropdown-menu dropdown-menu-end dash-h-dropdown" style="position: absolute ; right: 12% !important;padding: 10px; background: transparent; box-shadow: none;">
+            <div id="notification-dropdown-content"
+                class="dropdown-content dropdown-menu dropdown-menu-end dash-h-dropdown"
+                style="position: absolute ; right: 12% !important;padding: 10px; background: transparent; box-shadow: none;">
                 <ul class="dropdown-menu dropdown-menu-end notification-content noti"
                     aria-labelledby="notificationsDropdown" style=" top: 2px !important; left: 4px;">
-                    <li style="max-width: 300px;"> @foreach (@$notifications as  $notification)
+                    <li style="max-width: 300px;">
+                        @foreach (@$notifications as $notification)
                             @php
                                 echo $notification->toHtml();
                             @endphp
@@ -332,8 +350,8 @@
     </div>
 </div>
 
-    <!-- Notification Modal -->
-    {{-- <div class="modal fade" id="notificationModal" tabindex="-1" role="dialog" aria-labelledby="notificationModalLabel" aria-hidden="true">
+<!-- Notification Modal -->
+{{-- <div class="modal fade" id="notificationModal" tabindex="-1" role="dialog" aria-labelledby="notificationModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -351,84 +369,32 @@
     </div> --}}
 </header>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    function getBaseUrl() {
-        const { protocol, host, pathname } = window.location;
-        const pathArray = pathname.split('/').filter(part => part); 
-        const basePath = pathArray.length > 0 ? '' : '';
-        return `${protocol}//${host}${basePath}`;
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+        function getBaseUrl() {
+            const {
+                protocol,
+                host,
+                pathname
+            } = window.location;
+            const pathArray = pathname.split('/').filter(part => part);
+            const basePath = pathArray.length > 0 ? '' : '';
+            return `${protocol}//${host}${basePath}`;
+        }
 
-    function markAsSeen(notificationId) {
-        const notification = $(`.notification-item[data-id="${notificationId}"]`);
-        notification.css('opacity', '0.7');
+        function markAsSeen(notificationId) {
+            const notification = $(`.notification-item[data-id="${notificationId}"]`);
+            notification.css('opacity', '0.7');
 
-        setTimeout(() => notification.addClass('d-none'), 500);
+            setTimeout(() => notification.addClass('d-none'), 500);
 
-        const baseUrl = getBaseUrl();
-        $.ajax({
-            url: `${baseUrl}/has_Seen/${notificationId}`,
-            type: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function() {
-                console.log(`Notification ${notificationId} marked as seen.`);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error marking notification as seen:', error);
-            }
-        });
-    }
-
-    // Handle notification clicks (for navigation)
-    document.querySelectorAll('.notification_model').forEach(function(element) {
-        element.addEventListener('click', function(event) {
-            // Check if the clicked element is a button or inside a form
-            if (event.target.tagName === 'BUTTON' || event.target.closest('form')) {
-                return; // Don't handle navigation if it's a button click
-            }
-
-            event.preventDefault();
-
-            const link = this.getAttribute('data-link');
-            const notificationType = this.getAttribute('data-type');
-            const notificationId = this.getAttribute('data-notificationId');
-
-            // Mark as seen and navigate
-            markAsSeen(notificationId);
-            
-            if (link && link !== '#') {
-                window.location.href = link;
-            }
-        });
-    });
-
-    // Handle approve/reject button clicks
-    document.querySelectorAll('.notification_model form').forEach(function(form) {
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
-            
-            const formData = new FormData(this);
-            const actionUrl = this.getAttribute('action');
-            const button = this.querySelector('button[type="submit"]');
-            const originalText = button.textContent;
-            const notificationElement = this.closest('.notification_model');
-            const notificationId = notificationElement.getAttribute('data-notificationId');
-
-            // Disable button and show loading state
-            button.disabled = true;
-            button.textContent = 'Processing...';
-
+            const baseUrl = getBaseUrl();
             $.ajax({
-                url: actionUrl,
+                url: `${baseUrl}/has_Seen/${notificationId}`,
                 type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
+
                 success: function(response) {
                     // Mark notification as seen
                     markAsSeen(notificationId);
@@ -458,16 +424,78 @@ document.addEventListener('DOMContentLoaded', function() {
                         errorMessage = xhr.responseJSON.message;
                     }
                     alert(errorMessage);
+
                 }
             });
         });
-    });
 
-    // Prevent event bubbling for buttons
-    document.querySelectorAll('.notification_model button').forEach(function(button) {
-        button.addEventListener('click', function(event) {
-            event.stopPropagation();
+        // Handle approve/reject button clicks
+        document.querySelectorAll('.notification_model form').forEach(function(form) {
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const formData = new FormData(this);
+                const actionUrl = this.getAttribute('action');
+                const button = this.querySelector('button[type="submit"]');
+                const originalText = button.textContent;
+                const notificationElement = this.closest('.notification_model');
+                const notificationId = notificationElement.getAttribute('data-notificationId');
+
+                // Disable button and show loading state
+                button.disabled = true;
+                button.textContent = 'Processing...';
+
+                $.ajax({
+                    url: actionUrl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        // Mark notification as seen
+                        markAsSeen(notificationId);
+
+                        // Show success message
+                        if (response.message) {
+                            alert(response.message);
+                        } else {
+                            alert('Action processed successfully.');
+                            // window.location.reload();
+                        }
+
+                        // Remove the notification from view
+                        notificationElement.style.opacity = '0.5';
+                        setTimeout(() => {
+                            notificationElement.remove();
+                        }, 300);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error processing action:', error);
+
+                        // Re-enable button
+                        button.disabled = false;
+                        button.textContent = originalText;
+
+                        // Show error message
+                        let errorMessage =
+                            'An error occurred while processing the action.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        alert(errorMessage);
+                    }
+                });
+            });
+        });
+
+        // Prevent event bubbling for buttons
+        document.querySelectorAll('.notification_model button').forEach(function(button) {
+            button.addEventListener('click', function(event) {
+                event.stopPropagation();
+            });
         });
     });
-});
 </script>

@@ -117,8 +117,10 @@ class BalanceSheetDataTable extends DataTable
                     return '<span class="amount-cell">' . number_format(abs($row->amount), 2) . '</span>';
                 }
 
+
                 // Default → keep column aligned
                 return '&nbsp;';
+
             })
 
             ->rawColumns(['account_name', 'amount']);
@@ -136,6 +138,33 @@ class BalanceSheetDataTable extends DataTable
 
         return '';
     }
+
+
+    /*public function query()
+    {
+        $accounts = ChartOfAccount::where('chart_of_accounts.created_by', $this->companyId)
+            ->leftJoin('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->leftJoin('journal_items', 'chart_of_accounts.id', '=', 'journal_items.account')
+            ->leftJoin('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->where('journal_entries.date', '<=', $this->asOfDate)
+            ->select([
+                'chart_of_accounts.id',
+                'chart_of_accounts.name',
+                'chart_of_account_types.name as account_type',
+                DB::raw('COALESCE(SUM(journal_items.debit), 0) as total_debit'),
+                DB::raw('COALESCE(SUM(journal_items.credit), 0) as total_credit'),
+            ])
+            ->whereIn('chart_of_account_types.name', ['Assets', 'Liabilities', 'Equity'])
+            ->groupBy('chart_of_accounts.id', 'chart_of_accounts.name', 'chart_of_account_types.name')
+            ->orderBy('chart_of_account_types.name')
+            ->orderBy('chart_of_accounts.name')
+            ->get();
+
+        return $this->buildHierarchicalBalanceSheet($accounts);
+    }*/
+
+
     public function query()
     {
         // Base query (Accrual default)
@@ -144,6 +173,7 @@ class BalanceSheetDataTable extends DataTable
             ->leftJoin('journal_items', 'chart_of_accounts.id', '=', 'journal_items.account')
             ->leftJoin('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
             ->where("journal_entries.{$this->owner}", $this->companyId)
+
             ->where('journal_entries.date', '<=', $this->asOfDate);
 
         // ----- Cash Basis Filtering -----
@@ -214,6 +244,7 @@ class BalanceSheetDataTable extends DataTable
             DB::raw('COALESCE(SUM(journal_items.debit), 0) as total_debit'),
             DB::raw('COALESCE(SUM(journal_items.credit), 0) as total_credit'),
         ])
+
             ->whereIn('chart_of_account_types.name', ['Assets', 'Liabilities', 'Equity'])
             ->groupBy('chart_of_accounts.id', 'chart_of_accounts.name', 'chart_of_account_types.name')
             ->orderBy('chart_of_account_types.name')
