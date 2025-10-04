@@ -20,6 +20,7 @@ class Purchase extends Model
         'discount_apply',
         'category_id',
         'created_by',
+        'voucher_id',
     ];
     public static $statues = [
         'Draft',

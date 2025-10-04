@@ -91,79 +91,110 @@ public function store(Request $request)
 {
     \DB::beginTransaction();
     try {
-        if(\Auth::user()->can('create bank account'))
-        {
-            $rules = [
-                'holder_name'     => 'required',
-                'bank_name'       => 'required',
-                'account_number'  => 'required',
-                // Accept any non-empty subtype (no hard-coded list)
-                'account_subtype' => ['required','string','max:100'],
-            ];
-            if ($request->contact_number != null) {
-                $rules['contact_number'] = ['regex:/^([0-9\s\-\+\(\)]*)$/'];
+        if (!\Auth::user()->can('create bank account')) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => __('Permission denied.')], 403);
             }
-
-            $validator = \Validator::make($request->all(), $rules);
-            if ($validator->fails()) {
-                $messages = $validator->getMessageBag();
-                return redirect()->route('bank-account.index')->with('error', $messages->first());
-            }
-
-            // Prevent duplicate subtype per bank (tenant-scoped)
-            $duplicate = BankAccount::where('created_by', \Auth::user()->creatorId())
-                ->where('bank_name', $request->bank_name)
-                ->where('account_subtype', $request->account_subtype)
-                ->exists();
-
-            if ($duplicate) {
-                return redirect()
-                    ->route('bank-account.index')
-                    ->with('error', __('A ":type" sub-account already exists for ":bank".', [
-                        'type' => ucfirst($request->account_subtype),
-                        'bank' => $request->bank_name,
-                    ]));
-            }
-
-            $account                   = new BankAccount();
-            $account->chart_account_id = $request->chart_account_id;
-            $account->holder_name      = $request->holder_name;
-            $account->bank_name        = $request->bank_name;
-            $account->account_number   = $request->account_number;
-            $account->opening_balance  = $request->opening_balance ?: 0;
-            $account->contact_number   = $request->contact_number ?: '-';
-            $account->bank_address     = $request->bank_address ?: '-';
-            $account->account_subtype  = $request->account_subtype;
-            $account->created_by       = \Auth::user()->creatorId();
-            $account->save();
-
-            CustomField::saveData($account, $request->customField);
-
-            // (Your existing workflow/notifications code stays as-is)
-
-            $data = [
-                'account_id'         => $account->chart_account_id,
-                'transaction_type'   => 'Credit',
-                'transaction_amount' => $account->opening_balance,
-                'reference'          => 'Bank Account',
-                'reference_id'       => $account->id,
-                'reference_sub_id'   => 0,
-                'date'               => date('Y-m-d'),
-            ];
-            Utility::addTransactionLines($data , 'create');
-
-            \DB::commit();
-            return redirect()->route('bank-account.index')->with('success', __('Account successfully created.'));
+            return redirect()->back()->with('error', __('Permission denied.'));
         }
 
-        return redirect()->back()->with('error', __('Permission denied.'));
+        $rules = [
+            'holder_name'     => 'required',
+            'bank_name'       => 'required',
+            'account_number'  => 'required',
+            'account_subtype' => ['required','string','max:100'],
+        ];
+        if ($request->contact_number != null) {
+            $rules['contact_number'] = ['regex:/^([0-9\s\-\+\(\)]*)$/'];
+        }
+
+        $validator = \Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message' => 'Validation error',
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+            $messages = $validator->getMessageBag();
+            return redirect()->route('bank-account.index')->with('error', $messages->first());
+        }
+
+        // Prevent duplicate subtype per bank (tenant-scoped)
+        $duplicate = BankAccount::where('created_by', \Auth::user()->creatorId())
+            ->where('bank_name', $request->bank_name)
+            ->where('account_subtype', $request->account_subtype)
+            ->exists();
+
+        if ($duplicate) {
+            $dupMsg = __('A ":type" sub-account already exists for ":bank".', [
+                'type' => ucfirst($request->account_subtype),
+                'bank' => $request->bank_name,
+            ]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $dupMsg], 409);
+            }
+
+            return redirect()
+                ->route('bank-account.index')
+                ->with('error', $dupMsg);
+        }
+
+        $account                   = new BankAccount();
+        $account->chart_account_id = $request->chart_account_id;
+        $account->holder_name      = $request->holder_name;
+        $account->bank_name        = $request->bank_name;
+        $account->account_number   = $request->account_number;
+        $account->opening_balance  = $request->opening_balance ?: 0;
+        $account->contact_number   = $request->contact_number ?: '-';
+        $account->bank_address     = $request->bank_address ?: '-';
+        $account->account_subtype  = $request->account_subtype;
+        $account->created_by       = \Auth::user()->creatorId();
+        $account->save();
+
+        CustomField::saveData($account, $request->customField);
+
+        // (Your existing workflow/notifications code stays as-is)
+
+        $data = [
+            'account_id'         => $account->chart_account_id,
+            'transaction_type'   => 'Credit',
+            'transaction_amount' => $account->opening_balance,
+            'reference'          => 'Bank Account',
+            'reference_id'       => $account->id,
+            'reference_sub_id'   => 0,
+            'date'               => date('Y-m-d'),
+        ];
+        Utility::addTransactionLines($data , 'create');
+
+        \DB::commit();
+
+        // If AJAX, return JSON so the page can append/select without refresh
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'id'           => $account->id,
+                // Common labels you might use in a <select>
+                'name'         => $account->bank_name . ' - ' . $account->account_subtype,
+                'bank_name'    => $account->bank_name,
+                'subtype'      => $account->account_subtype,
+                'holder_name'  => $account->holder_name,
+                'account_no'   => $account->account_number,
+                'data'         => $account,
+                'success'      => true,
+            ], 201);
+        }
+
+        return redirect()->route('bank-account.index')->with('success', __('Account successfully created.'));
+
     } catch (\Exception $e) {
         \DB::rollback();
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
         return redirect()->back()->with('error', $e);
     }
 }
-
-
 
     public function show()
     {

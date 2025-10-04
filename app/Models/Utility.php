@@ -7072,5 +7072,206 @@ class Utility extends Model
         return $journal->id;
     }
 
+        //Purchase jr voucher
+public static function purchasejrentry($data)
+{
+    DB::beginTransaction();
+    try {
+        // --- ensure a valid date (main cause of your error) ---
+        $date = $data['date'] ?? ($data['purchase_date'] ?? null);
+        if (empty($date)) {
+            // final fallback to "today" to avoid null insert
+            $date = now()->toDateString();
+        }
+
+        // Next sequential journal_id for JV
+        $latest = JournalEntry::where('created_by', '=', \Auth::user()->creatorId())
+                    ->where('voucher_type','JV')
+                    ->orderBy('id','desc')
+                    ->first();
+        $nextJournalId = $latest ? ($latest->journal_id + 1) : 1;
+
+        // Header
+        $journal               = new JournalEntry();
+        $journal->journal_id   = $nextJournalId;
+        $journal->date         = $date; // ✅ never null now
+        $journal->reference    = $data['reference'] ?? null;
+        $journal->description  = 'Purchase No : ' . (@$data['no']); // ✅ correct label
+        $journal->reference_id = $data['id'] ?? null;
+        $journal->category     = $data['category'] ?? 'Purchase';
+        $journal->voucher_type = 'JV';
+        $journal->owned_by     = $data['owned_by'] ?? null;
+        $journal->created_by   = $data['created_by'];
+        $journal->save();
+
+        // timestamps (preserve backdated create if provided)
+        $stamp = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+        $journal->created_at = $stamp;
+        $journal->updated_at = $stamp;
+        $journal->save();
+
+        $reciveable = 0; // total line + tax (will become A/P credit)
+        $tax = 0;
+
+        // --- Lines (Inventory/Expense debit per item) ---
+        for ($i = 0; $i < count($data['items']); $i++) {
+            $row = $data['items'][$i];
+
+            $product = ProductService::where('id', $row['item'])->first();
+
+            $lineAmount = (($row['quantity'] * $row['price']) - $row['discount']);
+            $itemTax    = floatval($row['itemTaxPrice'] ?? 0);
+
+            $journalItem               = new JournalItem();
+            $journalItem->journal      = $journal->id;
+            // NOTE: keeping your product account mapping as-is (sale_chartaccount_id), 
+            // change to purchase-side account if you have one (e.g. $product->purchase_chartaccount_id).
+            $journalItem->account      = @$product->sale_chartaccount_id;
+            $journalItem->product_ids  = @$row['prod_id'];
+            $journalItem->description  = @$row['description'];
+            $journalItem->credit       = 0;
+            $journalItem->debit        = $lineAmount;
+            $journalItem->save();
+            $journalItem->created_at   = $stamp;
+            $journalItem->updated_at   = $stamp;
+            $journalItem->save();
+
+            $reciveable += ($lineAmount + $itemTax);
+            $tax        += $itemTax;
+
+            // Transaction line for item (DEBIT)
+            Utility::addTransactionLines([
+                'account_id'        => $journalItem->account,
+                'transaction_type'  => 'Debit',
+                'transaction_amount'=> $journalItem->debit,
+                'reference'         => 'Purchase Journal',
+                'reference_id'      => $journal->id,
+                'reference_sub_id'  => $journalItem->id,
+                'date'              => $journal->date,
+                'created_at'        => $stamp,
+                'product_id'        => $data['id'],
+                'product_type'      => 'Purchase',
+                'product_item_id'   => @$row['prod_id'],
+            ], 'create');
+
+            // Tax (DEBIT)
+            if ($tax != 0) {
+                $accounttax = Tax::where('id', $product->tax_id)->first();
+                $account_tax = $accounttax ? ChartOfAccount::where('id', $accounttax->account_id)->first() : null;
+
+                if (!$account_tax) {
+                    $types_t = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
+                    if ($types_t) {
+                        $sub_type_t  = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
+                        $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
+                        if (!$account_tax) {
+                            $account_tax = ChartOfAccount::create([
+                                'name'       => 'TAX',
+                                'code'       => '10000',
+                                'type'       => $types_t->id,
+                                'sub_type'   => $sub_type_t->id,
+                                'is_enabled' => 1,
+                                'created_by' => $data['created_by'],
+                            ]);
+                        }
+                    }
+                }
+
+                if ($account_tax) {
+                    $taxItem               = new JournalItem();
+                    $taxItem->journal      = $journal->id;
+                    $taxItem->account      = @$account_tax->id;
+                    $taxItem->prod_tax_id  = @$row['prod_id'];
+                    $taxItem->description  = 'Tax on Purchase No : ' . (@$data['no']);
+                    $taxItem->credit       = 0;
+                    $taxItem->debit        = $tax;
+                    $taxItem->save();
+                    $taxItem->created_at   = $stamp;
+                    $taxItem->updated_at   = $stamp;
+                    $taxItem->save();
+
+                    // Transaction line for tax (DEBIT)
+                    Utility::addTransactionLines([
+                        'account_id'        => $taxItem->account,
+                        'transaction_type'  => 'Debit',
+                        'transaction_amount'=> $taxItem->debit,
+                        'reference'         => 'Purchase Journal',
+                        'reference_id'      => $journal->id,
+                        'reference_sub_id'  => $taxItem->id,
+                        'date'              => $journal->date,
+                        'created_at'        => $stamp,
+                        'product_id'        => $data['id'],
+                        'product_type'      => 'Purchase Tax',
+                        'product_item_id'   => @$row['prod_id'],
+                    ], 'create');
+                }
+
+                // reset tax for next loop item
+                $tax = 0;
+            }
+        }
+
+        // --- Accounts Payable (CREDIT total) ---
+        $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])
+                    ->where('name', 'Liabilities')->first();
+        $account = null;
+        if ($types) {
+            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
+            $account  = ChartOfAccount::where('type', $types->id)
+                            ->where('sub_type', $sub_type->id)
+                            ->where('name', 'Account Payable')    // ✅ payable (not receivables)
+                            ->first();
+
+            if (!$account) {
+                $account = ChartOfAccount::create([
+                    'name'       => 'Account Payable',
+                    'code'       => '20000',
+                    'type'       => $types->id,
+                    'sub_type'   => $sub_type->id,
+                    'is_enabled' => 1,
+                    'created_by' => $data['created_by'],
+                ]);
+            }
+        }
+
+        if ($account) {
+            $ap                 = new JournalItem();
+            $ap->journal        = $journal->id;
+            $ap->account        = @$account->id;
+            $ap->description    = 'Payable on Purchase No : ' . (@$data['no']);
+            $ap->credit         = $reciveable;  // ✅ payable → CREDIT
+            $ap->debit          = 0;
+            $ap->save();
+            $ap->created_at     = $stamp;
+            $ap->updated_at     = $stamp;
+            $ap->save();
+
+            // Transaction line for A/P (CREDIT)
+            Utility::addTransactionLines([
+                'account_id'        => $account->id,
+                'transaction_type'  => 'Credit',
+                'transaction_amount'=> $ap->credit,
+                'reference'         => 'Purchase Journal',
+                'reference_id'      => $journal->id,
+                'reference_sub_id'  => $ap->id,
+                'date'              => $journal->date,
+                'created_at'        => $stamp,
+                'product_id'        => $data['id'],
+                'product_type'      => 'Purchase Payable',
+                'product_item_id'   => 0,
+            ], 'create');
+        }
+
+        DB::commit();
+        return $journal->id;
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return 'error';
+    }
+}
+
+
+
 }
 

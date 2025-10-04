@@ -212,7 +212,7 @@
                                         <li
                                             class="col-6 report-item {{ Request::route()->getName() == 'report.balance.sheet' ? 'active' : '' }}">
                                             <a class="report-link d-flex align-items-center justify-content-between p-3"
-                                                href="{{ route('report.balance.sheet') }}">
+                                                href="{{ route('balance-sheet.index') }}">
                                                 <span class="d-flex align-items-center">
                                                     <i class="bi bi-file-earmark-text me-2"></i>
                                                     {{ __('Balance Sheet') }}

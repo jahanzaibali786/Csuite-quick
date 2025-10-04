@@ -134,19 +134,19 @@ class ExpenseController extends Controller
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'bill')->get();
             $category = ProductServiceCategory::where('created_by', \Auth::user()->creatorId())
                 ->whereNotIn('type', ['product & service', 'income'])
-                ->get()->pluck('name', 'id');
-            $category->prepend('Select Category', '');
+                ->get()->pluck('name', 'id')->toArray();
+            $category = ['__add__' => '➕ Add New category'] + ['' => 'Select Category'] + $category;
 
             $expense_number = \Auth::user()->expenseNumberFormat($this->expenseNumber());
 
-            $employees = Employee::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-            $employees->prepend('Select Employee', '');
+            $employees = Employee::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id')->toArray();
+            $employees = ['__add__' => '➕ Add New employee'] + ['' => 'Select Employee'] + $employees;
 
-            $customers = Customer::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-            $customers->prepend('Select Customer', '');
+            $customers = Customer::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id')->toArray();
+            $customers = ['__add__' => '➕ Add New customer'] + ['' => 'Select Customer'] + $customers;
 
-            $venders = Vender::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
-            $venders->prepend('Select Vender', '');
+            $venders = Vender::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id')->toArray();
+            $venders = ['__add__' => '➕ Add New vendor'] + ['' => 'Select Vendor'] + $venders;
 
             $product_services = ProductService::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
             $product_services->prepend('Select Item', '');
@@ -164,7 +164,8 @@ class ExpenseController extends Controller
 
             $accounts = BankAccount::select('*', \DB::raw("CONCAT(bank_name,' ',holder_name) AS name"))
                 ->where('created_by', \Auth::user()->creatorId())
-                ->get()->pluck('name', 'id');
+                ->get()->pluck('name', 'id')->toArray();
+            $accounts = ['__add__' => '➕ Add New Account'] + ['' => 'Select Account'] + $accounts;
 
             return view('expense.create', compact('employees', 'customers', 'venders', 'expense_number', 'product_services', 'category', 'customFields', 'Id', 'chartAccounts', 'accounts', 'subAccounts'));
         } else {

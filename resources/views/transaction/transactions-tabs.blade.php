@@ -42,8 +42,8 @@
                         </a>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ Request::route()->getName() == 'recurring.transaction' ? 'active' : '' }}"
-                            href="{{route('report.recurring')}}">
+                        <a class="nav-link {{ Request::route()->getName() == 'report.recurring' ? 'active' : '' }}"
+                            href="{{ route('report.recurring') }}">
                             <i class="ti ti-refresh me-2"></i>{{ __('Recurring transactions') }}
                         </a>
                     </li>
@@ -60,7 +60,8 @@
         flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        scrollbar-width: none; /* Hide scrollbar for Firefox */
+        scrollbar-width: none;
+        /* Hide scrollbar for Firefox */
         padding: 0 8px;
         background: transparent;
     }
@@ -135,7 +136,8 @@
         }
 
         .nav-tabs .nav-link i {
-            display: none; /* Hide icons on very small screens to save space */
+            display: none;
+            /* Hide icons on very small screens to save space */
         }
     }
 </style>

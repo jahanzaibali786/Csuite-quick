@@ -19,8 +19,8 @@ class BalanceSheetStandardDataTable extends DataTable
     {
         parent::__construct();
 
-        $this->asOfDate = request('asOfDate')
-            ? Carbon::parse(request('asOfDate'))->endOfDay()
+        $this->asOfDate = request('endDate')
+            ? Carbon::parse(request('endDate'))->endOfDay()
             : Carbon::now()->endOfDay();
         $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
         $this->owner = \Auth::user()->type === 'company' ? 'created_by' : 'owned_by';
@@ -42,7 +42,7 @@ class BalanceSheetStandardDataTable extends DataTable
                     $chevron = '';
                     
                     if ($hasChildren) {
-                        $chevron = '<i class="fas fa-chevron-down chevron-icon" data-parent-type="subtype" data-parent-id="' . $subtypeId . '" style="margin-right: 8px; cursor: pointer; color: #007bff;"></i>';
+                        $chevron = '<i class=" chevron-icon" data-parent-type="subtype" data-parent-id="' . $subtypeId . '" style="margin-right: 8px; cursor: pointer;">▼</i>';
                     }
                     
                     $indent = str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', (int) ($row->depth ?? 0));
@@ -311,7 +311,7 @@ class BalanceSheetStandardDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('balance-sheet-standard-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             // ->dom('Bfrtip')
