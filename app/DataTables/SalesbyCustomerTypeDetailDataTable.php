@@ -5,6 +5,8 @@ namespace App\DataTables;
 use App\Models\InvoiceProduct;
 use App\Models\Tax;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 
@@ -12,150 +14,122 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
 {
     public function dataTable($query)
     {
-        return datatables()
-            ->eloquent($query)
-            ->addColumn('transaction_type', function ($row) {
-                return 'Invoice';
-            })
-            ->addColumn('transaction_date', function ($row) {
-                return optional($row->invoice)->issue_date
-                    ? Carbon::parse($row->invoice->issue_date)->format('m/d/Y')
-                    : 'No date available';
-            })
-            ->addColumn('invoice_number', function ($row) {
-                return optional($row->invoice)->ref_number ?? $row->invoice_id ?? '-';
-            })
-            ->addColumn('memo_description', function ($row) {
-                if ($row->description) {
-                    return $row->description;
-                }
-                return optional($row->invoice)->ref_number
-                    ? "Invoice Ref #" . optional($row->invoice)->ref_number
-                    : '-';
-            })
-            ->addColumn('customer_name', function ($row) {
-                return optional(optional($row->invoice)->customer)->name ?? '-';
-            })
+        $rows = $query->get();
+        $taxes = Tax::all()->keyBy('id');
 
-            // ---- Raw numeric fields (for accurate front-end formatting) ----
-            ->addColumn('quantity_raw', function ($row) {
-                return (float) ($row->quantity ?? 0);
-            })
-            ->addColumn('sales_price_raw', function ($row) {
-                return (float) ($row->price ?? 0);
-            })
-            ->addColumn('amount_raw', function ($row) {
-                return (float) (($row->price ?? 0) * ($row->quantity ?? 0));
-            })
-            ->addColumn('balance_raw', function ($row) {
-                return (float) (optional($row->invoice)->getDue() ?? 0);
-            })
-            ->addColumn('sales_with_tax_raw', function ($row) {
-                $baseAmount = (float) (($row->price ?? 0) * ($row->quantity ?? 0));
-                $discount = (float) ($row->discount ?? 0);
-                $tax = 0.0;
+        $data = collect();
+        $runningBalance = 0;
+        $totalAmount = 0;
+        $totalQuantity = 0;
+        $totalSalesWithTax = 0;
 
-                if ($row->tax) {
-                    foreach (explode(',', $row->tax) as $taxId) {
-                        $taxObj = Tax::find($taxId);
-                        if ($taxObj) {
-                            $tax += (($row->price ?? 0) * ($row->quantity ?? 0) - $discount) * ($taxObj->rate / 100);
-                        }
+        foreach ($rows as $r) {
+            // ---- Calculate amount (exclude tax) ----
+            $baseAmount = ($r->price ?? 0) * ($r->quantity ?? 0);
+            $discount = $r->discount ?? 0;
+            $amount = $baseAmount - $discount;
+
+            // ---- Calculate tax amount ----
+            $taxAmount = 0;
+            if (!empty($r->tax)) {
+                foreach (explode(',', $r->tax) as $taxId) {
+                    $taxId = trim($taxId);
+                    if (isset($taxes[$taxId])) {
+                        $rate = (float) $taxes[$taxId]->rate;
+                        $taxAmount += (($baseAmount - $discount) * $rate / 100);
                     }
                 }
-                return $baseAmount + $tax;
-            })
+            }
 
-            // ---- Formatted display fields (kept for non-JS context/fallbacks) ----
-            ->addColumn('quantity', function ($row) {
-                return number_format(($row->quantity ?? 0), 2);
-            })
-            ->addColumn('sales_price', function ($row) {
-                return number_format(($row->price ?? 0), 2);
-            })
-            ->addColumn('amount', function ($row) {
-                $val = ($row->price ?? 0) * ($row->quantity ?? 0);
-                return number_format($val, 2);
-            })
-            ->addColumn('balance', function ($row) {
-                $val = optional($row->invoice)->getDue() ?? 0;
-                return number_format($val, 2);
-            })
-            ->addColumn('sales_with_tax', function ($row) {
-                $baseAmount = ($row->price ?? 0) * ($row->quantity ?? 0);
-                $discount = $row->discount ?? 0;
-                $tax = 0;
+            $salesWithTax = $amount + $taxAmount;
 
-                if ($row->tax) {
-                    foreach (explode(',', $row->tax) as $taxId) {
-                        $taxObj = Tax::find($taxId);
-                        if ($taxObj) {
-                            $tax += (($row->price ?? 0) * ($row->quantity ?? 0) - $discount) * ($taxObj->rate / 100);
-                        }
-                    }
-                }
+            // ---- Update running totals ----
+            $runningBalance += $amount;
+            $totalQuantity += ($r->quantity ?? 0);
+            $totalAmount += $amount;
+            $totalSalesWithTax += $salesWithTax;
 
-                return number_format($baseAmount + $tax, 2);
-            });
-    }
-
-    /*public function query(InvoiceProduct $model)
-    {
-        $query = $model->with(['invoice.customer']);
-
-        // I want to use these variables later, please adjust it
-        $start = request()->get('start_date') ?? request()->get('startDate') ?? Carbon::now()->startOfYear()->format('Y-m-d');
-        $end = request()->get('end_date') ?? request()->get('endDate') ?? Carbon::now()->endOfDay()->format('Y-m-d');
-
-        // Date filter
-        if (request()->filled('start_date') && request()->filled('end_date')) {
-            $query->whereHas('invoice', function ($q) {
-                $q->whereBetween(\DB::raw('DATE(issue_date)'), [
-                    request('start_date'),
-                    request('end_date')
-                ]);
-            });
-        } else {
-            $start = date('Y-01-01');
-            $end   = date('Y-m-d');
-            $query->whereHas('invoice', function ($q) use ($start, $end) {
-                $q->whereBetween(\DB::raw('DATE(issue_date)'), [$start, $end]);
-            });
+            // ---- Add row to collection ----
+            $data->push([
+                'transaction_type' => 'Invoice',
+                'transaction_date' => optional($r->invoice)->issue_date
+                    ? Carbon::parse($r->invoice->issue_date)->format('m/d/Y')
+                    : '-',
+                'invoice_number' => optional($r->invoice)->ref_number ?? $r->invoice_id ?? '-',
+                'memo_description' => $r->description
+                    ?? (optional($r->invoice)->ref_number
+                        ? "Invoice Ref #" . optional($r->invoice)->ref_number
+                        : '-'),
+                'customer_name' => optional(optional($r->invoice)->customer)->name ?? '-',
+                'quantity' => number_format(($r->quantity ?? 0), 2),
+                'sales_price' => number_format(($r->price ?? 0), 2),
+                'amount' => number_format($amount, 2),
+                'balance' => number_format($runningBalance, 2), // ✅ running total balance
+                'sales_with_tax' => number_format($salesWithTax, 2),
+            ]);
         }
 
-        // Filter by created_by through invoice relationship
-        $query->whereHas('invoice', function ($q) {
-            $q->where('created_by', \Auth::user()->creatorId());
-        });
+        // ✅ Add total row
+        if ($rows->count() > 0) {
+            $data->push([
+                'transaction_type' => '<strong>Total</strong>',
+                'transaction_date' => '<strong></strong>',
+                'invoice_number' => '<strong></strong>',
+                'memo_description' => '<strong></strong>',
+                'customer_name' => '<strong></strong>',
+                'quantity' => '<strong>' . number_format($totalQuantity, 2) . '</strong>',
+                'sales_price' => '<strong></strong>',
+                'amount' => '<strong>' . number_format($totalAmount, 2) . '</strong>',
+                'balance' => '<strong>' . number_format($runningBalance, 2) . '</strong>', // ✅ final total balance
+                'sales_with_tax' => '<strong>' . number_format($totalSalesWithTax, 2) . '</strong>',
+                'DT_RowClass' => 'summary-total'
+            ]);
+        } else {
+            $data->push([
+                'transaction_type' => 'No records found.',
+                'transaction_date' => '',
+                'invoice_number' => '',
+                'memo_description' => '',
+                'customer_name' => '',
+                'quantity' => '',
+                'sales_price' => '',
+                'amount' => '',
+                'balance' => '',
+                'sales_with_tax' => '',
+                'DT_RowClass' => 'no-data-row'
+            ]);
+        }
 
-        return $query->orderBy('id', 'desc');
-    }*/
+        return datatables()
+            ->collection($data)
+            ->rawColumns([
+                'transaction_type',
+                'transaction_date',
+                'invoice_number',
+                'memo_description',
+                'customer_name',
+                'quantity',
+                'sales_price',
+                'amount',
+                'balance',
+                'sales_with_tax',
+            ]);
+    }
 
     public function query(InvoiceProduct $model)
     {
-        $query = $model->with(['invoice.customer']);
+        $user = Auth::user();
+        $start = request()->get('start_date') ?? request()->get('startDate') ?? date('Y-01-01');
+        $end = request()->get('end_date') ?? request()->get('endDate') ?? date('Y-m-d');
 
-        // Get start and end dates from request, fallback to defaults
-        $start = request()->get('start_date')
-            ?? request()->get('startDate')
-            ?? date('Y-01-01');
-        $end = request()->get('end_date')
-            ?? request()->get('endDate')
-            ?? date('Y-m-d');
-
-        // Ensure the query filters by date
-        $query->whereHas('invoice', function ($q) use ($start, $end) {
-            $q->whereBetween(\DB::raw('DATE(issue_date)'), [$start, $end]);
-        });
-
-        // Filter by created_by through invoice relationship
-        $query->whereHas('invoice', function ($q) {
-            $q->where('created_by', \Auth::user()->creatorId());
-        });
+        $query = $model->with(['invoice.customer'])
+            ->whereHas('invoice', function ($q) use ($user, $start, $end) {
+                $q->whereBetween(DB::raw('DATE(issue_date)'), [$start, $end])
+                    ->where('created_by', $user->creatorId());
+            });
 
         return $query->orderBy('id', 'desc');
     }
-
 
     public function html()
     {
@@ -163,17 +137,14 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
             ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->dom('t')
-            ->orderBy(1, 'desc')
+            ->dom('rt')
             ->parameters([
-                'responsive' => false,
+                'responsive' => true,
                 'autoWidth' => false,
                 'paging' => false,
                 'searching' => false,
                 'info' => false,
                 'ordering' => false,
-                'processing' => true,
-                'serverSide' => true,
                 'scrollX' => true,
                 'scrollY' => '420px',
                 'scrollCollapse' => true,
@@ -183,18 +154,16 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            Column::make('transaction_type')->title('Transaction Type')->width('150px'),
-            Column::make('transaction_date')->title('Transaction Date')->width('120px'),
-            Column::make('invoice_number')->title('Invoice Number / Num')->width('120px'),
-            Column::make('memo_description')->title('Memo/Description')->width('200px'),
-            Column::make('customer_name')->title('Customer Name')->width('150px'),
-
-            // Display columns (formatted); raw fields are in the JSON payload for JS renderers
-            Column::make('quantity')->title('Quantity')->width('100px')->addClass('text-right'),
-            Column::make('sales_price')->title('Sales Price')->width('100px')->addClass('text-right'),
-            Column::make('amount')->title('Amount')->width('120px')->addClass('text-right'),
-            Column::make('balance')->title('Balance')->width('120px')->addClass('text-right'),
-            Column::make('sales_with_tax')->title('Sales With Tax')->width('150px')->addClass('text-right'),
+            Column::make('transaction_type')->title('Transaction Type'),
+            Column::make('transaction_date')->title('Transaction Date'),
+            Column::make('invoice_number')->title('Invoice Number / Num'),
+            Column::make('memo_description')->title('Memo/Description'),
+            Column::make('customer_name')->title('Customer Name'),
+            Column::make('quantity')->title('Quantity')->addClass('text-right'),
+            Column::make('sales_price')->title('Sales Price')->addClass('text-right'),
+            Column::make('amount')->title('Amount')->addClass('text-right'),
+            Column::make('balance')->title('Balance')->addClass('text-right'),
+            Column::make('sales_with_tax')->title('Sales With Tax')->addClass('text-right'),
         ];
     }
 
