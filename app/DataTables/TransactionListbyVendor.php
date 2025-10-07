@@ -7,6 +7,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
+use App\Models\PurchaseProduct;
+
 
 class TransactionListByVendor extends DataTable
 {
@@ -142,7 +144,7 @@ class TransactionListByVendor extends DataTable
             ->rawColumns(['transaction', 'transaction_type']);
     }
 
-    public function query(BillProduct $model)
+    public function query(PurchaseProduct $model)
     {
         $start = request()->get('start_date')
             ?? request()->get('startDate')
@@ -152,28 +154,28 @@ class TransactionListByVendor extends DataTable
             ?? request()->get('endDate')
             ?? Carbon::now()->endOfDay()->format('Y-m-d');
 
-
         return $model->newQuery()
             ->select(
-                'bill_products.*',
-                'bills.bill_id as bill',
-                'bills.bill_date as transaction_date',
-                'bill_products.description as description', // ✅ from bill_products
+                'purchase_products.*',
+                'purchases.purchase_id as purchase',
+                'purchases.purchase_date as transaction_date',
+                'purchase_products.description as description',
                 'venders.name as vendor_name',
-                'bank_accounts.bank_name as account_full_name', // ✅ from bank_accounts
-                DB::raw('(SELECT IFNULL(SUM((bp.price * bp.quantity - bp.discount) * (taxes.rate / 100)),0) 
-                FROM bill_products bp
-                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bp.tax) > 0
-                WHERE bp.id = bill_products.id) as tax_amount')
+                'bank_accounts.bank_name as account_full_name',
+                DB::raw('(SELECT IFNULL(SUM((pp.price * pp.quantity - pp.discount) * (taxes.rate / 100)),0)
+                FROM purchase_products pp
+                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, pp.tax) > 0
+                WHERE pp.id = purchase_products.id) as tax_amount')
             )
-            ->join('bills', 'bills.id', '=', 'bill_products.bill_id')
-            ->join('venders', 'venders.id', '=', 'bills.vender_id')
-            ->join('product_services', 'product_services.id', '=', 'bill_products.product_id')
-            ->leftJoin('bill_payments', 'bill_payments.bill_id', '=', 'bills.id') // ✅ join payments
-            ->leftJoin('bank_accounts', 'bank_accounts.id', '=', 'bill_payments.account_id') // ✅ get bank name
-            ->where('bills.created_by', \Auth::user()->creatorId())
-            ->whereBetween('bills.bill_date', [$start, $end]);
+            ->join('purchases', 'purchases.id', '=', 'purchase_products.purchase_id')
+            ->join('venders', 'venders.id', '=', 'purchases.vender_id')
+            ->join('product_services', 'product_services.id', '=', 'purchase_products.product_id')
+            ->leftJoin('purchase_payments', 'purchase_payments.purchase_id', '=', 'purchases.id')
+            ->leftJoin('bank_accounts', 'bank_accounts.id', '=', 'purchase_payments.account_id')
+            ->where('purchases.created_by', \Auth::user()->creatorId())
+            ->whereBetween('purchases.purchase_date', [$start, $end]);
     }
+
 
 
     public function html()

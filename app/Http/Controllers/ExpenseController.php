@@ -841,7 +841,6 @@ class ExpenseController extends Controller
                 if(Auth::user()->type == 'company')
                 {
                     $this->createExpenseVoucher($expense);
-
                     $expense->status = 6;
                     $expense->save();
                     Utility::makeActivityLog(\Auth::user()->id, 'Expense', $expense->id, 'Create Expense', 'Expense Created & Approved');
@@ -897,7 +896,17 @@ class ExpenseController extends Controller
                 'description' => $product->description,
             ];
         }
-
+        //bill accounts
+        $bill_accounts = BillAccount::where('ref_id', $expense->id)->get();
+        foreach ($bill_accounts as $account) {
+            $newitems[] = [
+                'prod_id' => $account->id,
+                'chart_account_id' => $account->chart_account_id,
+                'amount' => $account->price,
+                'description' => $account->description,
+                'itemTaxPrice' => 0,
+            ];
+        }
         $data = [
             'id' => $expense->id,
             'no' => $expense->bill_id,
@@ -912,7 +921,7 @@ class ExpenseController extends Controller
             'items' => $newitems,
             'account_id' => $bank->chart_account_id,
         ];
-
+        // dd($data);
         // Create CPV or BPV based on bank account
         if (preg_match('/\bcash\b/i', $bank->bank_name) || preg_match('/\bcash\b/i', $bank->holder_name)) {
             $voucherId = Utility::cpv_entry($data); // Cash Payment Voucher (CPV)
@@ -1017,8 +1026,8 @@ class ExpenseController extends Controller
                 return redirect()->route('expense.index')->with('success', __('Expense approved successfully and voucher posted.'));   
             }
             // Create voucher (CPV or BPV)
-            $this->createExpenseVoucher($expense);
-
+            $voucherId = $this->createExpenseVoucher($expense);
+            $expense->voucher_id = $voucherId;
             // Update status to Approved
             $expense->status = 4;
             $expense->save();

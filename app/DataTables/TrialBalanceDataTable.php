@@ -11,10 +11,12 @@ use Yajra\DataTables\Services\DataTable;
 
 class TrialBalanceDataTable extends DataTable
 {
-       protected $startDate;
+    protected $startDate;
     protected $endDate;
     protected $companyId;
     protected $owner;
+    protected $accountingMethod;
+
     public function __construct()
     {
         parent::__construct();
@@ -29,7 +31,9 @@ class TrialBalanceDataTable extends DataTable
 
         $this->companyId = \Auth::user()->type === 'company' ? \Auth::user()->creatorId() : \Auth::user()->ownedId();
         $this->owner = \Auth::user()->type === 'company' ? 'created_by' : 'owned_by';
+        $this->accountingMethod = request('accountingMethod', 'accrual'); // default accrual
     }
+
     public function dataTable($query)
     {
         return datatables()
@@ -91,10 +95,10 @@ class TrialBalanceDataTable extends DataTable
 
                 // Header row with toggle
                 if (!empty($row->is_header)) {
-                    return $indent . '<span class="toggle-btn collapsed" data-target="' . $row->id . '">
-                        <i class="fa fa-chevron-right toggle-icon"></i>
-                    </span>
-                    <strong class="text-uppercase account-header-text">' . e($row->name) . '</strong>';
+                    return $indent . '<span class="toggle-btn collapsed" data-target="' . $row->id . '">'
+                        . '<i class="fa fa-chevron-right toggle-icon"></i>'
+                        . '</span>'
+                        . '<strong class="text-uppercase account-header-text">' . e($row->name) . '</strong>';
                 }
 
                 // Subtotal row
@@ -184,6 +188,7 @@ class TrialBalanceDataTable extends DataTable
 
     public function query()
     {
+        // dd($this->accountingMethod,request()->all());
         $startDate = request('startDate')
             ? Carbon::parse(request('startDate'))->startOfDay()
             : Carbon::now()->startOfYear();
@@ -196,35 +201,63 @@ class TrialBalanceDataTable extends DataTable
         $subtypeFilter = request('subtype');
         $typeFilter = request('type');
 
+        // --- Prepare cash account ids when cash accounting is requested ---
+        $cashAccountIds = [];
+        if ($this->accountingMethod === 'cash') {
+            $cashAccountIds = ChartOfAccount::query()
+                ->select('chart_of_accounts.id')
+                ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+                ->where('chart_of_accounts.created_by', $this->companyId)
+                ->where('chart_of_account_types.name', 'Assets')
+                ->where(function ($q) {
+                    // Try common cash/bank indicators: subtype or name containing 'bank'/'cash'
+                    $q->whereIn('chart_of_accounts.sub_type', ['Bank', 'Cash', 'Bank Account', 'Cash Account'])
+                      ->orWhereRaw("LOWER(chart_of_accounts.name) LIKE '%bank%'")
+                      ->orWhereRaw("LOWER(chart_of_accounts.name) LIKE '%cash%'");
+                })
+                ->pluck('chart_of_accounts.id')
+                ->toArray();
+        }
+
+        $cashJournalCondition = '';
+        if ($this->accountingMethod === 'cash') {
+            // If no cash accounts found, the condition will look for IN (NULL) - which returns no rows.
+            $ids = count($cashAccountIds) ? implode(',', array_map('intval', $cashAccountIds)) : 'NULL';
+            $cashJournalCondition = " AND je.id IN (SELECT journal FROM journal_items WHERE account IN ($ids)) ";
+        }
+
+        // Build opening and period subqueries, applying cash filter when needed
+        $openingSub = "(
+            SELECT 
+                jel.account,
+                SUM(jel.debit) as opening_debit,
+                SUM(jel.credit) as opening_credit
+            FROM journal_items jel
+            INNER JOIN journal_entries je ON je.id = jel.journal
+            WHERE je.{$this->owner} = " . $this->companyId . "
+              AND je.date < '" . $startDate->format('Y-m-d') . "' 
+              $cashJournalCondition
+            GROUP BY jel.account
+        ) as opening";
+
+        $periodSub = "(
+            SELECT 
+                jel.account,
+                SUM(jel.debit) as period_debit,
+                SUM(jel.credit) as period_credit
+            FROM journal_items jel
+            INNER JOIN journal_entries je ON je.id = jel.journal
+            WHERE je.{$this->owner} = " . $this->companyId . "
+              AND je.date BETWEEN '" . $startDate->format('Y-m-d') . "' AND '" . $endDate->format('Y-m-d') . "' 
+              $cashJournalCondition 
+            GROUP BY jel.account
+        ) as period";
+
         $accounts = ChartOfAccount::query()
             ->where('chart_of_accounts.created_by', $this->companyId)
             ->leftJoin('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
-            ->leftJoin(DB::raw("
-                (
-                    SELECT 
-                        jel.account,
-                        SUM(jel.debit) as opening_debit,
-                        SUM(jel.credit) as opening_credit
-                    FROM journal_items jel
-                    INNER JOIN journal_entries je ON je.id = jel.journal
-                    WHERE je.{$this->owner} = " . $this->companyId . "
-                      AND je.date < '" . $startDate->format('Y-m-d') . "'
-                    GROUP BY jel.account
-                ) as opening
-            "), 'chart_of_accounts.id', '=', 'opening.account')
-            ->leftJoin(DB::raw("
-                (
-                    SELECT 
-                        jel.account,
-                        SUM(jel.debit) as period_debit,
-                        SUM(jel.credit) as period_credit
-                    FROM journal_items jel
-                    INNER JOIN journal_entries je ON je.id = jel.journal
-                    WHERE je.{$this->owner} = " . $this->companyId . "
-                      AND je.date BETWEEN '" . $startDate->format('Y-m-d') . "' AND '" . $endDate->format('Y-m-d') . "'
-                    GROUP BY jel.account
-                ) as period
-            "), 'chart_of_accounts.id', '=', 'period.account');
+            ->leftJoin(DB::raw($openingSub), 'chart_of_accounts.id', '=', 'opening.account')
+            ->leftJoin(DB::raw($periodSub), 'chart_of_accounts.id', '=', 'period.account');
 
         // Apply type filter
         if ($typeFilter) {
@@ -242,7 +275,7 @@ class TrialBalanceDataTable extends DataTable
             'chart_of_accounts.code',
             'chart_of_accounts.sub_type as subtype',
             'chart_of_account_types.name as account_type',
-            DB::raw("
+            DB::raw(" 
                     CASE 
                         WHEN chart_of_account_types.name IN ('Assets','Liabilities','Equity') 
                             THEN GREATEST(
@@ -256,7 +289,7 @@ class TrialBalanceDataTable extends DataTable
                             )
                     END as debit
                 "),
-            DB::raw("
+            DB::raw(" 
                     CASE 
                         WHEN chart_of_account_types.name IN ('Assets','Liabilities','Equity') 
                             THEN GREATEST(
@@ -286,10 +319,10 @@ class TrialBalanceDataTable extends DataTable
             ->orderBy('chart_of_accounts.code')
             ->get();
 
-        return $this->buildHierarchicalData($accounts, $startDate);
+        return $this->buildHierarchicalData($accounts, $startDate, $cashAccountIds);
     }
 
-    private function buildHierarchicalData($accounts, $startDate)
+    private function buildHierarchicalData($accounts, $startDate, $cashAccountIds = [])
     {
         $report = collect();
         $accountTypes = ['Assets', 'Liabilities', 'Equity', 'Income', 'Expenses'];
@@ -346,7 +379,7 @@ class TrialBalanceDataTable extends DataTable
         }
 
         // Add accumulated profit/loss row
-        $netProfit = $this->calculateNetProfit($startDate);
+        $netProfit = $this->calculateNetProfit($startDate, $cashAccountIds);
 
         $accumulatedRow = (object) [
             'id' => 'net-income',
@@ -378,17 +411,32 @@ class TrialBalanceDataTable extends DataTable
         return $report;
     }
 
-    private function calculateNetProfit($startDate)
+    private function calculateNetProfit($startDate, $cashAccountIds = [])
     {
-        return DB::table('journal_items')
+        $qb = DB::table('journal_items')
             ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
             ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
             ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
             ->where("journal_entries.{$this->owner}", $this->companyId)
             ->where('journal_entries.date', '<=', $startDate)
-            ->whereIn('chart_of_account_types.name', ['Income', 'Expenses'])
-            ->selectRaw('SUM(journal_items.credit - journal_items.debit) as net_profit')
-            ->value('net_profit') ?? 0;
+            ->whereIn('chart_of_account_types.name', ['Income', 'Expenses']);
+
+        // When cash method is selected, include only journal entries that contain a cash account line
+        if ($this->accountingMethod === 'cash') {
+            if (count($cashAccountIds)) {
+                $qb->whereIn('journal_entries.id', function ($sub) use ($cashAccountIds) {
+                    $sub->select('journal')->from('journal_items')->whereIn('account', $cashAccountIds);
+                });
+            } else {
+                // No cash accounts found: force zero result
+                $qb->whereRaw('1 = 0');
+            }
+        }
+
+        $net = $qb->selectRaw('SUM(journal_items.credit - journal_items.debit) as net_profit')
+            ->value('net_profit');
+
+        return $net ?? 0;
     }
 
     public function html()

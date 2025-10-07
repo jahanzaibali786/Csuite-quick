@@ -167,18 +167,17 @@ class BalanceSheetDataTable extends DataTable
 
     public function query()
     {
-        // Base query (Accrual default)
+        // Base query (chart_of_accounts -> journal_items -> journal_entries)
         $query = ChartOfAccount::where('chart_of_accounts.created_by', $this->companyId)
             ->leftJoin('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
             ->leftJoin('journal_items', 'chart_of_accounts.id', '=', 'journal_items.account')
             ->leftJoin('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
             ->where("journal_entries.{$this->owner}", $this->companyId)
-
             ->where('journal_entries.date', '<=', $this->asOfDate);
 
-        // ----- Cash Basis Filtering -----
+        // cash mode: limit journal_entries to payment vouchers OR include direct cash/bank account lines
+        $cashSubTypes = ['bank', 'cash', 'Bank', 'Cash']; // tweak to match your data
         if ($this->accountingMethod == 'cash') {
-            // 1. Collect voucher_ids from payments
             $invoicePaymentVouchers = DB::table('invoice_payments')
                 ->where('date', '<=', $this->asOfDate)
                 ->whereNotNull('voucher_id')
@@ -191,70 +190,70 @@ class BalanceSheetDataTable extends DataTable
                 ->pluck('voucher_id')
                 ->toArray();
 
-            $allPaymentVouchers = array_merge($invoicePaymentVouchers, $billPaymentVouchers);
+            $allPaymentVouchers = array_values(array_unique(array_merge($invoicePaymentVouchers, $billPaymentVouchers)));
 
-            if (!empty($allPaymentVouchers)) {
-                $query->whereIn('journal_entries.id', $allPaymentVouchers);
-            }
-
-            // 2. Get accounts used in the original JVs (invoices + bills)
-            $invoiceAccounts = DB::table('journal_items as ji')
-                ->join('journal_entries as je', 'ji.journal', '=', 'je.id')
-                ->whereIn('je.id', function ($q) use ($invoicePaymentVouchers) {
-                    $q->select('invoice_id')
-                        ->from('invoice_payments')
-                        ->whereIn('voucher_id', $invoicePaymentVouchers);
-                })
-                ->pluck('ji.account')
-                ->toArray();
-
-            $billAccounts = DB::table('journal_items as ji')
-                ->join('journal_entries as je', 'ji.journal', '=', 'je.id')
-                ->whereIn('je.id', function ($q) use ($billPaymentVouchers) {
-                    $q->select('bill_id')
-                        ->from('bill_payments')
-                        ->whereIn('voucher_id', $billPaymentVouchers);
-                })
-                ->pluck('ji.account')
-                ->toArray();
-
-            $originalAccounts = array_merge($invoiceAccounts, $billAccounts);
-
-            // 3. Get accounts used in the payment JVs (BPV/CPV)
-            $paymentAccounts = DB::table('journal_items as ji')
-                ->join('journal_entries as je', 'ji.journal', '=', 'je.id')
-                ->whereIn('je.id', $allPaymentVouchers)
-                ->pluck('ji.account')
-                ->toArray();
-
-            // 4. Only exclude the overlap (AR/AP), not Bank
-            $excludeAccounts = array_intersect($originalAccounts, $paymentAccounts);
-
-            if (!empty($excludeAccounts)) {
-                $query->whereNotIn('chart_of_accounts.id', $excludeAccounts);
-            }
+            $query->where(function ($q) use ($allPaymentVouchers, $cashSubTypes) {
+                if (!empty($allPaymentVouchers)) {
+                    $q->whereIn('journal_entries.id', $allPaymentVouchers)
+                        ->orWhereIn('chart_of_accounts.sub_type', $cashSubTypes);
+                } else {
+                    $q->whereIn('chart_of_accounts.sub_type', $cashSubTypes);
+                }
+            });
         }
 
-
-        // ----- Select + Group -----
+        // include sub_type so we can filter AR/AP after grouping
         $accounts = $query->select([
             'chart_of_accounts.id',
             'chart_of_accounts.name',
+            'chart_of_accounts.sub_type',
             'chart_of_account_types.name as account_type',
             DB::raw('COALESCE(SUM(journal_items.debit), 0) as total_debit'),
             DB::raw('COALESCE(SUM(journal_items.credit), 0) as total_credit'),
         ])
-
             ->whereIn('chart_of_account_types.name', ['Assets', 'Liabilities', 'Equity'])
-            ->groupBy('chart_of_accounts.id', 'chart_of_accounts.name', 'chart_of_account_types.name')
+            ->groupBy('chart_of_accounts.id', 'chart_of_accounts.name', 'chart_of_accounts.sub_type', 'chart_of_account_types.name')
             ->orderBy('chart_of_account_types.name')
             ->orderBy('chart_of_accounts.name')
             ->get();
 
+        // --- Post-query filtering for cash basis: remove AR/AP and non-cash assets ---
+        if ($this->accountingMethod == 'cash') {
+            // Normalize cash subtypes for comparison
+            $cashSubTypesNorm = array_map(fn($s) => strtolower($s), $cashSubTypes);
+
+            $accounts = $accounts->filter(function ($acc) use ($cashSubTypesNorm) {
+                $acctType = $acc->account_type ?? '';
+                $subType = strtolower($acc->sub_type ?? '');
+                $name = strtolower($acc->name ?? '');
+
+                // 1) Assets: only keep explicit cash/bank subtypes
+                if ($acctType === 'Assets') {
+                    return in_array($subType, $cashSubTypesNorm);
+                }
+
+                // 2) Liabilities: remove Accounts Payable-like accounts (we don't want AP on cash BS)
+                //    - remove if name contains 'payable' or 'accounts payable'
+                if ($acctType === 'Liabilities') {
+                    if (str_contains($name, 'payable') || str_contains($subType, 'payable')) {
+                        return false;
+                    }
+                    // keep other liabilities (if any) — adjust logic if you want to remove all liabilities on cash basis
+                    return true;
+                }
+
+                // 3) Equity: keep (equity = retained earnings from cash P&L)
+                if ($acctType === 'Equity') {
+                    return true;
+                }
+
+                // default: exclude
+                return false;
+            })->values(); // reindex
+        }
+
         return $this->buildHierarchicalBalanceSheet($accounts);
     }
-
-
     private function buildHierarchicalBalanceSheet($accounts)
     {
         $report = collect();

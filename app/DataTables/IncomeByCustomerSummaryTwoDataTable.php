@@ -104,15 +104,17 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
             ->join('invoice_products as ip', 'ip.invoice_id', '=', 'i.id')
             ->select(
                 'i.customer_id',
-                DB::raw('SUM(
-                    (ip.price * ip.quantity - COALESCE(ip.discount, 0)) + 
-                    COALESCE((
-                        SELECT SUM((ipp.price * ipp.quantity - COALESCE(ipp.discount, 0)) * (COALESCE(t.rate, 0) / 100))
-                        FROM invoice_products ipp
-                        LEFT JOIN taxes t ON FIND_IN_SET(t.id, ipp.tax) > 0
-                        WHERE ipp.id = ip.id
-                    ), 0)
-                ) as income')
+                // DB::raw('SUM(
+                //     (ip.price * ip.quantity - COALESCE(ip.discount, 0)) + 
+                //     COALESCE((
+                //         SELECT SUM((ipp.price * ipp.quantity - COALESCE(ipp.discount, 0)) * (COALESCE(t.rate, 0) / 100))
+                //         FROM invoice_products ipp
+                //         LEFT JOIN taxes t ON FIND_IN_SET(t.id, ipp.tax) > 0
+                //         WHERE ipp.id = ip.id
+                //     ), 0)
+                // ) as income')
+                DB::raw('SUM(ip.price * ip.quantity - COALESCE(ip.discount, 0)) as income')
+
             )
             ->where('i.created_by', $ownerId)
             ->where('i.status', '!=', 0);
@@ -135,16 +137,17 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
             ->leftJoin('bill_accounts as ba', 'ba.ref_id', '=', 'b.id')
             ->select(
                 'b.vender_id as customer_id',
-                DB::raw('SUM(
-                    COALESCE((bp.price * bp.quantity - COALESCE(bp.discount, 0)), 0) + 
-                    COALESCE((
-                        SELECT SUM((bpp.price * bpp.quantity - COALESCE(bpp.discount, 0)) * (COALESCE(t.rate, 0) / 100))
-                        FROM bill_products bpp
-                        LEFT JOIN taxes t ON FIND_IN_SET(t.id, bpp.tax) > 0
-                        WHERE bpp.id = bp.id
-                    ), 0) +
-                    COALESCE(ba.price, 0)
-                ) as expenses')
+                // DB::raw('SUM(
+                //     COALESCE((bp.price * bp.quantity - COALESCE(bp.discount, 0)), 0) + 
+                //     COALESCE((
+                //         SELECT SUM((bpp.price * bpp.quantity - COALESCE(bpp.discount, 0)) * (COALESCE(t.rate, 0) / 100))
+                //         FROM bill_products bpp
+                //         LEFT JOIN taxes t ON FIND_IN_SET(t.id, bpp.tax) > 0
+                //         WHERE bpp.id = bp.id
+                //     ), 0) +
+                //     COALESCE(ba.price, 0)
+                // ) as expenses')
+                DB::raw('SUM(COALESCE(bp.price * bp.quantity - COALESCE(bp.discount, 0), 0) + COALESCE(ba.price, 0)) as expenses')
             )
             ->where('b.created_by', $ownerId)
             ->where('b.user_type', 'customer')
