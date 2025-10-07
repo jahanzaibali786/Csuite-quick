@@ -242,7 +242,7 @@ class Utility extends Model
             'twilio_from' => '',
             'twilio_from' => '',
             'chat_gpt_key' => '',
-            'chat_gpt_model'=>'',
+            'chat_gpt_model' => '',
             "ip_restrict" => "off",
 
             'mail_driver' => '',
@@ -264,11 +264,11 @@ class Utility extends Model
             'pusher_app_secret' => '',
             'pusher_app_cluster' => '',
 
-            'color_flag'=>'false',
+            'color_flag' => 'false',
 
-            'currency_space'=>'withspace',
-            'decimal_separator'=>'dot',
-            'thousand_separator'=>'dot',
+            'currency_space' => 'withspace',
+            'decimal_separator' => 'dot',
+            'thousand_separator' => 'dot',
             'currency_symbol' => 'withcurrencysymbol',
             'float_number' => 'comma',
 
@@ -374,7 +374,7 @@ class Utility extends Model
             "bill_logo" => "",
             "pos_logo" => "",
             "quotation_prefix" => "#QUO",
-            "quotation_logo"=>'',
+            "quotation_logo" => '',
             "pos_color" => "ffffff",
             "quotation_template" => "template1",
             "pos_template" => "template1",
@@ -454,7 +454,7 @@ class Utility extends Model
             'twilio_token' => '',
             'twilio_from' => '',
             'chat_gpt_key' => '',
-            'chat_gpt_model'=> '',
+            'chat_gpt_model' => '',
             "ip_restrict" => "off",
             "timezone" => '',
 
@@ -472,9 +472,9 @@ class Utility extends Model
             'mail_from_address' => '',
             'mail_from_name' => '',
 
-            'currency_space'=>'withspace',
-            'decimal_separator'=>'dot',
-            'thousand_separator'=>'dot',
+            'currency_space' => 'withspace',
+            'decimal_separator' => 'dot',
+            'thousand_separator' => 'dot',
             'currency_symbol' => 'withcurrencysymbol',
         ];
 
@@ -625,17 +625,14 @@ class Utility extends Model
         $number = explode('.', $price);
         $length = strlen(trim($number[0]));
         $float_number = isset($settings['float_number']) && $settings['float_number'] == 'dot' ? '.' : ',';
-        if($length > 3)
-        {
+        if ($length > 3) {
             $decimal_separator = $settings['decimal_separator'] == 'dot' ? ',' : ',';
             $thousand_separator = $settings['thousand_separator'] == 'dot' ? '.' : ',';
-        }
-        else
-        {
+        } else {
             $decimal_separator = $settings['decimal_separator'] == 'dot' ? '.' : ',';
             $thousand_separator = $settings['thousand_separator'] == 'dot' ? '.' : ',';
         }
-        $currency = $settings['currency_symbol'] == 'withcurrencysymbol' ? $settings['site_currency_symbol']: $settings['site_currency'];
+        $currency = $settings['currency_symbol'] == 'withcurrencysymbol' ? $settings['site_currency_symbol'] : $settings['site_currency'];
         $decimal_number = $settings['decimal_number'] ? $settings['decimal_number'] : 0;
         $currency_space = $settings['currency_space'];
         $price = number_format($price, $decimal_number, $decimal_separator, $thousand_separator);
@@ -782,7 +779,7 @@ class Utility extends Model
     public static function taxRate($taxRate, $price, $quantity, $discount = 0)
     {
 
-//        return ($taxRate / 100) * (($price-$discount) * $quantity);
+        //        return ($taxRate / 100) * (($price-$discount) * $quantity);
         return (($price * $quantity) - $discount) * ($taxRate / 100);
     }
 
@@ -970,22 +967,22 @@ class Utility extends Model
             '1' => 'Owners Equity',
         ),
         "income" => array(
-            '1' => 'Sales Revenue',
-            '2' => 'Other Revenue',
-        ),
+                '1' => 'Sales Revenue',
+                '2' => 'Other Revenue',
+            ),
         "costs of goods sold" => array(
             '1' => 'Costs of Goods Sold',
         ),
         "expenses" => array(
-            '1' => 'Payroll Expenses',
-            '2' => 'General and Administrative expenses',
-        ),
+                '1' => 'Payroll Expenses',
+                '2' => 'General and Administrative expenses',
+            ),
 
     );
 
     public static function chartOfAccountTypeData($company_id)
     {
-        $chartOfAccountTypes = Self::$chartOfAccountType;
+        $chartOfAccountTypes = self::$chartOfAccountType;
         foreach ($chartOfAccountTypes as $k => $type) {
 
             $accountType = ChartOfAccountType::create(
@@ -995,7 +992,7 @@ class Utility extends Model
                 ]
             );
 
-            $chartOfAccountSubTypes = Self::$chartOfAccountSubType;
+            $chartOfAccountSubTypes = self::$chartOfAccountSubType;
 
             foreach ($chartOfAccountSubTypes[$k] as $subType) {
                 ChartOfAccountSubType::create(
@@ -1136,7 +1133,8 @@ class Utility extends Model
             'name' => 'Purchase Tax',
             'type' => 2,
             'sub_type' => 4,
-        ], [
+        ],
+        [
             'code' => '2150',
             'name' => 'VAT Pay / Refund',
             'type' => 2,
@@ -1207,7 +1205,8 @@ class Utility extends Model
             'name' => 'Accr. Benefits - Central Provident Fund',
             'type' => 2,
             'sub_type' => 4,
-        ], [
+        ],
+        [
             'code' => '2320',
             'name' => 'Accr. Benefits - Stock Purchase',
             'type' => 2,
@@ -1811,7 +1810,8 @@ class Utility extends Model
             'name' => 'Purchase Tax',
             'type' => 'Liabilities',
             'sub_type' => 'Current Liabilities',
-        ], [
+        ],
+        [
             'code' => '2150',
             'name' => 'VAT Pay / Refund',
             'type' => 'Liabilities',
@@ -1882,7 +1882,8 @@ class Utility extends Model
             'name' => 'Accr. Benefits - Central Provident Fund',
             'type' => 'Liabilities',
             'sub_type' => 'Current Liabilities',
-        ], [
+        ],
+        [
             'code' => '2320',
             'name' => 'Accr. Benefits - Stock Purchase',
             'type' => 'Liabilities',
@@ -2359,10 +2360,10 @@ class Utility extends Model
 
     );
 
-// chart of account for new company
+    // chart of account for new company
     public static function chartOfAccountData1($user)
     {
-        $chartOfAccounts = Self::$chartOfAccount1;
+        $chartOfAccounts = self::$chartOfAccount1;
 
         foreach ($chartOfAccounts as $account) {
 
@@ -2384,7 +2385,7 @@ class Utility extends Model
 
     public static function chartOfAccountData($user)
     {
-        $chartOfAccounts = Self::$chartOfAccount;
+        $chartOfAccounts = self::$chartOfAccount;
         foreach ($chartOfAccounts as $account) {
             ChartOfAccount::create(
                 [
@@ -2444,13 +2445,12 @@ class Utility extends Model
                         $content->content = self::replaceVariable($content->content, $obj);
                         // send email
 
-                        try
-                        {
+                        try {
                             config(
                                 [
                                     'mail.driver' => $settings['mail_driver'] ? $settings['mail_driver'] : $setting['mail_driver'],
                                     'mail.host' => $settings['mail_host'] ? $settings['mail_host'] : $setting['mail_host'],
-                                    'mail.port' => $settings['mail_port'] ? $settings['mail_port'] :$setting['mail_port'],
+                                    'mail.port' => $settings['mail_port'] ? $settings['mail_port'] : $setting['mail_port'],
                                     'mail.encryption' => $settings['mail_encryption'] ? $settings['mail_encryption'] : $setting['mail_encryption'],
                                     'mail.username' => $settings['mail_username'] ? $settings['mail_username'] : $setting['mail_username'],
                                     'mail.password' => $settings['mail_password'] ? $settings['mail_password'] : $setting['mail_password'],
@@ -2523,8 +2523,7 @@ class Utility extends Model
                 if (!empty($content->content)) {
                     $content->content = self::replaceVariable($content->content, $obj);
                     // send email
-                    try
-                    {
+                    try {
                         config(
                             [
                                 'mail.driver' => $settings['mail_driver'],
@@ -2855,7 +2854,7 @@ class Utility extends Model
             'task_user' => '',
             'task_start_date' => '',
             'task_end_date' => '',
-         ];
+        ];
 
         foreach ($obj as $key => $val) {
             $arrValue[$key] = $val;
@@ -3201,7 +3200,7 @@ class Utility extends Model
         return $dateCollection;
     }
 
-//    public static function employeePayslipDetail($employeeId)
+    //    public static function employeePayslipDetail($employeeId)
 //    {
 ////        dd($employeeId);
 //        $earning['allowance']         = Allowance::where('employee_id', $employeeId)->get();
@@ -3864,7 +3863,7 @@ class Utility extends Model
             }
         }
 
-//        dd($msg);
+        //        dd($msg);
 
         if (isset($msg)) {
             $settings = Utility::settingsById($user->id);
@@ -4104,7 +4103,8 @@ class Utility extends Model
 
         $data = WarehouseProduct::updateOrCreate(
             ['warehouse_id' => $warehouse_id, 'product_id' => $product_id, 'created_by' => \Auth::user()->id],
-            ['warehouse_id' => $warehouse_id, 'product_id' => $product_id, 'quantity' => $product_quantity, 'created_by' => \Auth::user()->id])
+            ['warehouse_id' => $warehouse_id, 'product_id' => $product_id, 'quantity' => $product_quantity, 'created_by' => \Auth::user()->id]
+        )
         ;
 
     }
@@ -4129,7 +4129,7 @@ class Utility extends Model
     {
         try {
             $settings = Utility::getStorageSetting();
-//                dd($settings);
+            //                dd($settings);
 
             if (!empty($settings['storage_setting'])) {
 
@@ -4199,7 +4199,7 @@ class Utility extends Model
                     $name = $name;
 
                     if ($settings['storage_setting'] == 'local') {
-//                    dd(\Storage::disk(),$path);
+                        //                    dd(\Storage::disk(),$path);
                         $request->$key_name->move(storage_path($path), $name);
                         $path = $path . $name;
                     } else if ($settings['storage_setting'] == 'wasabi') {
@@ -4453,7 +4453,7 @@ class Utility extends Model
                 $overallrating = 0;
 
                 $rating = json_decode($indicator->rating, true);
-                if($rating){
+                if ($rating) {
                     $starsum = array_sum($rating);
                     $overallrating = $starsum / $competencyCount;
                 }
@@ -4535,21 +4535,21 @@ class Utility extends Model
 
     public static function addCalendarData($request, $type)
     {
-        Self::googleCalendarConfig();
+        self::googleCalendarConfig();
         $event = new GoogleEvent();
         $event->name = $request->title;
         $event->startDateTime = Carbon::parse($request->start_date);
         $event->endDateTime = Carbon::parse($request->end_date);
-        $event->colorId = Self::colorCodeData($type);
+        $event->colorId = self::colorCodeData($type);
         $event->save();
     }
 
     public static function getCalendarData($type)
     {
-        Self::googleCalendarConfig();
+        self::googleCalendarConfig();
         $data = GoogleEvent::get();
 
-        $type = Self::colorCodeData($type);
+        $type = self::colorCodeData($type);
         $arrayJson = [];
         foreach ($data as $val) {
             $end_date = date_create($val->endDateTime);
@@ -4561,7 +4561,7 @@ class Utility extends Model
                     "title" => $val->summary,
                     "start" => $val->startDateTime,
                     "end" => date_format($end_date, "Y-m-d H:i:s"),
-                    "className" => Self::$colorCode[$type],
+                    "className" => self::$colorCode[$type],
                     "allDay" => true,
 
                 ];
@@ -4630,9 +4630,17 @@ class Utility extends Model
     //start for cookie settings
     public static function getCookieSetting()
     {
-        $data = \DB::table('settings')->whereIn('name', ['enable_cookie', 'cookie_logging', 'cookie_title',
-            'cookie_description', 'necessary_cookies', 'strictly_cookie_title',
-            'strictly_cookie_description', 'more_information_description', 'contactus_url'])->get();
+        $data = \DB::table('settings')->whereIn('name', [
+            'enable_cookie',
+            'cookie_logging',
+            'cookie_title',
+            'cookie_description',
+            'necessary_cookies',
+            'strictly_cookie_title',
+            'strictly_cookie_description',
+            'more_information_description',
+            'contactus_url'
+        ])->get();
         $settings = [
             'enable_cookie' => 'off',
             'necessary_cookies' => 'on',
@@ -4901,9 +4909,13 @@ class Utility extends Model
 
         // foreach ($types as $type) {
         $total = TransactionLines::
-            select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name',
-            \DB::raw('sum(debit) as totalDebit'),
-            \DB::raw('sum(credit) as totalCredit'));
+            select(
+                'chart_of_accounts.id',
+                'chart_of_accounts.code',
+                'chart_of_accounts.name',
+                \DB::raw('sum(debit) as totalDebit'),
+                \DB::raw('sum(credit) as totalCredit')
+            );
         $total->leftjoin('chart_of_accounts', 'transaction_lines.account_id', 'chart_of_accounts.id');
         $total->leftjoin('chart_of_account_types', 'chart_of_accounts.type', 'chart_of_account_types.id');
         // $total->where('chart_of_accounts.type', $type->id);
@@ -5331,11 +5343,11 @@ class Utility extends Model
         }
     }
 
-    public static function addTransactionLines($data , $action)
+    public static function addTransactionLines($data, $action)
     {
         $existingTransaction = TransactionLines::where('reference_id', $data['reference_id'])
-        ->where('reference_sub_id', $data['reference_sub_id'])->where('reference', $data['reference'])
-        ->first();
+            ->where('reference_sub_id', $data['reference_sub_id'])->where('reference', $data['reference'])
+            ->first();
         if ($existingTransaction && $action == 'edit') {
             $transactionLines = $existingTransaction;
         } else {
@@ -5348,7 +5360,7 @@ class Utility extends Model
         $transactionLines->date = $data['date'];
         $transactionLines->product_id = @$data['product_id'] ?? @$transactionLines->product_id;
         $transactionLines->product_type = @$data['product_type'] ?? @$transactionLines->product_type;
-        $transactionLines->product_item_id = @$data['product_item_id']  ?? @$transactionLines->product_item_id;
+        $transactionLines->product_item_id = @$data['product_item_id'] ?? @$transactionLines->product_item_id;
         if ($data['transaction_type'] == "Credit") {
             $transactionLines->credit = $data['transaction_amount'];
             $transactionLines->debit = 0;
@@ -5369,10 +5381,12 @@ class Utility extends Model
             $taxData = Utility::getTaxData();
 
             $InvoiceProducts = \DB::table('invoice_products')
-                ->select('invoice_products.invoice_id as invoice',
+                ->select(
+                    'invoice_products.invoice_id as invoice',
                     \DB::raw('SUM(quantity) as total_quantity'),
                     \DB::raw('SUM(discount) as total_discount'),
-                    \DB::raw('SUM(price * quantity)  as sub_total'))
+                    \DB::raw('SUM(price * quantity)  as sub_total')
+                )
                 ->selectRaw('(SELECT SUM((price * quantity - discount) * (taxes.rate / 100)) FROM invoice_products
                     LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
                     WHERE invoice_products.invoice_id = invoices.id) as tax_values')
@@ -5403,10 +5417,12 @@ class Utility extends Model
         if (self::$billProductsData === null) {
             $taxData = Utility::getTaxData();
             $BillProducts = \DB::table('bill_products')
-                ->select('bill_products.bill_id as bill',
+                ->select(
+                    'bill_products.bill_id as bill',
                     \DB::raw('SUM(quantity) as total_quantity'),
                     \DB::raw('SUM(discount) as total_discount'),
-                    \DB::raw('SUM(bill_products.price * quantity)  as sub_total'))
+                    \DB::raw('SUM(bill_products.price * quantity)  as sub_total')
+                )
                 ->selectRaw('(SELECT SUM(bill_accounts.price) FROM bill_accounts
                     WHERE bill_accounts.ref_id = bills.id) as acc_price')
                 ->selectRaw('(SELECT SUM((price * quantity - discount) * (taxes.rate / 100)) FROM bill_products
@@ -5855,7 +5871,7 @@ class Utility extends Model
         $email = EmailTemplate::all();
 
         foreach ($email as $e) {
-            foreach ($defaultTemplate[$e->slug]['lang'] as  $content) {
+            foreach ($defaultTemplate[$e->slug]['lang'] as $content) {
                 $emailNoti = EmailTemplateLang::where('parent_id', $e->id)->where('lang', $lang)->count();
                 if ($emailNoti == 0) {
                     EmailTemplateLang::create(
@@ -5871,24 +5887,20 @@ class Utility extends Model
         }
     }
 
-    public static function referralTransaction($plan , $company= '')
+    public static function referralTransaction($plan, $company = '')
     {
-        if($company != '')
-        {
+        if ($company != '') {
             $objUser = $company;
-        }
-        else
-        {
+        } else {
             $objUser = \Auth::user();
         }
 
-        $user = ReferralTransaction::where('company_id' , $objUser->id)->first();
+        $user = ReferralTransaction::where('company_id', $objUser->id)->first();
 
-        $referralSetting = ReferralSetting::where('created_by' , 1)->first();
+        $referralSetting = ReferralSetting::where('created_by', 1)->first();
 
-        if($objUser->used_referral_code != 0 && $user == null && (isset($referralSetting) && $referralSetting->is_enable == 1))
-        {
-            $transaction         = new ReferralTransaction();
+        if ($objUser->used_referral_code != 0 && $user == null && (isset($referralSetting) && $referralSetting->is_enable == 1)) {
+            $transaction = new ReferralTransaction();
             $transaction->company_id = $objUser->id;
             $transaction->plan_id = $plan->id;
             $transaction->plan_price = $plan->price;
@@ -5896,8 +5908,8 @@ class Utility extends Model
             $transaction->referral_code = $objUser->used_referral_code;
             $transaction->save();
 
-            $commissionAmount  = ($plan->price * $referralSetting->percentage)/100;
-            $user = User::where('referral_code' , $objUser->used_referral_code)->first();
+            $commissionAmount = ($plan->price * $referralSetting->percentage) / 100;
+            $user = User::where('referral_code', $objUser->used_referral_code)->first();
 
             $user->commission_amount = $user->commission_amount + $commissionAmount;
             $user->save();
@@ -5910,19 +5922,19 @@ class Utility extends Model
             if (!empty($settings['storage_setting'])) {
                 if ($settings['storage_setting'] == 'wasabi') {
                     $max_size = !empty($settings['wasabi_max_upload_size']) ? $settings['wasabi_max_upload_size'] : '2048';
-                    $mimes =  !empty($settings['wasabi_storage_validation']) ? $settings['wasabi_storage_validation'] : '';
+                    $mimes = !empty($settings['wasabi_storage_validation']) ? $settings['wasabi_storage_validation'] : '';
                 } else if ($settings['storage_setting'] == 's3') {
                     $max_size = !empty($settings['s3_max_upload_size']) ? $settings['s3_max_upload_size'] : '2048';
-                    $mimes =  !empty($settings['s3_storage_validation']) ? $settings['s3_storage_validation'] : '';
+                    $mimes = !empty($settings['s3_storage_validation']) ? $settings['s3_storage_validation'] : '';
                 } else {
                     $max_size = !empty($settings['local_storage_max_upload_size']) ? $settings['local_storage_max_upload_size'] : '2048';
-                    $mimes =  !empty($settings['local_storage_validation']) ? $settings['local_storage_validation'] : '';
+                    $mimes = !empty($settings['local_storage_validation']) ? $settings['local_storage_validation'] : '';
                 }
-                    $res = [
-                        'types'  => $mimes,
-                        'max_size'  => $max_size,
-                    ];
-                    return $res;
+                $res = [
+                    'types' => $mimes,
+                    'max_size' => $max_size,
+                ];
+                return $res;
             } else {
                 $res = [
                     'flag' => 0,
@@ -5938,19 +5950,21 @@ class Utility extends Model
             return $res;
         }
     }
-    public static function makeActivityLog($user_id,$type,$type_id,$log_type,$remarks){
+    public static function makeActivityLog($user_id, $type, $type_id, $log_type, $remarks)
+    {
         ActivityLog::create(
             [
                 'user_id' => $user_id,
                 'type' => $type,
-                'type_id'=>$type_id,
+                'type_id' => $type_id,
                 'log_type' => $log_type,
                 'remark' => json_encode(['title' => $remarks]),
             ]
         );
     }
 
-    public static function makeNotification($user_id,$type,$data,$data_id,$action_type){
+    public static function makeNotification($user_id, $type, $data, $data_id, $action_type)
+    {
 
         Notification::create([
             'user_id' => $user_id, // to whome display notification
@@ -5962,175 +5976,173 @@ class Utility extends Model
         ]);
     }
 
-    
+
     // jr voucher
     public static function jrentry($data)
     {
         // dd($data);
         DB::beginTransaction();
-            try {
-                $latest = JournalEntry::where('created_by', '=', \Auth::user()->creatorId())->where('voucher_type','JV')->orderBY('id','Desc')->first();
-                if(!$latest)
-                {
-                    $latest = 1;
-                }else{
-                    $latest = $latest->journal_id + 1;
-                }
+        try {
+            $latest = JournalEntry::where('created_by', '=', \Auth::user()->creatorId())->where('voucher_type', 'JV')->orderBY('id', 'Desc')->first();
+            if (!$latest) {
+                $latest = 1;
+            } else {
+                $latest = $latest->journal_id + 1;
+            }
 
-                $journal              = new JournalEntry();
-                $journal->journal_id  = $latest;
-                $journal->date        = $data['date'];
-                $journal->reference   = $data['reference'];
-                $journal->description = 'Invoice No : '.@$data['no'];
-                $journal->reference_id = $data['id'];
-                $journal->category     = $data['category'];
-                $journal->voucher_type = 'JV';
-                $journal->owned_by     = $data['owned_by'];
-                $journal->created_by   = $data['created_by'];
-                $journal->save();
-                $journal->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                $journal->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                $journal->save();
+            $journal = new JournalEntry();
+            $journal->journal_id = $latest;
+            $journal->date = $data['date'];
+            $journal->reference = $data['reference'];
+            $journal->description = 'Invoice No : ' . @$data['no'];
+            $journal->reference_id = $data['id'];
+            $journal->category = $data['category'];
+            $journal->voucher_type = 'JV';
+            $journal->owned_by = $data['owned_by'];
+            $journal->created_by = $data['created_by'];
+            $journal->save();
+            $journal->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journal->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journal->save();
 
-                $reciveable = 0;
-                $tax = 0;
+            $reciveable = 0;
+            $tax = 0;
 
-                for($i = 0; $i < count($data['items']); $i++)
-                {
+            for ($i = 0; $i < count($data['items']); $i++) {
 
-                    $product = ProductService::where('id',$data['items'][$i]['item'])->first();
+                $product = ProductService::where('id', $data['items'][$i]['item'])->first();
 
-                    $journalItem              = new JournalItem();
-                    $journalItem->journal     = $journal->id;
-                    $journalItem->account     = @$product->sale_chartaccount_id;
-                    $journalItem->product_ids  = @$data['items'][$i]['prod_id'];
-                    $journalItem->description  = @$data['items'][$i]['description'];
-                    $journalItem->credit       = (($data['items'][$i]['quantity'] * $data['items'][$i]['price'])- $data['items'][$i]['discount']);
-                    $journalItem->debit        =  0;
-                    $journalItem->save();
-                    $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $reciveable += ((floatval($data['items'][$i]['quantity']) * floatval($data['items'][$i]['price']))- floatval($data['items'][$i]['discount'])) + floatval($data['items'][$i]['itemTaxPrice']);
-                    $tax += floatval($data['items'][$i]['itemTaxPrice']);
-                    // dd($journalItem,$reciveable);
-                    
-                    $dataline = [
-                        'account_id' => $product->sale_chartaccount_id,
-                        'transaction_type' => 'Credit',
-                        'transaction_amount' => $journalItem->credit,
-                        'reference' => 'Invoice Journal',
-                        'reference_id' => $journal->id,
-                        'reference_sub_id' => $journalItem->id,
-                        'date' => $journal->date,
-                        'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                        'product_id' => $data['id'],
-                        'product_type' => 'Invoice',
-                        'product_item_id' => @$data['items'][$i]['prod_id'],
-                    ];
-                    Utility::addTransactionLines($dataline , 'create');
+                $journalItem = new JournalItem();
+                $journalItem->journal = $journal->id;
+                $journalItem->account = @$product->sale_chartaccount_id;
+                $journalItem->product_ids = @$data['items'][$i]['prod_id'];
+                $journalItem->description = @$data['items'][$i]['description'];
+                $journalItem->credit = (($data['items'][$i]['quantity'] * $data['items'][$i]['price']) - $data['items'][$i]['discount']);
+                $journalItem->debit = 0;
+                $journalItem->save();
+                $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $reciveable += ((floatval($data['items'][$i]['quantity']) * floatval($data['items'][$i]['price'])) - floatval($data['items'][$i]['discount'])) + floatval($data['items'][$i]['itemTaxPrice']);
+                $tax += floatval($data['items'][$i]['itemTaxPrice']);
+                // dd($journalItem,$reciveable);
+
+                $dataline = [
+                    'account_id' => $product->sale_chartaccount_id,
+                    'transaction_type' => 'Credit',
+                    'transaction_amount' => $journalItem->credit,
+                    'reference' => 'Invoice Journal',
+                    'reference_id' => $journal->id,
+                    'reference_sub_id' => $journalItem->id,
+                    'date' => $journal->date,
+                    'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
+                    'product_id' => $data['id'],
+                    'product_type' => 'Invoice',
+                    'product_item_id' => @$data['items'][$i]['prod_id'],
+                ];
+                Utility::addTransactionLines($dataline, 'create');
 
 
-                    if($tax != 0){
-                        $accounttax = Tax::where('id', $product->tax_id)->first();
-                        $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
-                        if(!$account_tax){
-                            $types_t = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
-                            if ($types_t) {
-                                $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
-                                $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
-                                if(!$account_tax){
-                                    $account_tax = ChartOfAccount::create([
-                                        'name' => 'TAX',
-                                        'code' => '10000',
-                                        'type' => $types_t->id,
-                                        'sub_type' => $sub_type_t->id,
-                                        'is_enabled' => 1,
-                                        'created_by' => $data['created_by'],
-                                    ]);
-                                }
+                if ($tax != 0) {
+                    $accounttax = Tax::where('id', $product->tax_id)->first();
+                    $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
+                    if (!$account_tax) {
+                        $types_t = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
+                        if ($types_t) {
+                            $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
+                            $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
+                            if (!$account_tax) {
+                                $account_tax = ChartOfAccount::create([
+                                    'name' => 'TAX',
+                                    'code' => '10000',
+                                    'type' => $types_t->id,
+                                    'sub_type' => $sub_type_t->id,
+                                    'is_enabled' => 1,
+                                    'created_by' => $data['created_by'],
+                                ]);
                             }
                         }
-                      
-                        if($account_tax){
-                            $journalItem              = new JournalItem();
-                            $journalItem->journal     = $journal->id;
-                            $journalItem->account     = @$account_tax->id;
-                            $journalItem->prod_tax_id  = @$data['items'][$i]['prod_id'];
-                            $journalItem->description = 'Tax on Invoice No : '.@$data['no'];
-                            $journalItem->credit       =  $tax;
-                            $journalItem->debit        = 0;
-                            $journalItem->save();
-                            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                            $journalItem->save();
-
-                            $dataline = [
-                                    'account_id' => $account_tax->id,
-                                    'transaction_type' => 'Credit',
-                                    'transaction_amount' => $journalItem->credit,
-                                    'reference' => 'Invoice Journal',
-                                    'reference_id' => $journal->id,
-                                    'reference_sub_id' => $journalItem->id,
-                                    'date' => $journal->date,
-                                    'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                                    'product_id' => $data['id'],
-                                    'product_type' => 'Invoice Tax',
-                                    'product_item_id' => @$data['items'][$i]['prod_id'],
-                            ];
-                            Utility::addTransactionLines($dataline , 'create');
-                        }
                     }
-                    $tax = 0;
-                }
-                
 
-                $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name','Assets')->first();
-                if($types){
-                    $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name','Current Asset')->first();
-                    $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name','Account Receivables')->first();
-                    if(!$account){
-                        $account = ChartOfAccount::create([
-                            'name' => 'Account Receivables',
-                            'code' => '10000',
-                            'type' => $types->id,
-                            'sub_type' => $sub_type->id,
-                            'is_enabled' => 1,
-                            'created_by' => $data['created_by'],
-                        ]);
+                    if ($account_tax) {
+                        $journalItem = new JournalItem();
+                        $journalItem->journal = $journal->id;
+                        $journalItem->account = @$account_tax->id;
+                        $journalItem->prod_tax_id = @$data['items'][$i]['prod_id'];
+                        $journalItem->description = 'Tax on Invoice No : ' . @$data['no'];
+                        $journalItem->credit = $tax;
+                        $journalItem->debit = 0;
+                        $journalItem->save();
+                        $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                        $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                        $journalItem->save();
+
+                        $dataline = [
+                            'account_id' => $account_tax->id,
+                            'transaction_type' => 'Credit',
+                            'transaction_amount' => $journalItem->credit,
+                            'reference' => 'Invoice Journal',
+                            'reference_id' => $journal->id,
+                            'reference_sub_id' => $journalItem->id,
+                            'date' => $journal->date,
+                            'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
+                            'product_id' => $data['id'],
+                            'product_type' => 'Invoice Tax',
+                            'product_item_id' => @$data['items'][$i]['prod_id'],
+                        ];
+                        Utility::addTransactionLines($dataline, 'create');
                     }
                 }
-                if($account){
-                    $journalItem              = new JournalItem();
-                    $journalItem->journal     = $journal->id;
-                    $journalItem->account     = @$account->id;
-                    $journalItem->description = 'Reciveable on Invoice No : '.@$data['no'];
-                    $journalItem->credit       =  0;
-                    $journalItem->debit      = $reciveable;
-                    $journalItem->save();
-                    $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $journalItem->save();
+                $tax = 0;
+            }
 
-                    $dataline = [
-                        'account_id' => $account->id,
-                        'transaction_type' => 'Debit',
-                        'transaction_amount' => $journalItem->debit,
-                        'reference' => 'Invoice Journal',
-                        'reference_id' => $journal->id,
-                        'reference_sub_id' => $journalItem->id,
-                        'date' => $journal->date,
-                        'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                        'product_id' =>  $data['id'],
-                        'product_type' => 'Invoice Reciveable',
-                        'product_item_id' => 0,
-                    ];
-                    Utility::addTransactionLines($dataline , 'create');
+
+            $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Assets')->first();
+            if ($types) {
+                $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
+                $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
+                if (!$account) {
+                    $account = ChartOfAccount::create([
+                        'name' => 'Account Receivables',
+                        'code' => '10000',
+                        'type' => $types->id,
+                        'sub_type' => $sub_type->id,
+                        'is_enabled' => 1,
+                        'created_by' => $data['created_by'],
+                    ]);
                 }
+            }
+            if ($account) {
+                $journalItem = new JournalItem();
+                $journalItem->journal = $journal->id;
+                $journalItem->account = @$account->id;
+                $journalItem->description = 'Reciveable on Invoice No : ' . @$data['no'];
+                $journalItem->credit = 0;
+                $journalItem->debit = $reciveable;
+                $journalItem->save();
+                $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->save();
+
+                $dataline = [
+                    'account_id' => $account->id,
+                    'transaction_type' => 'Debit',
+                    'transaction_amount' => $journalItem->debit,
+                    'reference' => 'Invoice Journal',
+                    'reference_id' => $journal->id,
+                    'reference_sub_id' => $journalItem->id,
+                    'date' => $journal->date,
+                    'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
+                    'product_id' => $data['id'],
+                    'product_type' => 'Invoice Reciveable',
+                    'product_item_id' => 0,
+                ];
+                Utility::addTransactionLines($dataline, 'create');
+            }
             DB::commit();
             return $journal->id;
         } catch (\Exception $e) {
-                DB::rollback();
-                dd($e);
+            DB::rollback();
+            dd($e);
             return 'error';
         }
     }
@@ -6139,25 +6151,24 @@ class Utility extends Model
     // BRV voucher
     public static function brv_entry($data)
     {
-        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type','BRV')->orderBY('id','Desc')->first();
-        if(!$latest)
-        {
+        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type', 'BRV')->orderBY('id', 'Desc')->first();
+        if (!$latest) {
             $latest = 1;
-        }else{
+        } else {
             $latest = $latest->journal_id + 1;
         }
 
-        $journal              = new JournalEntry();
-        $journal->journal_id  = $latest;
-        $journal->date        = $data['date'];
-        $journal->reference   = $data['reference'];
-        $journal->description = ' Payment on Invoice No : '.@$data['no'];
+        $journal = new JournalEntry();
+        $journal->journal_id = $latest;
+        $journal->date = $data['date'];
+        $journal->reference = $data['reference'];
+        $journal->description = ' Payment on Invoice No : ' . @$data['no'];
         $journal->reference_id = $data['id'];
-        $journal->category     = $data['category'];
-        $journal->prod_id       =  $data['prod_id'];
-        $journal->voucher_type  = 'BRV';
-        $journal->owned_by      = $data['owned_by'];
-        $journal->created_by    = $data['created_by'];
+        $journal->category = $data['category'];
+        $journal->prod_id = $data['prod_id'];
+        $journal->voucher_type = 'BRV';
+        $journal->owned_by = $data['owned_by'];
+        $journal->created_by = $data['created_by'];
         $journal->save();
         $journal->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
         $journal->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6165,16 +6176,16 @@ class Utility extends Model
 
         $reciveable = 0;
 
-        $journalItem              = new JournalItem();
-        $journalItem->journal     = $journal->id;
-        $journalItem->account     = $data['account_id'];
+        $journalItem = new JournalItem();
+        $journalItem->journal = $journal->id;
+        $journalItem->account = $data['account_id'];
         $journalItem->description = $data['description'];
         $journalItem->product_ids = $data['prod_id'];
-        $journalItem->credit       = 0;
-        $journalItem->debit        = $data['amount'];
+        $journalItem->credit = 0;
+        $journalItem->debit = $data['amount'];
         $journalItem->save();
-        $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-        $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+        $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+        $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
         $journalItem->save();
 
         $dataline = [
@@ -6186,11 +6197,11 @@ class Utility extends Model
             'reference_sub_id' => $data['prod_id'],
             'date' => $journal->date,
             'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-            'product_id' =>  $journal->id,
+            'product_id' => $journal->id,
             'product_type' => 'Invoice Payment',
             'product_item_id' => $journalItem->id,
         ];
-        Utility::addTransactionLines($dataline , 'create');
+        Utility::addTransactionLines($dataline, 'create');
         // dd($journalItem,$reciveable);
 
         // if (!empty($data['wth']) && $data['wth'] > 0) {
@@ -6205,24 +6216,24 @@ class Utility extends Model
         //     $journalItem->save();
         // }
 
-        $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name','Assets')->first();
-        if($types){
-            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name','Current Asset')->first();
-            $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name','Account Receivables')->first();
+        $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Assets')->first();
+        if ($types) {
+            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
+            $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
         }
-        if($account){
-            $journalItem              = new JournalItem();
-            $journalItem->journal     = $journal->id;
-            $journalItem->account     = $account->id;
+        if ($account) {
+            $journalItem = new JournalItem();
+            $journalItem->journal = $journal->id;
+            $journalItem->account = $account->id;
             $journalItem->description = $data['description'];
-            $journalItem->credit      = $data['amount'];
-            $journalItem->debit      = 0;
+            $journalItem->credit = $data['amount'];
+            $journalItem->debit = 0;
             $journalItem->save();
-            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->save();
 
-             $dataline = [
+            $dataline = [
                 'account_id' => $journalItem->account,
                 'transaction_type' => 'Credit',
                 'transaction_amount' => $journalItem->credit,
@@ -6231,11 +6242,11 @@ class Utility extends Model
                 'reference_sub_id' => $data['prod_id'],
                 'date' => $journal->date,
                 'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                'product_id' =>  $journal->id,
+                'product_id' => $journal->id,
                 'product_type' => 'Invoice Payment Receiveable',
                 'product_item_id' => $journalItem->id,
             ];
-            Utility::addTransactionLines($dataline , 'create');
+            Utility::addTransactionLines($dataline, 'create');
 
         }
 
@@ -6267,25 +6278,24 @@ class Utility extends Model
     // CRV voucher
     public static function crv_entry($data)
     {
-        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type','CRV')->orderBY('id','Desc')->first();
-        if(!$latest)
-        {
+        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type', 'CRV')->orderBY('id', 'Desc')->first();
+        if (!$latest) {
             $latest = 1;
-        }else{
+        } else {
             $latest = $latest->journal_id + 1;
         }
 
-        $journal              = new JournalEntry();
-        $journal->journal_id  = $latest;
-        $journal->date        = $data['date'];
-        $journal->reference   = $data['reference'];
-        $journal->description = 'Payment on Invoice No : '.@$data['no'];
+        $journal = new JournalEntry();
+        $journal->journal_id = $latest;
+        $journal->date = $data['date'];
+        $journal->reference = $data['reference'];
+        $journal->description = 'Payment on Invoice No : ' . @$data['no'];
         $journal->reference_id = $data['id'];
-        $journal->category     = $data['category'];
-        $journal->prod_id       =  $data['prod_id'];
+        $journal->category = $data['category'];
+        $journal->prod_id = $data['prod_id'];
         $journal->voucher_type = 'CRV';
-        $journal->owned_by      = $data['owned_by'];
-        $journal->created_by   = $data['created_by'];
+        $journal->owned_by = $data['owned_by'];
+        $journal->created_by = $data['created_by'];
         $journal->save();
         $journal->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
         $journal->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6293,16 +6303,16 @@ class Utility extends Model
 
         $reciveable = 0;
 
-        $journalItem              = new JournalItem();
-        $journalItem->journal     = $journal->id;
-        $journalItem->account     = $data['account_id'];
+        $journalItem = new JournalItem();
+        $journalItem->journal = $journal->id;
+        $journalItem->account = $data['account_id'];
         $journalItem->description = $data['description'];
         $journalItem->product_ids = $data['prod_id'];
-        $journalItem->credit       = 0;
-        $journalItem->debit        = $data['amount'];
+        $journalItem->credit = 0;
+        $journalItem->debit = $data['amount'];
         $journalItem->save();
-        $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-        $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+        $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+        $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
         $journalItem->save();
 
         $dataline = [
@@ -6314,11 +6324,11 @@ class Utility extends Model
             'reference_sub_id' => $data['prod_id'],
             'date' => $journal->date,
             'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-            'product_id' =>  $journal->id,
+            'product_id' => $journal->id,
             'product_type' => 'Invoice Payment',
             'product_item_id' => $journalItem->id,
         ];
-        Utility::addTransactionLines($dataline , 'create');
+        Utility::addTransactionLines($dataline, 'create');
 
         // if (!empty($data['wth']) && $data['wth'] > 0) {
         //     $tax_wth = Tax::where('id',$data['tax'])->first();
@@ -6332,21 +6342,21 @@ class Utility extends Model
         //     $journalItem->save();
         // }
 
-        $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name','Assets')->first();
-        if($types){
-            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name','Current Asset')->first();
-            $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name','Account Receivables')->first();
+        $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Assets')->first();
+        if ($types) {
+            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
+            $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
         }
-        if($account){
-            $journalItem              = new JournalItem();
-            $journalItem->journal     = $journal->id;
-            $journalItem->account     = $account->id;
+        if ($account) {
+            $journalItem = new JournalItem();
+            $journalItem->journal = $journal->id;
+            $journalItem->account = $account->id;
             $journalItem->description = $data['description'];
-            $journalItem->credit      = $data['amount'];
-            $journalItem->debit      = 0;
+            $journalItem->credit = $data['amount'];
+            $journalItem->debit = 0;
             $journalItem->save();
-            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->save();
 
             $dataline = [
@@ -6358,11 +6368,11 @@ class Utility extends Model
                 'reference_sub_id' => $data['prod_id'],
                 'date' => $journal->date,
                 'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                'product_id' =>  $journal->id,
+                'product_id' => $journal->id,
                 'product_type' => 'Invoice Payment Receiveable',
                 'product_item_id' => $journalItem->id,
             ];
-            Utility::addTransactionLines($dataline , 'create');
+            Utility::addTransactionLines($dataline, 'create');
         }
 
         // if (isset($data['result']) && $data['result'] == 'Yes') {
@@ -6388,7 +6398,7 @@ class Utility extends Model
         //     }
         // }
 
-            return $journal->id;
+        return $journal->id;
     }
 
 
@@ -6396,7 +6406,7 @@ class Utility extends Model
     public static function bpv_entry($data)
     {
         // dd($data);
-        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type', 'BPV')->orderBY('id','Desc')->first();
+        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type', 'BPV')->orderBY('id', 'Desc')->first();
         if (!$latest) {
             $latest = 1;
         } else {
@@ -6423,20 +6433,21 @@ class Utility extends Model
         if (@$data['category'] == 'Expanse') {
             $payable = 0;
             $tax = 0;
+            // dd($data);
             for ($i = 0; $i < count($data['items']); $i++) {
                 if (!empty($data['items'][$i]['item'])) {
-                    $product = ProductService::where('id',$data['items'][$i]['item'])->first();
-                    $journalItem              = new JournalItem();
-                    $journalItem->journal     = $journal->id;
-                    $journalItem->account     = @$product->expense_chartaccount_id;
-                    $journalItem->product_ids  = @$data['items'][$i]['prod_id'];
-                    $journalItem->description  = @$data['items'][$i]['description'];
-                    $journalItem->debit       = (($data['items'][$i]['quantity'] * $data['items'][$i]['price'])- $data['items'][$i]['discount']);
-                    $journalItem->credit        =  0;
+                    $product = ProductService::where('id', $data['items'][$i]['item'])->first();
+                    $journalItem = new JournalItem();
+                    $journalItem->journal = $journal->id;
+                    $journalItem->account = @$product->expense_chartaccount_id;
+                    $journalItem->product_ids = @$data['items'][$i]['prod_id'];
+                    $journalItem->description = @$data['items'][$i]['description'];
+                    $journalItem->debit = (($data['items'][$i]['quantity'] * $data['items'][$i]['price']) - $data['items'][$i]['discount']);
+                    $journalItem->credit = 0;
                     $journalItem->save();
-                    $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $payable += ((floatval($data['items'][$i]['quantity']) * floatval($data['items'][$i]['price']))- floatval($data['items'][$i]['discount'])) + floatval($data['items'][$i]['itemTaxPrice']);
+                    $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                    $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                    $payable += ((floatval($data['items'][$i]['quantity']) * floatval($data['items'][$i]['price'])) - floatval($data['items'][$i]['discount'])) + floatval($data['items'][$i]['itemTaxPrice']);
 
                     $tax += floatval($data['items'][$i]['itemTaxPrice']);
 
@@ -6453,17 +6464,17 @@ class Utility extends Model
                         'product_type' => 'Expense Product',
                         'product_item_id' => @$data['items'][$i]['prod_id'],
                     ];
-                    Utility::addTransactionLines($dataline , 'create');
+                    Utility::addTransactionLines($dataline, 'create');
 
-                    if($tax != 0){
+                    if ($tax != 0) {
                         $accounttax = Tax::where('id', $product->tax_id)->first();
                         $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
-                        if(!$account_tax){
+                        if (!$account_tax) {
                             $types_t = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
                             if ($types_t) {
                                 $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
                                 $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
-                                if(!$account_tax){
+                                if (!$account_tax) {
                                     $account_tax = ChartOfAccount::create([
                                         'name' => 'TAX',
                                         'code' => '10000',
@@ -6475,18 +6486,18 @@ class Utility extends Model
                                 }
                             }
                         }
-                        
-                        if($account_tax){
-                            $journalItem              = new JournalItem();
-                            $journalItem->journal     = $journal->id;
-                            $journalItem->account     = @$account_tax->id;
-                            $journalItem->prod_tax_id  = @$data['items'][$i]['prod_id'];
-                            $journalItem->description = 'Tax on Expense No : '.@$data['no'];
-                            $journalItem->debit      =  $tax;
-                            $journalItem->credit        = 0;
+
+                        if ($account_tax) {
+                            $journalItem = new JournalItem();
+                            $journalItem->journal = $journal->id;
+                            $journalItem->account = @$account_tax->id;
+                            $journalItem->prod_tax_id = @$data['items'][$i]['prod_id'];
+                            $journalItem->description = 'Tax on Expense No : ' . @$data['no'];
+                            $journalItem->debit = $tax;
+                            $journalItem->credit = 0;
                             $journalItem->save();
-                            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                            $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                            $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                             $journalItem->save();
 
                             $dataline = [
@@ -6502,7 +6513,7 @@ class Utility extends Model
                                 'product_type' => 'Expense Tax',
                                 'product_item_id' => @$data['items'][$i]['prod_id'],
                             ];
-                            Utility::addTransactionLines($dataline , 'create');
+                            Utility::addTransactionLines($dataline, 'create');
                         }
                     }
                     $tax = 0;
@@ -6510,16 +6521,16 @@ class Utility extends Model
 
                 if (!empty($data['items'][$i]['chart_account_id'])) {
 
-                    $journalItem              = new JournalItem();
-                    $journalItem->journal     = $journal->id;
-                    $journalItem->account     = $data['items'][$i]['chart_account_id'];
-                    $journalItem->product_ids  = @$data['items'][$i]['bill_account_id'];
-                    $journalItem->description  = @$data['items'][$i]['description'];
-                    $journalItem->debit       = @$data['items'][$i]['amount'] ?? 0;
-                    $journalItem->credit        =  0;
+                    $journalItem = new JournalItem();
+                    $journalItem->journal = $journal->id;
+                    $journalItem->account = $data['items'][$i]['chart_account_id'];
+                    $journalItem->product_ids = @$data['items'][$i]['bill_account_id'];
+                    $journalItem->description = @$data['items'][$i]['description'];
+                    $journalItem->debit = @$data['items'][$i]['amount'] ?? 0;
+                    $journalItem->credit = 0;
                     $journalItem->save();
-                    $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                    $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                    $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->save();
                     $payable += @$data['items'][$i]['amount'] ?? 0;
 
@@ -6538,7 +6549,7 @@ class Utility extends Model
                         'product_type' => 'Expense Account',
                         'product_item_id' => @$data['items'][$i]['bill_account_id'],
                     ];
-                    Utility::addTransactionLines($dataline , 'create');
+                    Utility::addTransactionLines($dataline, 'create');
                 }
             }
             $journalItem = new JournalItem();
@@ -6549,11 +6560,11 @@ class Utility extends Model
             $journalItem->debit = 0;
             $journalItem->credit = $data['amount'];
             $journalItem->save();
-            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->save();
-          
-            
+
+
             $dataline = [
                 'account_id' => $journalItem->account,
                 'transaction_type' => 'Credit',
@@ -6567,14 +6578,14 @@ class Utility extends Model
                 'product_type' => 'Expense Payable',
                 'product_item_id' => 0,
             ];
-            Utility::addTransactionLines($dataline , 'create');
+            Utility::addTransactionLines($dataline, 'create');
 
-            return  $journal->id;
+            return $journal->id;
         } elseif (@$data['category'] == 'Bill') {
-                if(@$data['type'] == 'Expanse'){
-                    $journal->category = $data['type'] ?? 'Expanse';
-                    $journal->save();
-                }
+            if (@$data['type'] == 'Expanse') {
+                $journal->category = $data['type'] ?? 'Expanse';
+                $journal->save();
+            }
 
             $journalItem = new JournalItem();
             $journalItem->journal = $journal->id;
@@ -6584,8 +6595,8 @@ class Utility extends Model
             $journalItem->credit = $data['amount'];
             $journalItem->debit = 0;
             $journalItem->save();
-            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->save();
 
             $dataline = [
@@ -6597,11 +6608,11 @@ class Utility extends Model
                 'reference_sub_id' => $data['prod_id'],
                 'date' => $journal->date,
                 'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                'product_id' =>  $journal->id,
+                'product_id' => $journal->id,
                 'product_type' => 'Bill Payment',
                 'product_item_id' => $journalItem->id,
             ];
-            Utility::addTransactionLines($dataline , 'create');
+            Utility::addTransactionLines($dataline, 'create');
 
 
             $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
@@ -6609,16 +6620,16 @@ class Utility extends Model
                 $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
                 $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
             }
-            if($account){
+            if ($account) {
                 $journalItem = new JournalItem();
                 $journalItem->journal = $journal->id;
                 $journalItem->account = $account->id;
-                $journalItem->description = "Account payable less on ".$journal->category . ' No : ' . @$data['no'];
-                $journalItem->credit =0;
+                $journalItem->description = "Account payable less on " . $journal->category . ' No : ' . @$data['no'];
+                $journalItem->credit = 0;
                 $journalItem->debit = $data['amount'];
                 $journalItem->save();
-                $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                 $journalItem->save();
                 $dataline = [
                     'account_id' => $journalItem->account,
@@ -6629,13 +6640,13 @@ class Utility extends Model
                     'reference_sub_id' => $data['prod_id'],
                     'date' => $journal->date,
                     'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                    'product_id' =>  $journal->id,
+                    'product_id' => $journal->id,
                     'product_type' => 'Bill Payment Payable',
                     'product_item_id' => $journalItem->id,
                 ];
-            Utility::addTransactionLines($dataline , 'create');
+                Utility::addTransactionLines($dataline, 'create');
             }
-            return  $journal->id;
+            return $journal->id;
         }
     }
 
@@ -6643,7 +6654,7 @@ class Utility extends Model
     public static function cpv_entry($data)
     {
         // dd($data);
-        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type', 'CPV')->orderBY('id','Desc')->first();
+        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type', 'CPV')->orderBY('id', 'Desc')->first();
         if (!$latest) {
             $latest = 1;
         } else {
@@ -6659,7 +6670,7 @@ class Utility extends Model
         $journal->description = $data['category'] . ' No : ' . @$data['no'];
         $journal->reference_id = $data['id'];
         $journal->category = $data['category'];
-        $journal->prod_id     =  $data['prod_id'];
+        $journal->prod_id = $data['prod_id'];
         $journal->voucher_type = 'CPV';
         $journal->owned_by = $data['owned_by'];
         $journal->created_by = $data['created_by'];
@@ -6672,18 +6683,18 @@ class Utility extends Model
             // dd($latest);
             for ($i = 0; $i < count($data['items']); $i++) {
                 if (!empty($data['items'][$i]['item'])) {
-                    $product = ProductService::where('id',$data['items'][$i]['item'])->first();
-                    $journalItem              = new JournalItem();
-                    $journalItem->journal     = $journal->id;
-                    $journalItem->account     = @$product->expense_chartaccount_id;
-                    $journalItem->product_ids  = @$data['items'][$i]['prod_id'];
-                    $journalItem->description  = @$data['items'][$i]['description'];
-                    $journalItem->debit       = (($data['items'][$i]['quantity'] * $data['items'][$i]['price'])- $data['items'][$i]['discount']);
-                    $journalItem->credit        =  0;
+                    $product = ProductService::where('id', $data['items'][$i]['item'])->first();
+                    $journalItem = new JournalItem();
+                    $journalItem->journal = $journal->id;
+                    $journalItem->account = @$product->expense_chartaccount_id;
+                    $journalItem->product_ids = @$data['items'][$i]['prod_id'];
+                    $journalItem->description = @$data['items'][$i]['description'];
+                    $journalItem->debit = (($data['items'][$i]['quantity'] * $data['items'][$i]['price']) - $data['items'][$i]['discount']);
+                    $journalItem->credit = 0;
                     $journalItem->save();
-                    $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $payable += ((floatval($data['items'][$i]['quantity']) * floatval($data['items'][$i]['price']))- floatval($data['items'][$i]['discount'])) + floatval($data['items'][$i]['itemTaxPrice']);
+                    $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                    $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                    $payable += ((floatval($data['items'][$i]['quantity']) * floatval($data['items'][$i]['price'])) - floatval($data['items'][$i]['discount'])) + floatval($data['items'][$i]['itemTaxPrice']);
 
                     $tax += floatval($data['items'][$i]['itemTaxPrice']);
 
@@ -6700,17 +6711,17 @@ class Utility extends Model
                         'product_type' => 'Expense Product',
                         'product_item_id' => @$data['items'][$i]['prod_id'],
                     ];
-                    Utility::addTransactionLines($dataline , 'create');
+                    Utility::addTransactionLines($dataline, 'create');
 
-                    if($tax != 0){
+                    if ($tax != 0) {
                         $accounttax = Tax::where('id', $product->tax_id)->first();
                         $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
-                        if(!$account_tax){
+                        if (!$account_tax) {
                             $types_t = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
                             if ($types_t) {
                                 $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
                                 $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
-                                if(!$account_tax){
+                                if (!$account_tax) {
                                     $account_tax = ChartOfAccount::create([
                                         'name' => 'TAX',
                                         'code' => '10000',
@@ -6722,18 +6733,18 @@ class Utility extends Model
                                 }
                             }
                         }
-                        
-                        if($account_tax){
-                            $journalItem              = new JournalItem();
-                            $journalItem->journal     = $journal->id;
-                            $journalItem->account     = @$account_tax->id;
-                            $journalItem->prod_tax_id  = @$data['items'][$i]['prod_id'];
-                            $journalItem->description = 'Tax on Expense No : '.@$data['no'];
-                            $journalItem->debit      =  $tax;
-                            $journalItem->credit        = 0;
+
+                        if ($account_tax) {
+                            $journalItem = new JournalItem();
+                            $journalItem->journal = $journal->id;
+                            $journalItem->account = @$account_tax->id;
+                            $journalItem->prod_tax_id = @$data['items'][$i]['prod_id'];
+                            $journalItem->description = 'Tax on Expense No : ' . @$data['no'];
+                            $journalItem->debit = $tax;
+                            $journalItem->credit = 0;
                             $journalItem->save();
-                            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                            $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                            $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                             $journalItem->save();
 
                             $dataline = [
@@ -6749,7 +6760,7 @@ class Utility extends Model
                                 'product_type' => 'Expense Tax',
                                 'product_item_id' => @$data['items'][$i]['prod_id'],
                             ];
-                            Utility::addTransactionLines($dataline , 'create');
+                            Utility::addTransactionLines($dataline, 'create');
                         }
                     }
                     $tax = 0;
@@ -6757,16 +6768,16 @@ class Utility extends Model
 
                 if (!empty($data['items'][$i]['chart_account_id'])) {
 
-                    $journalItem              = new JournalItem();
-                    $journalItem->journal     = $journal->id;
-                    $journalItem->account     = $data['items'][$i]['chart_account_id'];
-                    $journalItem->product_ids  = @$data['items'][$i]['bill_account_id'];
-                    $journalItem->description  = @$data['items'][$i]['description'];
-                    $journalItem->debit       = @$data['items'][$i]['amount'] ?? 0;
-                    $journalItem->credit        =  0;
+                    $journalItem = new JournalItem();
+                    $journalItem->journal = $journal->id;
+                    $journalItem->account = $data['items'][$i]['chart_account_id'];
+                    $journalItem->product_ids = @$data['items'][$i]['bill_account_id'];
+                    $journalItem->description = @$data['items'][$i]['description'];
+                    $journalItem->debit = @$data['items'][$i]['amount'] ?? 0;
+                    $journalItem->credit = 0;
                     $journalItem->save();
-                    $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                    $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                    $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                    $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->save();
                     $payable += @$data['items'][$i]['amount'] ?? 0;
 
@@ -6785,7 +6796,7 @@ class Utility extends Model
                         'product_type' => 'Expense Account',
                         'product_item_id' => @$data['items'][$i]['bill_account_id'],
                     ];
-                    Utility::addTransactionLines($dataline , 'create');
+                    Utility::addTransactionLines($dataline, 'create');
                 }
             }
 
@@ -6797,8 +6808,8 @@ class Utility extends Model
             $journalItem->debit = 0;
             $journalItem->credit = $data['amount'];
             $journalItem->save();
-            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->save();
 
             $dataline = [
@@ -6814,11 +6825,11 @@ class Utility extends Model
                 'product_type' => 'Expense Payable',
                 'product_item_id' => 0,
             ];
-            Utility::addTransactionLines($dataline , 'create');
+            Utility::addTransactionLines($dataline, 'create');
 
-            return  $journal->id;
+            return $journal->id;
         } elseif (@$data['category'] == 'Bill') {
-            if(@$data['type'] == 'Expanse'){
+            if (@$data['type'] == 'Expanse') {
                 $journal->category = $data['type'] ?? 'Expanse';
                 $journal->save();
 
@@ -6833,8 +6844,8 @@ class Utility extends Model
             $journalItem->credit = $data['amount'];
             $journalItem->debit = 0;
             $journalItem->save();
-            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->save();
 
             $dataline = [
@@ -6846,11 +6857,11 @@ class Utility extends Model
                 'reference_sub_id' => $data['prod_id'],
                 'date' => $journal->date,
                 'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                'product_id' =>  $journal->id,
+                'product_id' => $journal->id,
                 'product_type' => 'Bill Payment',
                 'product_item_id' => $journalItem->id,
             ];
-            Utility::addTransactionLines($dataline , 'create');
+            Utility::addTransactionLines($dataline, 'create');
 
 
             $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
@@ -6862,36 +6873,36 @@ class Utility extends Model
                 $journalItem = new JournalItem();
                 $journalItem->journal = $journal->id;
                 $journalItem->account = $account->id;
-                $journalItem->description = "Account payable less on ".$journal->category . ' No : ' . @$data['no'];
-                $journalItem->credit =0;
-                $journalItem->debit =  $data['amount'];
+                $journalItem->description = "Account payable less on " . $journal->category . ' No : ' . @$data['no'];
+                $journalItem->credit = 0;
+                $journalItem->debit = $data['amount'];
                 $journalItem->save();
-                $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                 $journalItem->save();
 
                 $dataline = [
-                        'account_id' => $journalItem->account,
-                        'transaction_type' => 'Debit',
-                        'transaction_amount' => $journalItem->debit,
-                        'reference' => 'Bill Payment',
-                        'reference_id' => $data['id'],
-                        'reference_sub_id' => $data['prod_id'],
-                        'date' => $journal->date,
-                        'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                        'product_id' =>  $journal->id,
-                        'product_type' => 'Bill Payment Payable',
-                        'product_item_id' => $journalItem->id,
-                    ];
-                }
-            return  $journal->id;
+                    'account_id' => $journalItem->account,
+                    'transaction_type' => 'Debit',
+                    'transaction_amount' => $journalItem->debit,
+                    'reference' => 'Bill Payment',
+                    'reference_id' => $data['id'],
+                    'reference_sub_id' => $data['prod_id'],
+                    'date' => $journal->date,
+                    'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
+                    'product_id' => $journal->id,
+                    'product_type' => 'Bill Payment Payable',
+                    'product_item_id' => $journalItem->id,
+                ];
+            }
+            return $journal->id;
         }
     }
 
     // jr voucher
     public static function jr_exp_entry($data)
     {
-        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type', 'JV')->orderBY('id','Desc')->first();
+        $latest = JournalEntry::where('created_by', '=', $data['created_by'])->where('voucher_type', 'JV')->orderBY('id', 'Desc')->first();
         if (!$latest) {
             $latest = 1;
         } else {
@@ -6919,18 +6930,18 @@ class Utility extends Model
         // dd($latest);
         for ($i = 0; $i < count($data['items']); $i++) {
             if (!empty($data['items'][$i]['item'])) {
-                $product = ProductService::where('id',$data['items'][$i]['item'])->first();
-                $journalItem              = new JournalItem();
-                $journalItem->journal     = $journal->id;
-                $journalItem->account     = @$product->expense_chartaccount_id;
-                $journalItem->product_ids  = @$data['items'][$i]['prod_id'];
-                $journalItem->description  = @$data['items'][$i]['description'];
-                $journalItem->debit       = (($data['items'][$i]['quantity'] * $data['items'][$i]['price'])- $data['items'][$i]['discount']);
-                $journalItem->credit        =  0;
+                $product = ProductService::where('id', $data['items'][$i]['item'])->first();
+                $journalItem = new JournalItem();
+                $journalItem->journal = $journal->id;
+                $journalItem->account = @$product->expense_chartaccount_id;
+                $journalItem->product_ids = @$data['items'][$i]['prod_id'];
+                $journalItem->description = @$data['items'][$i]['description'];
+                $journalItem->debit = (($data['items'][$i]['quantity'] * $data['items'][$i]['price']) - $data['items'][$i]['discount']);
+                $journalItem->credit = 0;
                 $journalItem->save();
-                $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                $payable += ((floatval($data['items'][$i]['quantity']) * floatval($data['items'][$i]['price']))- floatval($data['items'][$i]['discount'])) + floatval($data['items'][$i]['itemTaxPrice']);
+                $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $payable += ((floatval($data['items'][$i]['quantity']) * floatval($data['items'][$i]['price'])) - floatval($data['items'][$i]['discount'])) + floatval($data['items'][$i]['itemTaxPrice']);
 
                 $tax += floatval($data['items'][$i]['itemTaxPrice']);
 
@@ -6947,18 +6958,18 @@ class Utility extends Model
                     'product_type' => 'Bill Product',
                     'product_item_id' => @$data['items'][$i]['prod_id'],
                 ];
-                Utility::addTransactionLines($dataline , 'create');
+                Utility::addTransactionLines($dataline, 'create');
 
-                if($tax != 0){
+                if ($tax != 0) {
                     $accounttax = Tax::where('id', $product->tax_id)->first();
-                    
+
                     $account_tax = ChartOfAccount::where('id', $accounttax->account_id)->first();
-                    if(!$account_tax){
+                    if (!$account_tax) {
                         $types_t = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
                         if ($types_t) {
                             $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
                             $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
-                            if(!$account_tax){
+                            if (!$account_tax) {
                                 $account_tax = ChartOfAccount::create([
                                     'name' => 'TAX',
                                     'code' => '10000',
@@ -6970,18 +6981,18 @@ class Utility extends Model
                             }
                         }
                     }
-                    
-                    if($account_tax){
-                        $journalItem              = new JournalItem();
-                        $journalItem->journal     = $journal->id;
-                        $journalItem->account     = @$account_tax->id;
-                        $journalItem->prod_tax_id  = @$data['items'][$i]['prod_id'];
-                        $journalItem->description = 'Tax on Bill No : '.@$data['no'];
-                        $journalItem->debit      =  $tax;
-                        $journalItem->credit        = 0;
+
+                    if ($account_tax) {
+                        $journalItem = new JournalItem();
+                        $journalItem->journal = $journal->id;
+                        $journalItem->account = @$account_tax->id;
+                        $journalItem->prod_tax_id = @$data['items'][$i]['prod_id'];
+                        $journalItem->description = 'Tax on Bill No : ' . @$data['no'];
+                        $journalItem->debit = $tax;
+                        $journalItem->credit = 0;
                         $journalItem->save();
-                        $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                        $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                        $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                        $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                         $journalItem->save();
 
                         $dataline = [
@@ -6997,7 +7008,7 @@ class Utility extends Model
                             'product_type' => 'Bill Tax',
                             'product_item_id' => @$data['items'][$i]['prod_id'],
                         ];
-                        Utility::addTransactionLines($dataline , 'create');
+                        Utility::addTransactionLines($dataline, 'create');
                     }
                 }
                 $tax = 0;
@@ -7005,16 +7016,16 @@ class Utility extends Model
 
             if (!empty($data['items'][$i]['chart_account_id'])) {
 
-                $journalItem              = new JournalItem();
-                $journalItem->journal     = $journal->id;
-                $journalItem->account     = $data['items'][$i]['chart_account_id'];
-                $journalItem->product_ids  = @$data['items'][$i]['bill_account_id'];
-                $journalItem->description  = @$data['items'][$i]['description'];
-                $journalItem->debit       = @$data['items'][$i]['amount'] ?? 0;
-                $journalItem->credit        =  0;
+                $journalItem = new JournalItem();
+                $journalItem->journal = $journal->id;
+                $journalItem->account = $data['items'][$i]['chart_account_id'];
+                $journalItem->product_ids = @$data['items'][$i]['bill_account_id'];
+                $journalItem->description = @$data['items'][$i]['description'];
+                $journalItem->debit = @$data['items'][$i]['amount'] ?? 0;
+                $journalItem->credit = 0;
                 $journalItem->save();
-                $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-                $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+                $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                 $journalItem->save();
                 $payable += @$data['items'][$i]['amount'] ?? 0;
 
@@ -7033,7 +7044,7 @@ class Utility extends Model
                     'product_type' => 'Bill Account',
                     'product_item_id' => @$data['items'][$i]['bill_account_id'],
                 ];
-                Utility::addTransactionLines($dataline , 'create');
+                Utility::addTransactionLines($dataline, 'create');
             }
         }
 
@@ -7043,233 +7054,233 @@ class Utility extends Model
             $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
             $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
         }
-            $journalItem = new JournalItem();
-            $journalItem->journal = $journal->id;
-            $journalItem->account = $account->id;
-            $journalItem->description = 'Account Payable on Bill No : '.@$data['no'];
-            $journalItem->debit = 0;
-            $journalItem->credit = $payable;
-            $journalItem->save();
-            $journalItem->created_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-            $journalItem->updated_at   = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-            $journalItem->save();
+        $journalItem = new JournalItem();
+        $journalItem->journal = $journal->id;
+        $journalItem->account = $account->id;
+        $journalItem->description = 'Account Payable on Bill No : ' . @$data['no'];
+        $journalItem->debit = 0;
+        $journalItem->credit = $payable;
+        $journalItem->save();
+        $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+        $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+        $journalItem->save();
 
-            $dataline = [
-                'account_id' => $account->id,
-                'transaction_type' => 'Credit',
-                'transaction_amount' => $journalItem->credit,
-                'reference' => 'Bill Journal',
-                'reference_id' => $journal->id,
-                'reference_sub_id' => $journalItem->id,
-                'date' => $journal->date,
-                'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
-                'product_id' => $data['id'],
-                'product_type' => 'Bill Payable',
-                'product_item_id' => 0,
-            ];
-            Utility::addTransactionLines($dataline , 'create');
+        $dataline = [
+            'account_id' => $account->id,
+            'transaction_type' => 'Credit',
+            'transaction_amount' => $journalItem->credit,
+            'reference' => 'Bill Journal',
+            'reference_id' => $journal->id,
+            'reference_sub_id' => $journalItem->id,
+            'date' => $journal->date,
+            'created_at' => @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s'),
+            'product_id' => $data['id'],
+            'product_type' => 'Bill Payable',
+            'product_item_id' => 0,
+        ];
+        Utility::addTransactionLines($dataline, 'create');
 
         return $journal->id;
     }
 
-        //Purchase jr voucher
-public static function purchasejrentry($data)
-{
-    DB::beginTransaction();
-    try {
-        // --- ensure a valid date (main cause of your error) ---
-        $date = $data['date'] ?? ($data['purchase_date'] ?? null);
-        if (empty($date)) {
-            // final fallback to "today" to avoid null insert
-            $date = now()->toDateString();
-        }
+    //Purchase jr voucher
+    public static function purchasejrentry($data)
+    {
+        DB::beginTransaction();
+        try {
+            // --- ensure a valid date (main cause of your error) ---
+            $date = $data['date'] ?? ($data['purchase_date'] ?? null);
+            if (empty($date)) {
+                // final fallback to "today" to avoid null insert
+                $date = now()->toDateString();
+            }
 
-        // Next sequential journal_id for JV
-        $latest = JournalEntry::where('created_by', '=', \Auth::user()->creatorId())
-                    ->where('voucher_type','JV')
-                    ->orderBy('id','desc')
-                    ->first();
-        $nextJournalId = $latest ? ($latest->journal_id + 1) : 1;
+            // Next sequential journal_id for JV
+            $latest = JournalEntry::where('created_by', '=', \Auth::user()->creatorId())
+                ->where('voucher_type', 'JV')
+                ->orderBy('id', 'desc')
+                ->first();
+            $nextJournalId = $latest ? ($latest->journal_id + 1) : 1;
 
-        // Header
-        $journal               = new JournalEntry();
-        $journal->journal_id   = $nextJournalId;
-        $journal->date         = $date; // ✅ never null now
-        $journal->reference    = $data['reference'] ?? null;
-        $journal->description  = 'Purchase No : ' . (@$data['no']); // ✅ correct label
-        $journal->reference_id = $data['id'] ?? null;
-        $journal->category     = $data['category'] ?? 'Purchase';
-        $journal->voucher_type = 'JV';
-        $journal->owned_by     = $data['owned_by'] ?? null;
-        $journal->created_by   = $data['created_by'];
-        $journal->save();
+            // Header
+            $journal = new JournalEntry();
+            $journal->journal_id = $nextJournalId;
+            $journal->date = $date; // ✅ never null now
+            $journal->reference = $data['reference'] ?? null;
+            $journal->description = 'Purchase No : ' . (@$data['no']); // ✅ correct label
+            $journal->reference_id = $data['id'] ?? null;
+            $journal->category = $data['category'] ?? 'Purchase';
+            $journal->voucher_type = 'JV';
+            $journal->owned_by = $data['owned_by'] ?? null;
+            $journal->created_by = $data['created_by'];
+            $journal->save();
 
-        // timestamps (preserve backdated create if provided)
-        $stamp = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
-        $journal->created_at = $stamp;
-        $journal->updated_at = $stamp;
-        $journal->save();
+            // timestamps (preserve backdated create if provided)
+            $stamp = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
+            $journal->created_at = $stamp;
+            $journal->updated_at = $stamp;
+            $journal->save();
 
-        $reciveable = 0; // total line + tax (will become A/P credit)
-        $tax = 0;
+            $reciveable = 0; // total line + tax (will become A/P credit)
+            $tax = 0;
 
-        // --- Lines (Inventory/Expense debit per item) ---
-        for ($i = 0; $i < count($data['items']); $i++) {
-            $row = $data['items'][$i];
+            // --- Lines (Inventory/Expense debit per item) ---
+            for ($i = 0; $i < count($data['items']); $i++) {
+                $row = $data['items'][$i];
 
-            $product = ProductService::where('id', $row['item'])->first();
+                $product = ProductService::where('id', $row['item'])->first();
 
-            $lineAmount = (($row['quantity'] * $row['price']) - $row['discount']);
-            $itemTax    = floatval($row['itemTaxPrice'] ?? 0);
+                $lineAmount = (($row['quantity'] * $row['price']) - $row['discount']);
+                $itemTax = floatval($row['itemTaxPrice'] ?? 0);
 
-            $journalItem               = new JournalItem();
-            $journalItem->journal      = $journal->id;
-            // NOTE: keeping your product account mapping as-is (sale_chartaccount_id), 
-            // change to purchase-side account if you have one (e.g. $product->purchase_chartaccount_id).
-            $journalItem->account      = @$product->sale_chartaccount_id;
-            $journalItem->product_ids  = @$row['prod_id'];
-            $journalItem->description  = @$row['description'];
-            $journalItem->credit       = 0;
-            $journalItem->debit        = $lineAmount;
-            $journalItem->save();
-            $journalItem->created_at   = $stamp;
-            $journalItem->updated_at   = $stamp;
-            $journalItem->save();
+                $journalItem = new JournalItem();
+                $journalItem->journal = $journal->id;
+                // NOTE: keeping your product account mapping as-is (sale_chartaccount_id), 
+                // change to purchase-side account if you have one (e.g. $product->purchase_chartaccount_id).
+                $journalItem->account = @$product->sale_chartaccount_id;
+                $journalItem->product_ids = @$row['prod_id'];
+                $journalItem->description = @$row['description'];
+                $journalItem->credit = 0;
+                $journalItem->debit = $lineAmount;
+                $journalItem->save();
+                $journalItem->created_at = $stamp;
+                $journalItem->updated_at = $stamp;
+                $journalItem->save();
 
-            $reciveable += ($lineAmount + $itemTax);
-            $tax        += $itemTax;
+                $reciveable += ($lineAmount + $itemTax);
+                $tax += $itemTax;
 
-            // Transaction line for item (DEBIT)
-            Utility::addTransactionLines([
-                'account_id'        => $journalItem->account,
-                'transaction_type'  => 'Debit',
-                'transaction_amount'=> $journalItem->debit,
-                'reference'         => 'Purchase Journal',
-                'reference_id'      => $journal->id,
-                'reference_sub_id'  => $journalItem->id,
-                'date'              => $journal->date,
-                'created_at'        => $stamp,
-                'product_id'        => $data['id'],
-                'product_type'      => 'Purchase',
-                'product_item_id'   => @$row['prod_id'],
-            ], 'create');
+                // Transaction line for item (DEBIT)
+                Utility::addTransactionLines([
+                    'account_id' => $journalItem->account,
+                    'transaction_type' => 'Debit',
+                    'transaction_amount' => $journalItem->debit,
+                    'reference' => 'Purchase Journal',
+                    'reference_id' => $journal->id,
+                    'reference_sub_id' => $journalItem->id,
+                    'date' => $journal->date,
+                    'created_at' => $stamp,
+                    'product_id' => $data['id'],
+                    'product_type' => 'Purchase',
+                    'product_item_id' => @$row['prod_id'],
+                ], 'create');
 
-            // Tax (DEBIT)
-            if ($tax != 0) {
-                $accounttax = Tax::where('id', $product->tax_id)->first();
-                $account_tax = $accounttax ? ChartOfAccount::where('id', $accounttax->account_id)->first() : null;
+                // Tax (DEBIT)
+                if ($tax != 0) {
+                    $accounttax = Tax::where('id', $product->tax_id)->first();
+                    $account_tax = $accounttax ? ChartOfAccount::where('id', $accounttax->account_id)->first() : null;
 
-                if (!$account_tax) {
-                    $types_t = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
-                    if ($types_t) {
-                        $sub_type_t  = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
-                        $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
-                        if (!$account_tax) {
-                            $account_tax = ChartOfAccount::create([
-                                'name'       => 'TAX',
-                                'code'       => '10000',
-                                'type'       => $types_t->id,
-                                'sub_type'   => $sub_type_t->id,
-                                'is_enabled' => 1,
-                                'created_by' => $data['created_by'],
-                            ]);
+                    if (!$account_tax) {
+                        $types_t = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
+                        if ($types_t) {
+                            $sub_type_t = ChartOfAccountSubType::where('type', $types_t->id)->where('name', 'Current Liabilities')->first();
+                            $account_tax = ChartOfAccount::where('type', $types_t->id)->where('sub_type', $sub_type_t->id)->where('name', 'TAX')->first();
+                            if (!$account_tax) {
+                                $account_tax = ChartOfAccount::create([
+                                    'name' => 'TAX',
+                                    'code' => '10000',
+                                    'type' => $types_t->id,
+                                    'sub_type' => $sub_type_t->id,
+                                    'is_enabled' => 1,
+                                    'created_by' => $data['created_by'],
+                                ]);
+                            }
                         }
                     }
+
+                    if ($account_tax) {
+                        $taxItem = new JournalItem();
+                        $taxItem->journal = $journal->id;
+                        $taxItem->account = @$account_tax->id;
+                        $taxItem->prod_tax_id = @$row['prod_id'];
+                        $taxItem->description = 'Tax on Purchase No : ' . (@$data['no']);
+                        $taxItem->credit = 0;
+                        $taxItem->debit = $tax;
+                        $taxItem->save();
+                        $taxItem->created_at = $stamp;
+                        $taxItem->updated_at = $stamp;
+                        $taxItem->save();
+
+                        // Transaction line for tax (DEBIT)
+                        Utility::addTransactionLines([
+                            'account_id' => $taxItem->account,
+                            'transaction_type' => 'Debit',
+                            'transaction_amount' => $taxItem->debit,
+                            'reference' => 'Purchase Journal',
+                            'reference_id' => $journal->id,
+                            'reference_sub_id' => $taxItem->id,
+                            'date' => $journal->date,
+                            'created_at' => $stamp,
+                            'product_id' => $data['id'],
+                            'product_type' => 'Purchase Tax',
+                            'product_item_id' => @$row['prod_id'],
+                        ], 'create');
+                    }
+
+                    // reset tax for next loop item
+                    $tax = 0;
                 }
+            }
 
-                if ($account_tax) {
-                    $taxItem               = new JournalItem();
-                    $taxItem->journal      = $journal->id;
-                    $taxItem->account      = @$account_tax->id;
-                    $taxItem->prod_tax_id  = @$row['prod_id'];
-                    $taxItem->description  = 'Tax on Purchase No : ' . (@$data['no']);
-                    $taxItem->credit       = 0;
-                    $taxItem->debit        = $tax;
-                    $taxItem->save();
-                    $taxItem->created_at   = $stamp;
-                    $taxItem->updated_at   = $stamp;
-                    $taxItem->save();
+            // --- Accounts Payable (CREDIT total) ---
+            $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])
+                ->where('name', 'Liabilities')->first();
+            $account = null;
+            if ($types) {
+                $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
+                $account = ChartOfAccount::where('type', $types->id)
+                    ->where('sub_type', $sub_type->id)
+                    ->where('name', 'Account Payable')    // ✅ payable (not receivables)
+                    ->first();
 
-                    // Transaction line for tax (DEBIT)
-                    Utility::addTransactionLines([
-                        'account_id'        => $taxItem->account,
-                        'transaction_type'  => 'Debit',
-                        'transaction_amount'=> $taxItem->debit,
-                        'reference'         => 'Purchase Journal',
-                        'reference_id'      => $journal->id,
-                        'reference_sub_id'  => $taxItem->id,
-                        'date'              => $journal->date,
-                        'created_at'        => $stamp,
-                        'product_id'        => $data['id'],
-                        'product_type'      => 'Purchase Tax',
-                        'product_item_id'   => @$row['prod_id'],
-                    ], 'create');
+                if (!$account) {
+                    $account = ChartOfAccount::create([
+                        'name' => 'Account Payable',
+                        'code' => '20000',
+                        'type' => $types->id,
+                        'sub_type' => $sub_type->id,
+                        'is_enabled' => 1,
+                        'created_by' => $data['created_by'],
+                    ]);
                 }
-
-                // reset tax for next loop item
-                $tax = 0;
             }
-        }
 
-        // --- Accounts Payable (CREDIT total) ---
-        $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])
-                    ->where('name', 'Liabilities')->first();
-        $account = null;
-        if ($types) {
-            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
-            $account  = ChartOfAccount::where('type', $types->id)
-                            ->where('sub_type', $sub_type->id)
-                            ->where('name', 'Account Payable')    // ✅ payable (not receivables)
-                            ->first();
+            if ($account) {
+                $ap = new JournalItem();
+                $ap->journal = $journal->id;
+                $ap->account = @$account->id;
+                $ap->description = 'Payable on Purchase No : ' . (@$data['no']);
+                $ap->credit = $reciveable;  // ✅ payable → CREDIT
+                $ap->debit = 0;
+                $ap->save();
+                $ap->created_at = $stamp;
+                $ap->updated_at = $stamp;
+                $ap->save();
 
-            if (!$account) {
-                $account = ChartOfAccount::create([
-                    'name'       => 'Account Payable',
-                    'code'       => '20000',
-                    'type'       => $types->id,
-                    'sub_type'   => $sub_type->id,
-                    'is_enabled' => 1,
-                    'created_by' => $data['created_by'],
-                ]);
+                // Transaction line for A/P (CREDIT)
+                Utility::addTransactionLines([
+                    'account_id' => $account->id,
+                    'transaction_type' => 'Credit',
+                    'transaction_amount' => $ap->credit,
+                    'reference' => 'Purchase Journal',
+                    'reference_id' => $journal->id,
+                    'reference_sub_id' => $ap->id,
+                    'date' => $journal->date,
+                    'created_at' => $stamp,
+                    'product_id' => $data['id'],
+                    'product_type' => 'Purchase Payable',
+                    'product_item_id' => 0,
+                ], 'create');
             }
+
+            DB::commit();
+            return $journal->id;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return 'error';
         }
-
-        if ($account) {
-            $ap                 = new JournalItem();
-            $ap->journal        = $journal->id;
-            $ap->account        = @$account->id;
-            $ap->description    = 'Payable on Purchase No : ' . (@$data['no']);
-            $ap->credit         = $reciveable;  // ✅ payable → CREDIT
-            $ap->debit          = 0;
-            $ap->save();
-            $ap->created_at     = $stamp;
-            $ap->updated_at     = $stamp;
-            $ap->save();
-
-            // Transaction line for A/P (CREDIT)
-            Utility::addTransactionLines([
-                'account_id'        => $account->id,
-                'transaction_type'  => 'Credit',
-                'transaction_amount'=> $ap->credit,
-                'reference'         => 'Purchase Journal',
-                'reference_id'      => $journal->id,
-                'reference_sub_id'  => $ap->id,
-                'date'              => $journal->date,
-                'created_at'        => $stamp,
-                'product_id'        => $data['id'],
-                'product_type'      => 'Purchase Payable',
-                'product_item_id'   => 0,
-            ], 'create');
-        }
-
-        DB::commit();
-        return $journal->id;
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return 'error';
     }
-}
 
 
 
