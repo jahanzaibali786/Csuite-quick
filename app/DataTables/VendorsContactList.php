@@ -12,12 +12,20 @@ class VendorsContactList extends DataTable
     {
         return datatables()
             ->eloquent($query)
-            ->editColumn('name', fn($row) => $row->name)
-            ->editColumn('contact', fn($row) => $row->contact ?? '-')
-            ->editColumn('email', fn($row) => $row->email ?? '-')
-            ->editColumn('billing_name', fn($row) => $row->billing_name ?? '-')
-            ->editColumn('billing_address', fn($row) => $row->billing_address ?? '-')
-            ->editColumn('vender_id', fn($row) => $row->vender_id ?: '-');
+            ->editColumn('name', fn($row) => e($row->name))
+            ->editColumn('contact', function ($row) {
+                if (empty($row->contact)) {
+                    return '-';
+                }
+
+                // Prefix with non-breaking space to force string treatment
+                return '&nbsp;' . e($row->contact);
+            })
+            ->rawColumns(['contact']) // allow &nbsp; to render as HTML
+            ->editColumn('email', fn($row) => e($row->email ?? '-'))
+            ->editColumn('billing_name', fn($row) => e($row->billing_name ?? '-'))
+            ->editColumn('billing_address', fn($row) => e($row->billing_address ?? '-'))
+            ->editColumn('vender_id', fn($row) => e($row->vender_id ?: '-'));
     }
 
     public function query(Vender $model)
@@ -41,6 +49,15 @@ class VendorsContactList extends DataTable
                 'info' => false,
                 'ordering' => false,
                 'responsive' => true,
+
+                // 🚫 disable DataTables numeric formatting
+                'columnDefs' => [
+                    [
+                        'targets' => [1], // column index of Phone Number (0-based)
+                        'type' => 'string', // force text
+                        'render' => 'function(data, type, row, meta) { return data; }',
+                    ],
+                ],
             ]);
     }
 
@@ -48,7 +65,9 @@ class VendorsContactList extends DataTable
     {
         return [
             Column::make('name')->title('Vendor'),
-            Column::make('contact')->title('Phone Number'),
+            Column::make('contact')
+                ->title('Phone Number')
+                ->addClass('text-start'),
             Column::make('email')->title('Email'),
             Column::make('billing_name')->title('Full Name'),
             Column::make('billing_address')->title('Billing Address'),
