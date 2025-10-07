@@ -15,92 +15,77 @@ class SalesByCustomerDetailDataTable extends DataTable
 {
     public function dataTable($query)
     {
+        $rows = $query->get();
+        $data = collect();
+
+        $runningBalance = 0;
+        $totalAmount = 0;
+        $totalQuantity = 0;
+
+        foreach ($rows as $r) {
+            $amount = ($r->sales_price ?? 0) * ($r->quantity ?? 0);
+            $runningBalance += $amount;
+            $totalAmount += $amount;
+            $totalQuantity += ($r->quantity ?? 0);
+
+            $data->push([
+                'transaction_date' => date('m/d/Y', strtotime($r->transaction_date ?? '')),
+                'transaction_type' => $r->transaction_type ?? '',
+                'num' => $r->num ?? '-',
+                'product_service_name' => $r->product_service_name ?? '-',
+                'memo_description' => $r->memo_description ?? '-',
+                'quantity' => number_format($r->quantity ?? 0, 2),
+                'sales_price' => number_format($r->sales_price ?? 0),
+                'amount' => number_format($amount, 2),
+                'balance' => number_format($runningBalance, 2),
+            ]);
+        }
+
+        // Add a total row
+        if ($rows->count() > 0) {
+            $data->push([
+                'transaction_date' => '<strong>Total</strong>',
+                'transaction_type' => '',
+                'num' => '',
+                'product_service_name' => '',
+                'memo_description' => '',
+                'quantity' => '<strong>' . number_format($totalQuantity, 2) . '</strong>',
+                'sales_price' => '',
+                'amount' => '<strong>' . number_format($totalAmount, 2) . '</strong>',
+                'balance' => '<strong>' . number_format($runningBalance, 2) . '</strong>',
+                'DT_RowClass' => 'summary-total'
+            ]);
+        }
+
         return datatables()
-            ->of($query)
-            ->editColumn('transaction_date', function ($row) {
-                try {
-                    return date('m/d/Y', strtotime($row->transaction_date ?? ''));
-                } catch (\Exception $e) {
-                    return $row->transaction_date ?? '-';
-                }
-            })
-            ->editColumn('transaction_type', function ($row) {
-                return $row->transaction_type ?? '';
-            })
-            ->editColumn('num', function ($row) {
-                return $row->num ?? '-';
-            })
-            ->editColumn('product_service_name', function ($row) {
-                return $row->product_service_name ?? '-';
-            })
-            ->editColumn('memo_description', function ($row) {
-                return $row->memo_description ?? '-';
-            })
-            ->editColumn('quantity', function ($row) {
-                try {
-                    return number_format((float)($row->quantity ?? 0), 2);
-                } catch (\Exception $e) {
-                    return '0.00';
-                }
-            })
-            ->editColumn('sales_price', function ($row) {
-                try {
-                    return number_format((float)($row->sales_price ?? 0));
-                } catch (\Exception $e) {
-                    return '$0.00';
-                }
-            })
-            ->editColumn('amount', function ($row) {
-                try {
-                    return number_format((float)($row->amount ?? 0));
-                } catch (\Exception $e) {
-                    return '$0.00';
-                }
-            })
-            ->editColumn('balance', function ($row) {
-                try {
-                    return \Auth::user()->priceFormat((float)($row->balance ?? 0));
-                } catch (\Exception $e) {
-                    return '$0.00';
-                }
-            });
+            ->collection($data)
+            ->rawColumns(['transaction_date', 'quantity', 'amount', 'balance']);
     }
+
 
     public function query()
     {
         $user = Auth::user();
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $ownerColumn = $user->type === 'company' ? 'created_by' : 'owned_by';
 
-        // Get start and end dates from request, fallback to defaults
-        $start = request()->get('start_date')
-            ?? request()->get('startDate')
-            ?? date('Y-01-01');
-        $end = request()->get('end_date')
-            ?? request()->get('endDate')
-            ?? date('Y-m-d');
+        // Determine owner ID based on user type
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+
+        // Use consistent column for created_by (same as Product/Service Detail)
+        $ownerColumn = 'invoices.created_by';
+
+        // Date range
+        $start = request()->get('start_date') ?? request()->get('startDate') ?? date('Y-01-01');
+        $end = request()->get('end_date') ?? request()->get('endDate') ?? date('Y-m-d');
         $selectedCustomer = request('customer_name', '');
 
-        // Debug logging
-        \Log::info('SalesByCustomerDetail Debug', [
-            'user_id' => $user->id,
-            'user_type' => $user->type,
-            'owner_id' => $ownerId,
-            'owner_column' => $ownerColumn,
-            'start_date' => $start,
-            'end_date' => $end,
-            'selected_customer' => $selectedCustomer,
-            'request_params' => request()->all()
-        ]);
-
-        // Build the query for detailed sales by customer
+        // Build the query (aligned with SalesByProductServiceDetail)
         $query = DB::table('invoice_products')
             ->join('invoices', 'invoices.id', '=', 'invoice_products.invoice_id')
             ->join('customers', 'customers.id', '=', 'invoices.customer_id')
             ->leftJoin('product_services', 'product_services.id', '=', 'invoice_products.product_id')
-            ->where("invoices.$ownerColumn", $ownerId)
+            ->where($ownerColumn, $ownerId)
+            ->where('invoices.status', '!=', 0) // ✅ Exclude draft invoices
             ->whereBetween('invoices.issue_date', [$start, $end])
-            ->whereIn('invoices.status', [1, 2, 3, 4]) // Exclude draft (0)
             ->select([
                 'customers.name as customer_name',
                 'invoices.issue_date as transaction_date',
@@ -111,20 +96,20 @@ class SalesByCustomerDetailDataTable extends DataTable
                 DB::raw('COALESCE(invoice_products.quantity, 0) as quantity'),
                 DB::raw('COALESCE(invoice_products.price, 0) as sales_price'),
                 DB::raw('COALESCE((invoice_products.price * invoice_products.quantity - COALESCE(invoice_products.discount, 0)), 0) as amount'),
-                DB::raw('COALESCE((invoice_products.price * invoice_products.quantity - COALESCE(invoice_products.discount, 0)), 0) as balance')
+                DB::raw('COALESCE((invoice_products.price * invoice_products.quantity - COALESCE(invoice_products.discount, 0)), 0) as balance'),
             ]);
 
-        // Apply customer filter if specified
+        // Apply optional customer filter
         if (!empty($selectedCustomer)) {
             $query->where('customers.name', 'LIKE', '%' . $selectedCustomer . '%');
         }
 
-        // Order by customer, then by date, then by product
+        // Order consistently
         $query->orderBy('customers.name', 'asc')
-              ->orderBy('invoices.issue_date', 'asc')
-              ->orderBy('product_services.name', 'asc');
+            ->orderBy('invoices.issue_date', 'asc')
+            ->orderBy('product_services.name', 'asc');
 
-        // Debug: Log the actual SQL query
+        // Log for debug (optional)
         \Log::info('SalesByCustomerDetail SQL', [
             'sql' => $query->toSql(),
             'bindings' => $query->getBindings()
@@ -132,6 +117,7 @@ class SalesByCustomerDetailDataTable extends DataTable
 
         return $query;
     }
+
 
     public function html()
     {
@@ -177,12 +163,12 @@ class SalesByCustomerDetailDataTable extends DataTable
             Column::make('quantity')->title(__('Quantity'))->visible(true)->addClass('text-right')->width('8%'),
             Column::make('sales_price')->title(__('Sales Price'))->visible(true)->addClass('text-right')->width('10%'),
             Column::make('amount')->title(__('Amount'))->visible(true)->addClass('text-right')->width('10%'),
-            Column::make('balance')->title(__('Balance'))->visible(false)->addClass('text-right')->width('10%'),
+            Column::make('balance')->title(__('Balance'))->visible(true)->addClass('text-right')->width('10%'),
         ];
     }
 
     protected function filename(): string
     {
-        return 'SalesByCustomerDetail_'.date('YmdHis');
+        return 'SalesByCustomerDetail_' . date('YmdHis');
     }
 }

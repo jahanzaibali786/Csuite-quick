@@ -7,6 +7,8 @@ use Carbon\Carbon;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 use Illuminate\Support\Facades\DB;
+use App\Models\PurchaseProduct;
+
 
 class OpenPurchaseOrderList extends DataTable
 {
@@ -143,7 +145,7 @@ class OpenPurchaseOrderList extends DataTable
             ->rawColumns(['transaction']);
     }
 
-    public function query(BillProduct $model)
+    public function query(PurchaseProduct $model)
     {
         $start = request()->get('start_date')
             ?? request()->get('startDate')
@@ -155,30 +157,30 @@ class OpenPurchaseOrderList extends DataTable
 
         return $model->newQuery()
             ->select(
-                'bill_products.*',
-                'bills.bill_id as bill',
-                'bills.bill_date as transaction_date',
-                'bill_products.description',
+                'purchase_products.*',
+                'purchases.purchase_id as purchase',
+                'purchases.purchase_date as transaction_date',
+                'purchase_products.description',
                 'venders.name as vendor_name',
-                DB::raw('IFNULL(SUM(invoice_products.quantity),0) as received_quantity'),
-                DB::raw('(SELECT IFNULL(SUM((bp.price * bp.quantity - bp.discount) * (taxes.rate / 100)),0) 
-                FROM bill_products bp
-                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bp.tax) > 0
-                WHERE bp.id = bill_products.id) as tax_amount')
+                DB::raw('(SELECT IFNULL(SUM((pp.price * pp.quantity - pp.discount) * (taxes.rate / 100)),0)
+                FROM purchase_products pp
+                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, pp.tax) > 0
+                WHERE pp.id = purchase_products.id) as tax_amount')
             )
-            ->join('bills', 'bills.id', '=', 'bill_products.bill_id')
-            ->join('venders', 'venders.id', '=', 'bills.vender_id')
-            ->leftJoin('invoice_products', 'invoice_products.product_id', '=', 'bill_products.product_id')
-            ->where('bills.created_by', \Auth::user()->creatorId())
-            ->whereBetween('bills.bill_date', [$start, $end])
+            ->join('purchases', 'purchases.id', '=', 'purchase_products.purchase_id')
+            ->join('venders', 'venders.id', '=', 'purchases.vender_id')
+            ->where('purchases.created_by', \Auth::user()->creatorId())
+            ->whereBetween('purchases.purchase_date', [$start, $end])
             ->groupBy(
-                'bill_products.id',
-                'bills.bill_id',
-                'bills.bill_date',
-                'bill_products.description',
+                'purchase_products.id',
+                'purchases.purchase_id',
+                'purchases.purchase_date',
+                'purchase_products.description',
                 'venders.name'
             );
     }
+
+
 
     public function html()
     {
