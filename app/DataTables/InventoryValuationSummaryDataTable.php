@@ -19,15 +19,21 @@ class InventoryValuationSummaryDataTable extends DataTable
             ->addColumn('category', fn($r) => $r->category->name ?? '-')
             ->addColumn('unit', fn($r) => $r->unit->name ?? '-')
             ->addColumn('tax', function ($r) {
-                if (empty($r->tax_id))
+                if (empty($r->tax_id)) {
                     return '-';
+                }
+
                 $out = [];
                 $taxData = \App\Models\Utility::getTaxData();
+
                 foreach (explode(',', $r->tax_id) as $id) {
-                    if (!isset($taxData[$id]))
+                    if (!isset($taxData[$id])) {
                         continue;
+                    }
+
                     $out[] = $taxData[$id]['name'] . ' (' . $taxData[$id]['rate'] . '%)';
                 }
+
                 return implode('<br>', $out);
             })
             // Show computed on-hand quantity AS OF end date (only for products)
@@ -42,24 +48,41 @@ class InventoryValuationSummaryDataTable extends DataTable
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
 
         // ---- AS-OF quantity: use only "To" (end_date) ----
-        //$end   = request('end_date') ?: now()->toDateString();
-        //$endDT = $end . ' 23:59:59';
-
-        $endDT = request()->get('end_date')
-            ?? request()->get('endDate')
-            ?? date('Y-m-d');
+        $endDT = request()->get('end_date') ?? request()->get('endDate') ?? date('Y-m-d');
 
         // Movement mapping (edit as your app uses)
-        $incoming = ['bill', 'purchase', 'vendor_bill', 'stock_in', 'opening', 'adjustment_in', 'transfer_in', 'credit_note_in', 'manually'];
-        $outgoing = ['invoice', 'sale', 'proposal', 'stock_out', 'adjustment_out', 'transfer_out', 'debit_note_out'];
+        $incoming = [
+            'bill',
+            'purchase',
+            'vendor_bill',
+            'stock_in',
+            'opening',
+            'adjustment_in',
+            'transfer_in',
+            'credit_note_in',
+            'manually'
+        ];
+
+        $outgoing = [
+            'invoice',
+            'sale',
+            'proposal',
+            'stock_out',
+            'adjustment_out',
+            'transfer_out',
+            'debit_note_out'
+        ];
 
         // Sum movement <= end date
         $stockAgg = DB::table('stock_reports as sr')
-            ->select('sr.product_id', DB::raw("
-            SUM(CASE WHEN sr.type IN ('" . implode("','", $incoming) . "') THEN sr.quantity ELSE 0 END)
-          - SUM(CASE WHEN sr.type IN ('" . implode("','", $outgoing) . "') THEN sr.quantity ELSE 0 END)
-          AS qty_as_of
-        "))
+            ->select(
+                'sr.product_id',
+                DB::raw("
+                    SUM(CASE WHEN sr.type IN ('" . implode("','", $incoming) . "') THEN sr.quantity ELSE 0 END)
+                    - SUM(CASE WHEN sr.type IN ('" . implode("','", $outgoing) . "') THEN sr.quantity ELSE 0 END)
+                    AS qty_as_of
+                ")
+            )
             ->where('sr.created_by', $ownerId)
             ->where('sr.created_at', '<=', $endDT)
             ->groupBy('sr.product_id');
@@ -67,7 +90,8 @@ class InventoryValuationSummaryDataTable extends DataTable
         // Products list (NO date filter here)
         $q = $model->newQuery()
             ->with(['category', 'unit'])
-            ->where('product_services.created_by', $ownerId)->where('product_services.created_at', '<=', $endDT)
+            ->where('product_services.created_by', $ownerId)
+            ->where('product_services.created_at', '<=', $endDT)
             ->leftJoinSub($stockAgg, 'sr_agg', function ($join) {
                 $join->on('product_services.id', '=', 'sr_agg.product_id');
             })
@@ -77,13 +101,13 @@ class InventoryValuationSummaryDataTable extends DataTable
         if (request()->filled('category') && request('category') !== '') {
             $q->where('product_services.category_id', request('category'));
         }
+
         if (request()->filled('type') && request('type') !== '') {
             $q->where('product_services.type', request('type'));
         }
 
         return $q;
     }
-
 
     public function html()
     {
@@ -118,7 +142,11 @@ class InventoryValuationSummaryDataTable extends DataTable
             Column::make('category')->title(__('Category')),
             Column::make('unit')->title(__('Unit')),
             // We keep the key as "quantity" to match your JS columns config
-            Column::make('quantity')->data('quantity')->name('qty_as_of')->title(__('Quantity'))->addClass('text-right'),
+            Column::make('quantity')
+                ->data('quantity')
+                ->name('qty_as_of')
+                ->title(__('Quantity'))
+                ->addClass('text-right'),
             Column::make('type')->title(__('Type')),
         ];
     }

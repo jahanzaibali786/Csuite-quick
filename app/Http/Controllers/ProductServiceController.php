@@ -1393,6 +1393,11 @@ class ProductServiceController extends Controller
             'accountingMethod' => $request->get('accounting_method', 'accrual'),
         ];
 
-        return $dataTable->render('report.sales_tax_liability_report', compact('pageTitle', 'customers', 'categories', 'types', 'user', 'filter'));
+        // return $dataTable->render('report.sales_tax_liability_report', compact('pageTitle', 'customers', 'categories', 'types', 'user', 'filter'));
+        return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        ]);
     }
 }
