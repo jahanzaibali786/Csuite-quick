@@ -89,8 +89,8 @@ class PurchasesByVendorDetail extends DataTable
 
         $finalData->push((object) [
             'transaction_date' => '',
-            'transaction_type' => '',
-            'transaction' => 'Grand Total',
+            'transaction_type' => '<strong>Grand Total</strong>',
+            'transaction' => '',
             'product_service' => '',
             'memo' => '',
             'quantity' => 0,
@@ -112,6 +112,25 @@ class PurchasesByVendorDetail extends DataTable
                 }
                 return number_format((float) $row->amount, 2);
             })
+            ->editColumn('quantity', function ($row) {
+                if (isset($row->isVendorHeader) || isset($row->isSubtotal) || isset($row->isPlaceholder) || isset($row->isGrandTotal)) {
+                    return '';
+                }
+                return $row->quantity;
+            })
+            ->editColumn('rate', function ($row) {
+                if (isset($row->isVendorHeader) || isset($row->isSubtotal) || isset($row->isPlaceholder) || isset($row->isGrandTotal)) {
+                    return '';
+                }
+                return number_format((float) $row->rate, 2);
+            })
+            ->editColumn('balance', function ($row) {
+                if (isset($row->isVendorHeader) || isset($row->isPlaceholder)) {
+                    return '';
+                }
+                return number_format((float) $row->balance, 2);
+            })
+
             ->setRowClass(function ($row) {
                 $vendorSlug = $row->vendor_name ? \Str::slug($row->vendor_name) : 'no-vendor';
                 if (isset($row->isVendorHeader) && $row->isVendorHeader)

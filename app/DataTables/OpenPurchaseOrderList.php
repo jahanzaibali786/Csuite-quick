@@ -2,13 +2,10 @@
 
 namespace App\DataTables;
 
-use App\Models\BillProduct;
 use Carbon\Carbon;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 use Illuminate\Support\Facades\DB;
-use App\Models\PurchaseProduct;
-
 
 class OpenPurchaseOrderList extends DataTable
 {
@@ -30,11 +27,12 @@ class OpenPurchaseOrderList extends DataTable
                 'open_balance' => 0,
             ];
 
-            // Vendor header
+            // Vendor header row
             $finalData->push((object) [
                 'transaction_date' => '',
                 'vendor' => $vendor,
-                'transaction' => '<span class="" data-bucket="' . \Str::slug($vendor) . '"> <span class="icon">▼</span> <strong>' . $vendor . '</strong></span>',
+                'transaction' => '<span class="" data-bucket="' . \Str::slug($vendor) . '">
+                    <span class="icon">▼</span> <strong>' . $vendor . '</strong></span>',
                 'memo' => '',
                 'ship_via' => '',
                 'amount' => '',
@@ -44,16 +42,14 @@ class OpenPurchaseOrderList extends DataTable
             ]);
 
             foreach ($rowsByVendor as $row) {
-                $row->transaction = \Auth::user()->billNumberFormat($row->bill ?? $row->bill_id);
-                $row->memo = $row->description ?? '';
-                $row->ship_via = ''; // leave empty since column doesn't exist
-
-                $row->amount = ($row->price * $row->quantity) - ($row->discount ?? 0) + ($row->tax_amount ?? 0);
-                $row->received_amount = $row->price * $row->received_quantity;
-                $row->open_balance = $row->amount - $row->received_amount;
+                // Show purchase number instead of bill
+                $row->transaction = \Auth::user()->purchaseNumberFormat($row->purchase_number ?? $row->purchase_id);
+                $row->memo = $row->memo ?? '';
+                $row->ship_via = $row->ship_via ?? '';
 
                 $vendorTotals['amount'] += $row->amount;
                 $vendorTotals['open_balance'] += $row->open_balance;
+
                 $row->vendor = $vendor;
                 $finalData->push($row);
             }
@@ -70,11 +66,12 @@ class OpenPurchaseOrderList extends DataTable
                 'isSubtotal' => true,
             ]);
 
+            // Update grand totals
             foreach ($vendorTotals as $key => $val) {
                 $grandTotal[$key] += $val;
             }
 
-            // Empty row for spacing
+            // Spacing row
             $finalData->push((object) [
                 'vendor' => $vendor,
                 'transaction_date' => '',
@@ -108,44 +105,24 @@ class OpenPurchaseOrderList extends DataTable
                 : ($row->transaction_date ? Carbon::parse($row->transaction_date)->format('Y-m-d') : '')
             )
             ->setRowClass(function ($row) {
-                if (isset($row->isVendor))
-                    return 'vendor-row';
-                if (isset($row->isSubtotal))
-                    return 'subtotal-row';
-                if (isset($row->isGrandTotal))
-                    return 'grandtotal-row';
-                if (isset($row->isPlaceholder))
-                    return 'placeholder-row';
-                return 'detail-row';
-            })
-            ->setRowClass(function ($row) {
-                if (property_exists($row, 'isParent') && $row->isParent) {
+                if (property_exists($row, 'isParent') && $row->isParent)
                     return 'parent-row toggle-bucket bucket-' . \Str::slug($row->vendor ?? 'na');
-                }
 
-                if (property_exists($row, 'isSubtotal') && $row->isSubtotal && !property_exists($row, 'isGrandTotal')) {
+                if (property_exists($row, 'isSubtotal') && $row->isSubtotal)
                     return 'subtotal-row bucket-' . \Str::slug($row->vendor ?? 'na');
-                }
 
-                if (
-                    !property_exists($row, 'isParent') &&
-                    !property_exists($row, 'isSubtotal') &&
-                    !property_exists($row, 'isGrandTotal') &&
-                    !property_exists($row, 'isPlaceholder')
-                ) {
-                    return 'child-row bucket-' . \Str::slug($row->vendor ?? 'na');
-                }
-
-                if (property_exists($row, 'isGrandTotal') && $row->isGrandTotal) {
+                if (property_exists($row, 'isGrandTotal') && $row->isGrandTotal)
                     return 'grandtotal-row';
-                }
 
-                return '';
+                if (property_exists($row, 'isPlaceholder') && $row->isPlaceholder)
+                    return 'placeholder-row';
+
+                return 'child-row bucket-' . \Str::slug($row->vendor ?? 'na');
             })
             ->rawColumns(['transaction']);
     }
 
-    public function query(PurchaseProduct $model)
+    public function query()
     {
         $start = request()->get('start_date')
             ?? request()->get('startDate')
@@ -155,31 +132,57 @@ class OpenPurchaseOrderList extends DataTable
             ?? request()->get('endDate')
             ?? Carbon::now()->endOfDay()->format('Y-m-d');
 
-        return $model->newQuery()
+        return DB::table('purchases')
             ->select(
-                'purchase_products.*',
-                'purchases.purchase_id as purchase',
+                'purchases.id',
+                'purchases.purchase_id',
+                'purchases.purchase_number',
                 'purchases.purchase_date as transaction_date',
-                'purchase_products.description',
                 'venders.name as vendor_name',
-                DB::raw('(SELECT IFNULL(SUM((pp.price * pp.quantity - pp.discount) * (taxes.rate / 100)),0)
+                // Total amount (sum of product lines + taxes)
+                DB::raw('(
+                SELECT IFNULL(SUM(
+                    (pp.price * pp.quantity)
+                    - IFNULL(pp.discount, 0)
+                    + IFNULL(
+                        (SELECT IFNULL(SUM((pp2.price * pp2.quantity - pp2.discount) * (taxes.rate / 100)), 0)
+                         FROM purchase_products pp2
+                         LEFT JOIN taxes ON FIND_IN_SET(taxes.id, pp2.tax) > 0
+                         WHERE pp2.purchase_id = purchases.id),
+                    0)
+                ), 0)
                 FROM purchase_products pp
-                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, pp.tax) > 0
-                WHERE pp.id = purchase_products.id) as tax_amount')
+                WHERE pp.purchase_id = purchases.id
+            ) as amount'),
+                // Total payments applied to this purchase
+                DB::raw('(
+                SELECT IFNULL(SUM(amount), 0)
+                FROM purchase_payments
+                WHERE purchase_id = purchases.id
+            ) as payments_total'),
+                // Open balance = amount - payments_total
+                DB::raw('(
+                (SELECT IFNULL(SUM(
+                    (pp.price * pp.quantity)
+                    - IFNULL(pp.discount, 0)
+                    + IFNULL(
+                        (SELECT IFNULL(SUM((pp2.price * pp2.quantity - pp2.discount) * (taxes.rate / 100)), 0)
+                         FROM purchase_products pp2
+                         LEFT JOIN taxes ON FIND_IN_SET(taxes.id, pp2.tax) > 0
+                         WHERE pp2.purchase_id = purchases.id),
+                    0)
+                ), 0)
+                FROM purchase_products pp
+                WHERE pp.purchase_id = purchases.id)
+                -
+                (SELECT IFNULL(SUM(amount), 0) FROM purchase_payments WHERE purchase_id = purchases.id)
+            ) as open_balance')
             )
-            ->join('purchases', 'purchases.id', '=', 'purchase_products.purchase_id')
             ->join('venders', 'venders.id', '=', 'purchases.vender_id')
             ->where('purchases.created_by', \Auth::user()->creatorId())
             ->whereBetween('purchases.purchase_date', [$start, $end])
-            ->groupBy(
-                'purchase_products.id',
-                'purchases.purchase_id',
-                'purchases.purchase_date',
-                'purchase_products.description',
-                'venders.name'
-            );
+            ->orderBy('purchases.purchase_date', 'asc');
     }
-
 
 
     public function html()
@@ -201,7 +204,7 @@ class OpenPurchaseOrderList extends DataTable
     {
         return [
             Column::make('transaction_date')->title('Date'),
-            Column::make('transaction')->title('Transaction'),
+            Column::make('transaction')->title('Purchase #'),
             Column::make('memo')->title('Memo / Description'),
             Column::make('ship_via')->title('Ship Via')->addClass('default-hidden'),
             Column::make('amount')->title('Amount'),
