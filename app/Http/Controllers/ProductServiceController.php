@@ -234,7 +234,7 @@ class ProductServiceController extends Controller
         //     compact('pageTitle', 'categories', 'types', 'customers', 'user', 'filter')
         // );
 
-        return $dataTable->render('sync.DoubleDateReport.index', [ // ✅ keep same view, or create vendorbalance.index
+        return $dataTable->render('sync.DoubleDateReport.index', [ 
             'pageTitle' => $pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))

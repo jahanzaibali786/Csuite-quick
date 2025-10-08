@@ -14,121 +14,61 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
 {
     public function dataTable($query)
     {
-        $rows = $query->get();
-        $taxes = Tax::all()->keyBy('id');
-
-        $data = collect();
-        $runningBalance = 0;
-        $totalAmount = 0;
-        $totalQuantity = 0;
-        $totalSalesWithTax = 0;
-
-        foreach ($rows as $r) {
-            // ---- Calculate amount (exclude tax) ----
-            $baseAmount = ($r->price ?? 0) * ($r->quantity ?? 0);
-            $discount = $r->discount ?? 0;
-            $amount = $baseAmount - $discount;
-
-            // ---- Calculate tax amount ----
-            $taxAmount = 0;
-            if (!empty($r->tax)) {
-                foreach (explode(',', $r->tax) as $taxId) {
-                    $taxId = trim($taxId);
-                    if (isset($taxes[$taxId])) {
-                        $rate = (float) $taxes[$taxId]->rate;
-                        $taxAmount += (($baseAmount - $discount) * $rate / 100);
-                    }
-                }
-            }
-
-            $salesWithTax = $amount + $taxAmount;
-
-            // ---- Update running totals ----
-            $runningBalance += $amount;
-            $totalQuantity += ($r->quantity ?? 0);
-            $totalAmount += $amount;
-            $totalSalesWithTax += $salesWithTax;
-
-            // ---- Add row to collection ----
-            $data->push([
-                'transaction_type' => 'Invoice',
-                'transaction_date' => optional($r->invoice)->issue_date
-                    ? Carbon::parse($r->invoice->issue_date)->format('m/d/Y')
-                    : '-',
-                'invoice_number' => optional($r->invoice)->ref_number ?? $r->invoice_id ?? '-',
-                'memo_description' => $r->description
-                    ?? (optional($r->invoice)->ref_number
-                        ? "Invoice Ref #" . optional($r->invoice)->ref_number
-                        : '-'),
-                'customer_name' => optional(optional($r->invoice)->customer)->name ?? '-',
-                'quantity' => number_format(($r->quantity ?? 0), 2),
-                'sales_price' => number_format(($r->price ?? 0), 2),
-                'amount' => number_format($amount, 2),
-                'balance' => number_format($runningBalance, 2), // ✅ running total balance
-                'sales_with_tax' => number_format($salesWithTax, 2),
-            ]);
-        }
-
-        // ✅ Add total row
-        if ($rows->count() > 0) {
-            $data->push([
-                'transaction_type' => '<strong>Total</strong>',
-                'transaction_date' => '<strong></strong>',
-                'invoice_number' => '<strong></strong>',
-                'memo_description' => '<strong></strong>',
-                'customer_name' => '<strong></strong>',
-                'quantity' => '<strong>' . number_format($totalQuantity, 2) . '</strong>',
-                'sales_price' => '<strong></strong>',
-                'amount' => '<strong>' . number_format($totalAmount, 2) . '</strong>',
-                'balance' => '<strong>' . number_format($runningBalance, 2) . '</strong>', // ✅ final total balance
-                'sales_with_tax' => '<strong>' . number_format($totalSalesWithTax, 2) . '</strong>',
-                'DT_RowClass' => 'summary-total'
-            ]);
-        } else {
-            $data->push([
-                'transaction_type' => 'No records found.',
-                'transaction_date' => '',
-                'invoice_number' => '',
-                'memo_description' => '',
-                'customer_name' => '',
-                'quantity' => '',
-                'sales_price' => '',
-                'amount' => '',
-                'balance' => '',
-                'sales_with_tax' => '',
-                'DT_RowClass' => 'no-data-row'
-            ]);
-        }
-
-        return datatables()
-            ->collection($data)
-            ->rawColumns([
-                'transaction_type',
+        $dataTable = datatables()
+            ->eloquent($query)
+            ->addColumn('transaction_type', fn($row) => 'Invoice')
+            ->addColumn(
                 'transaction_date',
+                fn($row) =>
+                optional($row->invoice)->issue_date
+                ? Carbon::parse($row->invoice->issue_date)->format('m/d/Y')
+                : 'No date available'
+            )
+            ->addColumn(
                 'invoice_number',
+                fn($row) =>
+                optional($row->invoice)->ref_number ?? $row->invoice_id ?? '-'
+            )
+            ->addColumn(
                 'memo_description',
+                fn($row) =>
+                $row->description ?: (
+                    optional($row->invoice)->ref_number
+                    ? "Invoice Ref #" . optional($row->invoice)->ref_number
+                    : '-'
+                )
+            )
+            ->addColumn(
                 'customer_name',
-                'quantity',
-                'sales_price',
-                'amount',
-                'balance',
-                'sales_with_tax',
-            ]);
+                fn($row) =>
+                optional(optional($row->invoice)->customer)->name ?? '-'
+            )
+            ->addColumn('quantity', fn($row) => number_format(($row->quantity ?? 0), 2))
+            ->addColumn('sales_price', fn($row) => number_format(($row->price ?? 0), 2))
+            ->addColumn('amount', fn($row) => number_format(($row->price ?? 0) * ($row->quantity ?? 0), 2))
+            ->addColumn('balance', fn($row) => number_format(optional($row->invoice)->getDue() ?? 0, 2));
+
+        $dataTable->filter(function ($query) {
+            $start = request()->get('start_date') ?? date('Y-01-01');
+            $end = request()->get('end_date') ?? date('Y-m-d');
+            $query->whereHas('invoice', function ($q) use ($start, $end) {
+                $q->whereBetween(\DB::raw('DATE(issue_date)'), [$start, $end])
+                    ->where('created_by', \Auth::user()->creatorId());
+            });
+        });
+
+        return $dataTable;
     }
 
     public function query(InvoiceProduct $model)
     {
-        $user = Auth::user();
-        $start = request()->get('start_date') ?? request()->get('startDate') ?? date('Y-01-01');
-        $end = request()->get('end_date') ?? request()->get('endDate') ?? date('Y-m-d');
-
-        $query = $model->with(['invoice.customer'])
-            ->whereHas('invoice', function ($q) use ($user, $start, $end) {
-                $q->whereBetween(DB::raw('DATE(issue_date)'), [$start, $end])
-                    ->where('created_by', $user->creatorId());
+        return $model->with(['invoice.customer'])
+            ->whereHas('invoice', function ($q) {
+                $start = request()->get('start_date') ?? date('Y-01-01');
+                $end = request()->get('end_date') ?? date('Y-m-d');
+                $q->whereBetween(\DB::raw('DATE(issue_date)'), [$start, $end])
+                    ->where('created_by', \Auth::user()->creatorId());
             });
-
-        return $query->orderBy('id', 'desc');
     }
 
     public function html()
@@ -148,22 +88,96 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
                 'scrollX' => true,
                 'scrollY' => '420px',
                 'scrollCollapse' => true,
+
+                // === FRONTEND GROUP BY CUSTOMER ===
+                'drawCallback' => <<<JS
+    function(settings) {
+        var api = this.api();
+        var rows = api.rows({page:'current'}).nodes();
+        var data = api.rows({page:'current'}).data().toArray();
+
+        // 1️⃣ Compute totals grouped by customer
+        var customerGroups = {};
+        data.forEach(function(row) {
+            var customer = row.customer_name || '-';
+            var amount = parseFloat(row.amount.replace(/,/g, '')) || 0;
+            if (!customerGroups[customer]) {
+                customerGroups[customer] = {
+                    total: 0,
+                    rows: []
+                };
+            }
+            customerGroups[customer].total += amount;
+            customerGroups[customer].rows.push(row);
+        });
+
+        // 2️⃣ Clear table body completely (we’ll re-render it grouped)
+        var tbody = $(api.table().body());
+        tbody.empty();
+
+        // 3️⃣ Insert one header per unique customer, then all their rows
+        Object.keys(customerGroups).forEach(function(customer) {
+            var group = customerGroups[customer];
+            var totalFormatted = group.total.toLocaleString(undefined, { minimumFractionDigits: 2 });
+            
+            // Group header row
+            var header = $('<tr class="group bg-light" style="font-weight:bold;cursor:pointer;">' +
+                '<td colspan="9"><span class="chevron">▶</span> ' + customer + ' (Total: ' + totalFormatted + ')</td>' +
+            '</tr>');
+            tbody.append(header);
+
+            // Customer rows
+            group.rows.forEach(function(rowData) {
+                var rowNode = $('<tr>' +
+                    '<td>' + rowData.transaction_type + '</td>' +
+                    '<td>' + rowData.transaction_date + '</td>' +
+                    '<td>' + rowData.invoice_number + '</td>' +
+                    '<td>' + rowData.memo_description + '</td>' +
+                    '<td>' + rowData.customer_name + '</td>' +
+                    '<td class="text-right">' + rowData.quantity + '</td>' +
+                    '<td class="text-right">' + rowData.sales_price + '</td>' +
+                    '<td class="text-right">' + rowData.amount + '</td>' +
+                    '<td class="text-right">' + rowData.balance + '</td>' +
+                '</tr>');
+                tbody.append(rowNode);
+            });
+        });
+
+        // 4️⃣ Add expand/collapse toggle
+        $('.group').off('click').on('click', function() {
+            var chevron = $(this).find('.chevron');
+            var next = $(this).nextUntil('.group');
+            if (next.is(':visible')) {
+                next.hide();
+                chevron.text('▶');
+            } else {
+                next.show();
+                chevron.text('▼');
+            }
+        });
+
+        // 5️⃣ Start collapsed
+        $('.group').each(function() {
+            $(this).nextUntil('.group').hide();
+        });
+    }
+JS
+
             ]);
     }
 
     protected function getColumns()
     {
         return [
-            Column::make('transaction_type')->title('Transaction Type'),
-            Column::make('transaction_date')->title('Transaction Date'),
-            Column::make('invoice_number')->title('Invoice Number / Num'),
-            Column::make('memo_description')->title('Memo/Description'),
-            Column::make('customer_name')->title('Customer Name'),
-            Column::make('quantity')->title('Quantity')->addClass('text-right'),
-            Column::make('sales_price')->title('Sales Price')->addClass('text-right'),
-            Column::make('amount')->title('Amount')->addClass('text-right'),
-            Column::make('balance')->title('Balance')->addClass('text-right'),
-            Column::make('sales_with_tax')->title('Sales With Tax')->addClass('text-right'),
+            Column::make('transaction_type')->title('Transaction Type')->width('150px'),
+            Column::make('transaction_date')->title('Transaction Date')->width('120px'),
+            Column::make('invoice_number')->title('Invoice Number / Num')->width('120px'),
+            Column::make('memo_description')->title('Memo/Description')->width('200px'),
+            Column::make('customer_name')->title('Customer Name')->width('150px'),
+            Column::make('quantity')->title('Quantity')->width('100px')->addClass('text-right'),
+            Column::make('sales_price')->title('Sales Price')->width('100px')->addClass('text-right'),
+            Column::make('amount')->title('Amount')->width('120px')->addClass('text-right'),
+            Column::make('balance')->title('Balance')->width('120px')->addClass('text-right'),
         ];
     }
 
