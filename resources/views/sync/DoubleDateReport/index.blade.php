@@ -457,7 +457,21 @@
             </div>
         </div>
     </div>
+    <script>
+        $(document).on('click', '.group-toggle', function() {
+            const groupKey = $(this).data('group');
+            const icon = $(this).find('i');
+            const rows = $('.group-' + groupKey);
 
+            if (rows.is(':visible')) {
+                rows.hide();
+                icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+            } else {
+                rows.show();
+                icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+            }
+        });
+    </script>
     <script>
         function buildColumnsFromTable() {
             const headers = document.querySelectorAll('#customer-balance-table thead th');
@@ -1035,10 +1049,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                            flex-direction: column;
-                                                                                                                                                            width: 100%;
-                                                                                                                                                            gap: 16px;
-                                                                                                                                                        } */
+                                                                                                                                                                flex-direction: column;
+                                                                                                                                                                width: 100%;
+                                                                                                                                                                gap: 16px;
+                                                                                                                                                            } */
 
             .filter-item {
                 width: 100%;

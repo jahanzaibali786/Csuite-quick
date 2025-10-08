@@ -65,7 +65,7 @@ class InventoryValuationDetailDataTable extends DataTable
             ->addColumn('rate', function ($stock) {
                 // For products, we can get the purchase price
                 if ($stock->product && $stock->product->purchase_price) {
-                    return Auth::user()->priceFormat($stock->product->purchase_price);
+                    return $stock->product->purchase_price;
                 }
                 return '-';
             })
@@ -76,7 +76,7 @@ class InventoryValuationDetailDataTable extends DataTable
                     $rate = $stock->product->purchase_price;
                 }
                 $cost = $stock->quantity * $rate;
-                return Auth::user()->priceFormat($cost);
+                return $cost;
             })
             ->addColumn('qty_on_hand', function ($stock) {
                 // This would need to be calculated based on all previous transactions
@@ -90,7 +90,7 @@ class InventoryValuationDetailDataTable extends DataTable
                     $rate = $stock->product->purchase_price;
                 }
                 $value = $stock->quantity * $rate;
-                return Auth::user()->priceFormat($value);
+                return $value;
             })
             ->rawColumns(['product_service', 'transaction_date', 'transaction_type', 'num', 'name', 'qty', 'rate', 'inventory_cost', 'qty_on_hand', 'asset_value']);
     }
