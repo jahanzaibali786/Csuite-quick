@@ -14,8 +14,8 @@ class InventoryValuationSummaryDataTable extends DataTable
     {
         return datatables()
             ->eloquent($query)
-            ->addColumn('sale_price', fn($r) => Auth::user()->priceFormat($r->sale_price))
-            ->addColumn('purchase_price', fn($r) => Auth::user()->priceFormat($r->purchase_price))
+            ->addColumn('sale_price', fn($r) => $r->sale_price)
+            ->addColumn('purchase_price', fn($r) => $r->purchase_price)
             ->addColumn('category', fn($r) => $r->category->name ?? '-')
             ->addColumn('unit', fn($r) => $r->unit->name ?? '-')
             ->addColumn('tax', function ($r) {
