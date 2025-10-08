@@ -12,6 +12,88 @@ use Carbon\Carbon;
 
 class SalesByProductServiceDetailDataTable extends DataTable
 {
+    // public function dataTable($query)
+    // {
+    //     $user = Auth::user();
+
+    //     // Get all rows first (for running balance + total row)
+    //     $rows = $query->get();
+
+    //     $data = collect();
+    //     $runningBalance = 0;
+    //     $totalAmount = 0;
+    //     $totalQuantity = 0;
+
+    //     foreach ($rows as $r) {
+    //         // Calculate amount = (price * quantity) - discount + tax
+    //         $baseAmount = ($r->price ?? 0) * ($r->quantity ?? 0);
+    //         $discount = $r->discount ?? 0;
+    //         $taxAmount = $this->calculateTaxAmount($r);
+    //         $amount = $baseAmount - $discount + $taxAmount;
+
+    //         // Update totals
+    //         $runningBalance += $amount;
+    //         $totalAmount += $amount;
+    //         $totalQuantity += ($r->quantity ?? 0);
+
+    //         // Add each transaction row
+    //         $data->push([
+    //             'transaction_date' => \Carbon\Carbon::parse($r->transaction_date)->format('m/d/Y'),
+    //             'transaction_type' => $r->transaction_type ?? 'Invoice',
+    //             'num' => $r->invoice_number ?? '-',
+    //             'customer_full_name' => $r->customer_name ?? '-',
+    //             'memo_description' => $r->description ?? '-',
+    //             'quantity' => number_format($r->quantity ?? 0, 2),
+    //             'sales_price' => number_format($r->price ?? 0),
+    //             'amount' => number_format($amount, 2),
+    //             'balance' => number_format($runningBalance, 2),
+    //         ]);
+    //     }
+
+    //     // Add total row (all bold, empty placeholders)
+    //     if ($rows->count() > 0) {
+    //         $data->push([
+    //             'transaction_date' => '<strong>Total</strong>',
+    //             'transaction_type' => '<strong></strong>',
+    //             'num' => '<strong></strong>',
+    //             'customer_full_name' => '<strong></strong>',
+    //             'memo_description' => '<strong></strong>',
+    //             'quantity' => '<strong>' . number_format($totalQuantity, 2) . '</strong>',
+    //             'sales_price' => '<strong></strong>',
+    //             'amount' => '<strong>' . number_format($totalAmount, 2) . '</strong>',
+    //             'balance' => '<strong>' . number_format($runningBalance, 2) . '</strong>',
+    //             'DT_RowClass' => 'summary-total'
+    //         ]);
+    //     } else {
+    //         $data->push([
+    //             'transaction_date' => 'No records found.',
+    //             'transaction_type' => '',
+    //             'num' => '',
+    //             'customer_full_name' => '',
+    //             'memo_description' => '',
+    //             'quantity' => '',
+    //             'sales_price' => '',
+    //             'amount' => '',
+    //             'balance' => '',
+    //             'DT_RowClass' => 'no-data-row'
+    //         ]);
+    //     }
+
+    //     return datatables()
+    //         ->collection($data)
+    //         ->rawColumns([
+    //             'transaction_date',
+    //             'transaction_type',
+    //             'num',
+    //             'customer_full_name',
+    //             'memo_description',
+    //             'quantity',
+    //             'sales_price',
+    //             'amount',
+    //             'balance',
+    //         ]);
+    // }
+
     public function dataTable($query)
     {
         $rows = $query->get();
@@ -128,6 +210,8 @@ class SalesByProductServiceDetailDataTable extends DataTable
             ->rawColumns(['transaction_date']);
     }
 
+
+
     private function calculateTaxAmount($transaction)
     {
         if (empty($transaction->tax)) {
@@ -175,7 +259,7 @@ class SalesByProductServiceDetailDataTable extends DataTable
                 'i.invoice_id as invoice_number',
                 'ps.name as product_name',
                 'c.name as customer_name',
-                DB::raw("'Invoice' as transaction_type")
+                DB::raw("'Invoice' as transaction_type"),
             ])
             ->where('i.created_by', $ownerId)
             ->where('i.status', '!=', 0);
@@ -183,6 +267,7 @@ class SalesByProductServiceDetailDataTable extends DataTable
         if ($startDate) {
             $q->whereDate('i.issue_date', '>=', $startDate);
         }
+        if ($endDate) {
         if ($endDate) {
             $q->whereDate('i.issue_date', '<=', $endDate);
         }
@@ -203,9 +288,10 @@ class SalesByProductServiceDetailDataTable extends DataTable
             $q->where('ps.type', request('type'));
         }
 
-        return $q->orderBy('ps.name', 'ASC')
-            ->orderBy('i.issue_date', 'DESC');
+        return $q->orderBy('i.issue_date', 'desc');
     }
+
+
 
     private function calculateDateRange($period)
     {

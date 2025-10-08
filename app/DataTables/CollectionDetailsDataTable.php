@@ -198,7 +198,82 @@ class CollectionDetailsDataTable extends DataTable
             ?? request()->get('endDate')
             ?? Carbon::now()->endOfDay()->format('Y-m-d');
 
-        return $model->newQuery()
+        // 🧩 Combine all payment sources into a unified "collections" view
+        $collections = DB::table(DB::raw('(
+        SELECT 
+            p.id,
+            p.date,
+            p.amount,
+            p.account_id,
+            p.description,
+            c.name AS customer_name,
+            "General Payment" AS source_type
+        FROM payments p
+        LEFT JOIN customers c ON c.id = p.vender_id
+        WHERE p.amount > 0
+
+        UNION ALL
+
+        SELECT 
+            pp.id,
+            pp.date,
+            pp.amount,
+            pp.account_id,
+            pp.description,
+            v.name AS customer_name,
+            "Purchase Payment" AS source_type
+        FROM purchase_payments pp
+        LEFT JOIN vendors v ON v.id = pp.purchase_id
+        WHERE pp.amount > 0
+
+        UNION ALL
+
+        SELECT 
+            op.id,
+            op.date,
+            op.amount,
+            NULL AS account_id,
+            op.title AS description,
+            e.name AS customer_name,
+            CONCAT("Other Payment (", op.type, ")") AS source_type
+        FROM other_payments op
+        LEFT JOIN employees e ON e.id = op.employee_id
+        WHERE op.amount > 0
+
+        UNION ALL
+
+        SELECT 
+            ip.id,
+            ip.date,
+            ip.amount,
+            ip.account_id,
+            ip.description,
+            c.name AS customer_name,
+            "Invoice Payment" AS source_type
+        FROM invoice_payments ip
+        LEFT JOIN invoices i ON i.id = ip.invoice_id
+        LEFT JOIN customers c ON c.id = i.customer_id
+        WHERE ip.amount > 0
+
+        UNION ALL
+
+        SELECT 
+            bp.id,
+            bp.date,
+            bp.amount,
+            bp.account_id,
+            bp.description,
+            v.name AS customer_name,
+            "Bill Payment" AS source_type
+        FROM bill_payments bp
+        LEFT JOIN bills b ON b.id = bp.bill_id
+        LEFT JOIN vendors v ON v.id = b.vendor_id
+        WHERE bp.amount > 0
+    ) as all_collections'))
+            ->whereBetween('date', [$start, $end]);
+
+        // 🧮 Now join with invoices to get open balances etc. (for collection context)
+        $query = $model->newQuery()
             ->select(
                 'invoices.id',
                 'invoices.invoice_id as invoice',
@@ -208,33 +283,31 @@ class CollectionDetailsDataTable extends DataTable
                 'customers.name',
                 DB::raw('SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount) as subtotal'),
                 DB::raw('IFNULL(SUM(invoice_payments.amount), 0) as pay_price'),
-                DB::raw('(SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
-                  FROM invoice_products 
-                  LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                  WHERE invoice_products.invoice_id = invoices.id) as total_tax'),
-                DB::raw('(SELECT IFNULL(SUM(credit_notes.amount),0) 
-                  FROM credit_notes 
-                  WHERE credit_notes.invoice = invoices.id) as credit_price'),
+                DB::raw('(SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0)
+                FROM invoice_products
+                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
+                WHERE invoice_products.invoice_id = invoices.id) as total_tax'),
+                DB::raw('(SELECT IFNULL(SUM(credit_notes.amount),0)
+                FROM credit_notes WHERE credit_notes.invoice = invoices.id) as credit_price'),
                 DB::raw('(
-                    (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
-                    + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
-                       FROM invoice_products 
-                       LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                       WHERE invoice_products.invoice_id = invoices.id)
-                    - (IFNULL(SUM(invoice_payments.amount),0)
-                    + (SELECT IFNULL(SUM(credit_notes.amount),0) FROM credit_notes WHERE credit_notes.invoice = invoices.id))
-                 ) as balance_due'),
+                (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
+                + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0)
+                    FROM invoice_products
+                    LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
+                    WHERE invoice_products.invoice_id = invoices.id)
+                - (IFNULL(SUM(invoice_payments.amount),0)
+                + (SELECT IFNULL(SUM(credit_notes.amount),0) FROM credit_notes WHERE credit_notes.invoice = invoices.id))
+            ) as balance_due'),
                 DB::raw('(
-                    (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
-                    + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
-                       FROM invoice_products 
-                       LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                       WHERE invoice_products.invoice_id = invoices.id)
-                    - (IFNULL(SUM(invoice_payments.amount),0)
-                       + (SELECT IFNULL(SUM(credit_notes.amount),0) 
-                          FROM credit_notes 
-                          WHERE credit_notes.invoice = invoices.id))
-                ) as open_balance'),
+                (SUM((invoice_products.price * invoice_products.quantity) - invoice_products.discount))
+                + (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0)
+                    FROM invoice_products
+                    LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
+                    WHERE invoice_products.invoice_id = invoices.id)
+                - (IFNULL(SUM(invoice_payments.amount),0)
+                    + (SELECT IFNULL(SUM(credit_notes.amount),0)
+                    FROM credit_notes WHERE credit_notes.invoice = invoices.id))
+            ) as open_balance'),
                 DB::raw('GREATEST(DATEDIFF(CURDATE(), invoices.due_date), 0) as age')
             )
             ->leftJoin('customers', 'customers.id', '=', 'invoices.customer_id')
@@ -243,7 +316,10 @@ class CollectionDetailsDataTable extends DataTable
             ->where('invoices.created_by', \Auth::user()->creatorId())
             ->whereBetween('invoices.issue_date', [$start, $end])
             ->groupBy('invoices.id');
+
+        return $query;
     }
+
 
     public function html()
     {

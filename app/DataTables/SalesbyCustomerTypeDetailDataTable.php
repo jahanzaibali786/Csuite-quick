@@ -5,6 +5,8 @@ namespace App\DataTables;
 use App\Models\InvoiceProduct;
 use App\Models\Tax;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 
@@ -75,17 +77,14 @@ class SalesbyCustomerTypeDetailDataTable extends DataTable
             ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->dom('t')
-            ->orderBy(1, 'desc')
+            ->dom('rt')
             ->parameters([
-                'responsive' => false,
+                'responsive' => true,
                 'autoWidth' => false,
                 'paging' => false,
                 'searching' => false,
                 'info' => false,
                 'ordering' => false,
-                'processing' => true,
-                'serverSide' => true,
                 'scrollX' => true,
                 'scrollY' => '420px',
                 'scrollCollapse' => true,

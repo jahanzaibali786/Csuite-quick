@@ -24,9 +24,20 @@ class BillPaymentList extends DataTable
         $finalData = collect();
 
         foreach ($groupedData as $bank => $rows) {
-            $subtotalAmount = 0;
+            // Skip empty or zero groups entirely
+            if ($rows->count() == 0) {
+                continue;
+            }
 
-            // Header row with bank name and count
+            // Compute subtotal using real payment amount
+            $subtotalAmount = $rows->sum('total_amount');
+
+            // If subtotal is 0 (no actual payments), skip this bank group
+            if ($subtotalAmount == 0) {
+                continue;
+            }
+
+            // ✅ Header row for this bank
             $finalData->push((object) [
                 'bank_name' => $bank,
                 'vendor' => '',
@@ -41,12 +52,11 @@ class BillPaymentList extends DataTable
             ]);
 
             foreach ($rows as $row) {
-                $subtotalAmount += ($row->subtotal ?? 0) + ($row->total_tax ?? 0);
                 $row->bank_name = $bank;
                 $finalData->push($row);
             }
 
-            // Subtotal row
+            // ✅ Subtotal row
             $finalData->push((object) [
                 'bank_name' => $bank,
                 'vendor' => '',
@@ -58,6 +68,7 @@ class BillPaymentList extends DataTable
                 'isSubtotal' => true,
             ]);
 
+            // Empty placeholder row for spacing
             $finalData->push((object) [
                 'bank_name' => $bank,
                 'vendor' => '',
@@ -71,6 +82,7 @@ class BillPaymentList extends DataTable
 
             $grandTotalAmount += $subtotalAmount;
         }
+
 
         // ✅ Grand total row
         $finalData->push((object) [
@@ -91,22 +103,28 @@ class BillPaymentList extends DataTable
                 if (isset($row->isSubtotal) || isset($row->isGrandTotal) || (isset($row->isPlaceholder) && $row->isPlaceholder)) {
                     return $row->transaction;
                 }
-                return \Auth::user()->billNumberFormat($row->bill ?? $row->id);
+
+                // 👇 Show Payment ID instead of Bill Number
+                return 'PAY-' . str_pad($row->payment_id, 5, '0', STR_PAD_LEFT);
             })
-            ->addColumn('vendor', fn($row) => (isset($row->isSubtotal) || isset($row->isGrandTotal) || isset($row->isPlaceholder)) ? '' : $row->name)
+            ->addColumn('vendor', fn($row) => (isset($row->isSubtotal) || isset($row->isGrandTotal) || isset($row->isPlaceholder)) ? '' : ($row->vendor_name ?? ''))
             ->addColumn('type', function ($row) {
                 if (isset($row->isSubtotal) || isset($row->isGrandTotal) || (isset($row->isPlaceholder) && $row->isPlaceholder)) {
                     return '';
                 }
-                return 'Bill';
+                return 'Payment';
             })
             ->editColumn('total_amount', function ($row) {
                 if (isset($row->isPlaceholder))
                     return '';
+
                 if (isset($row->isSubtotal) || isset($row->isGrandTotal))
                     return number_format($row->total_amount ?? 0);
-                return number_format(($row->subtotal ?? 0) + ($row->total_tax ?? 0));
+
+                // ✅ For actual payment rows, show payment amount
+                return number_format($row->total_amount ?? 0);
             })
+
             ->setRowClass(function ($row) {
                 if (property_exists($row, 'isParent') && $row->isParent) {
                     return 'parent-row toggle-bucket bucket-' . \Str::slug($row->bank_name ?? 'na');
@@ -125,34 +143,65 @@ class BillPaymentList extends DataTable
             ->rawColumns(['transaction']);
     }
 
+    // public function query(Bill $model)
+    // {
+    //     $start = request()->get('start_date') ?? request()->get('startDate') ?? Carbon::now()->startOfYear()->format('Y-m-d');
+    //     $end = request()->get('end_date') ?? request()->get('endDate') ?? Carbon::now()->endOfDay()->format('Y-m-d');
+
+    //     return $model->newQuery()
+    //         ->select(
+    //             'bills.id',
+    //             'bills.bill_id as bill',
+    //             'bills.bill_date',
+    //             'bills.status',
+    //             'venders.name',
+    //             'bank_accounts.bank_name',
+    //             DB::raw('SUM((bill_products.price * bill_products.quantity) - bill_products.discount) as subtotal'),
+    //             DB::raw('(SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
+    //                 FROM bill_products 
+    //                 LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bill_products.tax) > 0
+    //                 WHERE bill_products.bill_id = bills.id) as total_tax')
+    //         )
+    //         ->leftJoin('venders', 'venders.id', '=', 'bills.vender_id')
+    //         ->leftJoin('bill_products', 'bill_products.bill_id', '=', 'bills.id')
+    //         ->leftJoin('bill_payments', 'bill_payments.bill_id', '=', 'bills.id')
+    //         ->leftJoin('bank_accounts', 'bank_accounts.id', '=', 'bill_payments.account_id')
+    //         ->where('bills.created_by', \Auth::user()->creatorId())
+    //         ->whereIn('bills.status', ['3', '4'])
+    //         ->whereBetween('bills.bill_date', [$start, $end])
+    //         ->groupBy('bills.id', 'bank_accounts.id');
+    // }
+
+
     public function query(Bill $model)
     {
-        $start = request()->get('start_date') ?? request()->get('startDate') ?? Carbon::now()->startOfYear()->format('Y-m-d');
-        $end = request()->get('end_date') ?? request()->get('endDate') ?? Carbon::now()->endOfDay()->format('Y-m-d');
+        $start = request()->get('start_date')
+            ?? request()->get('startDate')
+            ?? Carbon::now()->startOfYear()->format('Y-m-d');
 
-        return $model->newQuery()
+        $end = request()->get('end_date')
+            ?? request()->get('endDate')
+            ?? Carbon::now()->endOfDay()->format('Y-m-d');
+
+        return DB::table('bill_payments')
             ->select(
-                'bills.id',
+                'bill_payments.id as payment_id',
+                'bill_payments.date as bill_date',
+                'bill_payments.amount as total_amount',
+                'bill_payments.reference',
+                'bill_payments.description',
                 'bills.bill_id as bill',
-                'bills.bill_date',
-                'bills.status',
-                'venders.name',
-                'bank_accounts.bank_name',
-                DB::raw('SUM((bill_products.price * bill_products.quantity) - bill_products.discount) as subtotal'),
-                DB::raw('(SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)),0) 
-                    FROM bill_products 
-                    LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bill_products.tax) > 0
-                    WHERE bill_products.bill_id = bills.id) as total_tax')
+                'venders.name as vendor_name',
+                'bank_accounts.bank_name'
             )
+            ->leftJoin('bills', 'bills.id', '=', 'bill_payments.bill_id')
             ->leftJoin('venders', 'venders.id', '=', 'bills.vender_id')
-            ->leftJoin('bill_products', 'bill_products.bill_id', '=', 'bills.id')
-            ->leftJoin('bill_payments', 'bill_payments.bill_id', '=', 'bills.id')
             ->leftJoin('bank_accounts', 'bank_accounts.id', '=', 'bill_payments.account_id')
             ->where('bills.created_by', \Auth::user()->creatorId())
-            ->whereIn('bills.status', ['3', '4'])
-            ->whereBetween('bills.bill_date', [$start, $end])
-            ->groupBy('bills.id', 'bank_accounts.id');
+            ->whereBetween('bill_payments.date', [$start, $end])
+            ->orderBy('bill_payments.date', 'asc');
     }
+
 
     public function html()
     {

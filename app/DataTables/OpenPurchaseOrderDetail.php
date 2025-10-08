@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 use Illuminate\Support\Facades\DB;
+use App\Models\PurchaseProduct;
 
 class OpenPurchaseOrderDetail extends DataTable
 {
@@ -235,7 +236,7 @@ class OpenPurchaseOrderDetail extends DataTable
             ->rawColumns(['transaction']);
     }
 
-    public function query(BillProduct $model)
+    public function query(PurchaseProduct $model)
     {
         $start = request()->get('start_date')
             ?? request()->get('startDate')
@@ -247,35 +248,35 @@ class OpenPurchaseOrderDetail extends DataTable
 
         return $model->newQuery()
             ->select(
-                'bill_products.*',
-                'bills.bill_id as bill',
-                'bills.bill_date as transaction_date', // 👈 alias for consistency
+                'purchase_products.*',
+                'purchases.purchase_id as purchase',
+                'purchases.purchase_date as transaction_date',
                 'venders.name as vendor_name',
                 'product_services.name as product_name',
                 'product_service_categories.name as category_name',
                 'product_services.name as full_name',
-                DB::raw('IFNULL(SUM(invoice_products.quantity),0) as received_quantity'),
-                DB::raw('(SELECT IFNULL(SUM((bp.price * bp.quantity - bp.discount) * (taxes.rate / 100)),0) 
-                FROM bill_products bp
-                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bp.tax) > 0
-                WHERE bp.id = bill_products.id) as tax_amount')
+                DB::raw('(SELECT IFNULL(SUM((pp.price * pp.quantity - pp.discount) * (taxes.rate / 100)),0)
+                FROM purchase_products pp
+                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, pp.tax) > 0
+                WHERE pp.id = purchase_products.id) as tax_amount')
             )
-            ->join('bills', 'bills.id', '=', 'bill_products.bill_id')
-            ->join('venders', 'venders.id', '=', 'bills.vender_id')
-            ->join('product_services', 'product_services.id', '=', 'bill_products.product_id')
+            ->join('purchases', 'purchases.id', '=', 'purchase_products.purchase_id')
+            ->join('venders', 'venders.id', '=', 'purchases.vender_id')
+            ->join('product_services', 'product_services.id', '=', 'purchase_products.product_id')
             ->join('product_service_categories', 'product_service_categories.id', '=', 'product_services.category_id')
-            ->leftJoin('invoice_products', 'invoice_products.product_id', '=', 'bill_products.product_id')
-            ->where('bills.created_by', \Auth::user()->creatorId())
-            ->whereBetween('bills.bill_date', [$start, $end])
+            ->where('purchases.created_by', \Auth::user()->creatorId())
+            ->whereBetween('purchases.purchase_date', [$start, $end])
             ->groupBy(
-                'bill_products.id',
-                'bills.bill_id',
-                'bills.bill_date',
+                'purchase_products.id',
+                'purchases.purchase_id',
+                'purchases.purchase_date',
                 'venders.name',
                 'product_services.name',
                 'product_service_categories.name'
             );
     }
+
+
 
 
     public function html()
@@ -302,7 +303,7 @@ class OpenPurchaseOrderDetail extends DataTable
             Column::make('product_name')->title('Product/Service Name'),
             Column::make('full_name')->title('Full Name'),
             Column::make('quantity')->title('Quantity'),
-            Column::make('received_quantity')->title('Received Quantity'),
+            Column::make('received_quantity')->title('Received Quantity')->addClass('default-hidden'),
             Column::make('backordered_quantity')->title('Backordered Quantity'),
             Column::make('total_amount')->title('Total Amount'),
             Column::make('received_amount')->title('Received Amount'),
