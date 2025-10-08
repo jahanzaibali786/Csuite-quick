@@ -2,228 +2,177 @@
 
 namespace App\DataTables;
 
-use App\Models\Invoice;
-use Illuminate\Database\Eloquent\Builder as QueryBuilder;
-use Yajra\DataTables\EloquentDataTable;
-use Yajra\DataTables\Html\Builder as HtmlBuilder;
-use Yajra\DataTables\Html\Column;
-use Yajra\DataTables\Services\DataTable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Yajra\DataTables\Services\DataTable;
 
 class TaxableSalesSummaryDataTable extends DataTable
 {
-    public function dataTable(QueryBuilder $query): EloquentDataTable
+    public function dataTable($query)
     {
-        $dt = new EloquentDataTable($query);
+        $data = collect($query->get());
 
-        // Build children (all taxable invoices per product) once and attach to payload
-        $children = $this->childrenData(); // [product_service_id => [rows...]]
+        // ✅ Group by Product/Service
+        $grouped = $data->groupBy('product_service');
+        $final = collect();
 
-        return $dt
-            ->addColumn('control', function ($r) {
-                return '<button class="btn btn-sm btn-light toggle-child" data-product-id="'.$r->product_service_id.'">
-                            <i class="fa fa-angle-right me-1"></i>
-                        </button>';
-            })
-            ->editColumn('product_service', fn($r) => $r->product_service)
-            ->editColumn('taxable_amount',  fn($r) => (float) $r->taxable_amount) // raw numbers; format in JS
-            ->editColumn('tax_amount',      fn($r) => (float) $r->tax_amount)
-            ->rawColumns(['control'])
-            ->escapeColumns([])
-            ->with([
-                'children' => $children,
-                'currency_symbol' => Auth::user()->currencySymbol(),
+        $grandTaxable = 0;
+        $grandTax = 0;
+
+        foreach ($grouped as $product => $rows) {
+            $slug = \Str::slug($product);
+
+            $subtotalTaxable = $rows->sum('taxable_amount');
+            $subtotalTax = $rows->sum('tax_amount');
+
+            // ✅ Parent row
+            $final->push((object) [
+                'isParent' => true,
+                'product_service' => $product,
+                'slug' => $slug,
+                'taxable_amount' => '',
+                'tax_amount' => '',
             ]);
-    }
 
-    public function query(): QueryBuilder
-    {
-        $user = Auth::user();
-        $ownerId     = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $ownerColumn = $user->type === 'company' ? 'invoices.created_by' : 'invoices.owned_by';
-
-        $startDate        = $this->request()->get('start_date');
-        $endDate          = $this->request()->get('end_date');
-        $reportPeriod     = $this->request()->get('report_period', 'all_dates');
-        $accountingMethod = $this->request()->get('accounting_method', 'accrual');
-        $selectedCustomer = $this->request()->get('customer_name');
-        $selectedCategory = $this->request()->get('category');
-        $selectedType     = $this->request()->get('type');
-        $selectedProdName = $this->request()->get('product_name');
-
-        $q = Invoice::query()
-            ->where($ownerColumn, $ownerId)
-            ->whereIn('invoices.status', [1,2,3,4])
-            ->join('invoice_products','invoices.id','=','invoice_products.invoice_id')
-            ->join('product_services','invoice_products.product_id','=','product_services.id')
-            ->join('customers','invoices.customer_id','=','customers.id')
-            ->whereNotNull('invoice_products.tax')
-            ->where('invoice_products.tax','!=','')
-            ->selectRaw('
-                product_services.id   as product_service_id,
-                product_services.name as product_service,
-                SUM(invoice_products.price * invoice_products.quantity) as taxable_amount,
-                SUM(
-                    (invoice_products.price * invoice_products.quantity) *
-                    (
-                        (SELECT COALESCE(SUM(t.rate),0)
-                         FROM taxes t
-                         WHERE FIND_IN_SET(t.id, invoice_products.tax)) / 100
-                    )
-                ) as tax_amount
-            ')
-            ->groupBy('product_services.id','product_services.name');
-
-        // Dates
-        if ($accountingMethod === 'cash') {
-            $q->leftJoin('invoice_payments','invoices.id','=','invoice_payments.invoice_id');
-            if ($startDate && $endDate) {
-                $q->whereBetween('invoice_payments.date', [$startDate, $endDate]);
-            } else {
-                [$s,$e] = $this->getDateRange($reportPeriod);
-                $q->whereBetween('invoice_payments.date', [$s,$e]);
+            // ✅ Child rows
+            foreach ($rows as $r) {
+                $final->push((object) [
+                    'isChild' => true,
+                    'bucket' => $slug,
+                    'invoice_number' => $r->invoice_number,
+                    'customer_name' => $r->customer_name,
+                    'taxable_amount' => $r->taxable_amount,
+                    'tax_amount' => $r->tax_amount,
+                ]);
             }
-        } else {
-            if ($startDate && $endDate) {
-                $q->whereBetween('invoices.issue_date', [$startDate, $endDate]);
-            } else {
-                [$s,$e] = $this->getDateRange($reportPeriod);
-                $q->whereBetween('invoices.issue_date', [$s,$e]);
-            }
+
+            // ✅ Subtotal row
+            $final->push((object) [
+                'isSubtotal' => true,
+                'bucket' => $slug,
+                'product_service' => $product,
+                'taxable_amount' => $subtotalTaxable,
+                'tax_amount' => $subtotalTax,
+            ]);
+
+            $grandTaxable += $subtotalTaxable;
+            $grandTax += $subtotalTax;
         }
 
-        // Filters
-        if (!empty($selectedCustomer)) $q->where('customers.name','like','%'.$selectedCustomer.'%');
-        if (!empty($selectedCategory)) $q->where('product_services.category_id',$selectedCategory);
-        if (!empty($selectedType))     $q->where('product_services.type',$selectedType);
-        if (!empty($selectedProdName)) $q->where('product_services.name','like','%'.$selectedProdName.'%');
+        // ✅ Grand total row
+        $final->push((object) [
+            'isGrandTotal' => true,
+            'product_service' => 'Grand Total',
+            'taxable_amount' => $grandTaxable,
+            'tax_amount' => $grandTax,
+        ]);
 
-        return $q->orderBy('product_services.name');
+        return datatables()
+            ->collection($final)
+            ->editColumn('product_service', function ($row) {
+                if (isset($row->isParent)) {
+                    return '<span class="toggle-bucket" data-bucket="' . $row->slug . '">
+                    <span class="icon">▼</span> <strong>' . e($row->product_service) . '</strong>
+                </span>';
+                } elseif (isset($row->isChild)) {
+                    // return '↳ ' . e($row->customer_name);
+                    return '' . e($row->customer_name);
+                } elseif (isset($row->isSubtotal)) {
+                    return '<strong>Subtotal for ' . e($row->product_service) . '</strong>';
+                } elseif (isset($row->isGrandTotal)) {
+                    return '<strong>Grand Total</strong>';
+                }
+                return e($row->product_service);
+            })
+
+            ->editColumn('taxable_amount', function ($row) {
+                if (isset($row->isParent))
+                    return '';
+                return number_format($row->taxable_amount ?? 0, 0);
+            })
+            ->editColumn('tax_amount', function ($row) {
+                if (isset($row->isParent))
+                    return '';
+                return number_format($row->tax_amount ?? 0, 0);
+            })
+            ->setRowClass(function ($row) {
+                if (isset($row->isParent))
+                    return 'parent-row toggle-bucket bucket-' . $row->slug;
+                if (isset($row->isChild))
+                    return 'child-row bucket-' . $row->bucket;
+                if (isset($row->isSubtotal))
+                    return 'subtotal-row bucket-' . $row->bucket;
+                if (isset($row->isGrandTotal))
+                    return 'grandtotal-row';
+                return '';
+            })
+            ->rawColumns(['product_service']);
     }
 
-    public function html(): HtmlBuilder
+    public function query()
+    {
+        $user = Auth::user();
+        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        $ownerColumn = $user->type === 'company' ? 'invoices.created_by' : 'invoices.owned_by';
+
+        // $start = request()->get('start_date') ?? Carbon::now()->startOfYear()->format('Y-m-d');
+        // $end = request()->get('end_date') ?? Carbon::now()->endOfDay()->format('Y-m-d');
+
+        $start = request()->get('start_date')
+            ?? request()->get('startDate')
+            ?? Carbon::now()->startOfYear()->format('Y-m-d');
+
+        $end = request()->get('end_date')
+            ?? request()->get('endDate')
+            ?? Carbon::now()->endOfDay()->format('Y-m-d');
+
+        return DB::table('invoices')
+            ->join('invoice_products', 'invoices.id', '=', 'invoice_products.invoice_id')
+            ->join('product_services', 'invoice_products.product_id', '=', 'product_services.id')
+            ->join('customers', 'invoices.customer_id', '=', 'customers.id')
+            ->selectRaw('
+                product_services.name as product_service,
+                invoices.invoice_id as invoice_number,
+                customers.name as customer_name,
+                SUM(invoice_products.price * invoice_products.quantity) as taxable_amount,
+                SUM((invoice_products.price * invoice_products.quantity) *
+                    ((SELECT COALESCE(SUM(t.rate),0)
+                      FROM taxes t
+                      WHERE FIND_IN_SET(t.id, invoice_products.tax)) / 100)
+                ) as tax_amount
+            ')
+            ->where($ownerColumn, $ownerId)
+            ->whereBetween('invoices.issue_date', [$start, $end])
+            ->whereNotNull('invoice_products.tax')
+            ->where('invoice_products.tax', '!=', '')
+            ->groupBy('product_services.name', 'invoices.invoice_id', 'customers.name')
+            ->orderBy('product_services.name')
+            ->orderBy('invoices.invoice_id');
+    }
+
+    public function html()
     {
         return $this->builder()
-            ->setTableId('taxable-sales-summary-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('t')
-            ->paging(false)
-            ->ordering(false);
+            ->orderBy(0, 'asc')
+            ->parameters([
+                'paging' => false,
+                'searching' => false,
+                'info' => false,
+                'ordering' => false,
+            ]);
     }
 
-    protected function getColumns(): array
+    protected function getColumns()
     {
         return [
-            Column::computed('control')->title('')->width(90)->addClass('text-start'),
-            Column::make('product_service')->title(__('Product/Service'))->addClass('text-start'),
-            Column::make('taxable_amount')->title(__('Taxable Amount'))->addClass('text-end'),
-            Column::make('tax_amount')->title(__('Tax'))->addClass('text-end'),
+            ['data' => 'product_service', 'title' => 'Product/Service'],
+            ['data' => 'taxable_amount', 'title' => 'Taxable Amount', 'class' => 'text-end'],
+            ['data' => 'tax_amount', 'title' => 'Tax', 'class' => 'text-end'],
         ];
-    }
-
-    protected function filename(): string
-    {
-        return 'TaxableSalesSummary_'.date('YmdHis');
-    }
-
-    /** Build children map: one row per (product × invoice) with taxable & tax totals */
-    private function childrenData(): array
-    {
-        $user = Auth::user();
-        $ownerId     = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $ownerColumn = $user->type === 'company' ? 'invoices.created_by' : 'invoices.owned_by';
-
-        $startDate        = $this->request()->get('start_date');
-        $endDate          = $this->request()->get('end_date');
-        $reportPeriod     = $this->request()->get('report_period', 'all_dates');
-        $accountingMethod = $this->request()->get('accounting_method', 'accrual');
-        $selectedCustomer = $this->request()->get('customer_name');
-        $selectedCategory = $this->request()->get('category');
-        $selectedType     = $this->request()->get('type');
-        $selectedProdName = $this->request()->get('product_name');
-
-        $q = DB::table('invoices')
-            ->where($ownerColumn, $ownerId)
-            // ->whereIn('invoices.status', [1,2,3,4])
-            ->join('invoice_products','invoices.id','=','invoice_products.invoice_id')
-            ->join('product_services','invoice_products.product_id','=','product_services.id')
-            ->join('customers','invoices.customer_id','=','customers.id')
-            ->whereNotNull('invoice_products.tax')
-            ->where('invoice_products.tax','!=','')
-            ->selectRaw('
-                product_services.id   as product_service_id,
-                product_services.name as product_service,
-                invoices.id           as invoice_db_id,
-                invoices.invoice_id   as invoice_number,
-                invoices.issue_date   as issue_date,
-                customers.name        as customer_name,
-                SUM(invoice_products.price * invoice_products.quantity) as taxable_amount,
-                SUM(
-                    (invoice_products.price * invoice_products.quantity) *
-                    (
-                        (SELECT COALESCE(SUM(t.rate),0)
-                         FROM taxes t
-                         WHERE FIND_IN_SET(t.id, invoice_products.tax)) / 100
-                    )
-                ) as tax_amount
-            ')
-            ->groupBy([
-                'product_services.id', 'product_services.name',
-                'invoices.id', 'invoices.invoice_id', 'invoices.issue_date',
-                'customers.name',
-            ]);
-
-        // Dates
-        if ($accountingMethod === 'cash') {
-            $q->leftJoin('invoice_payments','invoices.id','=','invoice_payments.invoice_id');
-            if ($startDate && $endDate) $q->whereBetween('invoice_payments.date', [$startDate, $endDate]);
-            else { [$s,$e] = $this->getDateRange($reportPeriod); $q->whereBetween('invoice_payments.date', [$s,$e]); }
-        } else {
-            if ($startDate && $endDate) $q->whereBetween('invoices.issue_date', [$startDate, $endDate]);
-            else { [$s,$e] = $this->getDateRange($reportPeriod); $q->whereBetween('invoices.issue_date', [$s,$e]); }
-        }
-
-        // Filters
-        if (!empty($selectedCustomer)) $q->where('customers.name','like','%'.$selectedCustomer.'%');
-        if (!empty($selectedCategory)) $q->where('product_services.category_id',$selectedCategory);
-        if (!empty($selectedType))     $q->where('product_services.type',$selectedType);
-        if (!empty($selectedProdName)) $q->where('product_services.name','like','%'.$selectedProdName.'%');
-
-        $rows = $q->orderBy('product_services.name')->orderBy('invoices.issue_date')->get();
-
-        // Group by product_service_id
-        $map = [];
-        foreach ($rows as $r) {
-            $pid = $r->product_service_id;
-            if (!isset($map[$pid])) $map[$pid] = [];
-            $map[$pid][] = [
-                'invoice_db_id'  => $r->invoice_db_id,
-                'invoice_number' => $r->invoice_number,
-                'issue_date'     => $r->issue_date,
-                'customer_name'  => $r->customer_name,
-                'taxable_amount' => (float)$r->taxable_amount,
-                'tax_amount'     => (float)$r->tax_amount,
-            ];
-        }
-        return $map;
-    }
-
-    private function getDateRange($period)
-    {
-        $now = now();
-        return match ($period) {
-            'today'        => [$now->toDateString(), $now->toDateString()],
-            'this_week'    => [$now->copy()->startOfWeek()->toDateString(), $now->copy()->endOfWeek()->toDateString()],
-            'this_month'   => [$now->copy()->startOfMonth()->toDateString(), $now->copy()->endOfMonth()->toDateString()],
-            'this_quarter' => [$now->copy()->startOfQuarter()->toDateString(), $now->copy()->endOfQuarter()->toDateString()],
-            'this_year'    => [$now->copy()->startOfYear()->toDateString(), $now->copy()->endOfYear()->toDateString()],
-            'last_week'    => [$now->copy()->subWeek()->startOfWeek()->toDateString(), $now->copy()->subWeek()->endOfWeek()->toDateString()],
-            'last_month'   => [$now->copy()->subMonth()->startOfMonth()->toDateString(), $now->copy()->subMonth()->endOfMonth()->toDateString()],
-            'last_quarter' => [$now->copy()->subQuarter()->startOfQuarter()->toDateString(), $now->copy()->subQuarter()->endOfQuarter()->toDateString()],
-            'last_year'    => [$now->copy()->subYear()->startOfYear()->toDateString(), $now->copy()->subYear()->endOfYear()->toDateString()],
-            default        => ['2000-01-01', $now->toDateString()],
-        };
     }
 }
