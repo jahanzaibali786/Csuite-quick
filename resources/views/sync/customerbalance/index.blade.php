@@ -1185,6 +1185,9 @@
         i {
             font-style: normal;
         }
+        .summary-total{
+            font-weight: bold;
+        }
     </style>
 
     {!! $dataTable->scripts() !!}
