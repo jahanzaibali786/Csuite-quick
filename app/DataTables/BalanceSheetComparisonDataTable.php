@@ -41,18 +41,18 @@ class BalanceSheetComparisonDataTable extends DataTable
                     return '<strong class="section-header">' . e($row->name) . '</strong>';
                 }
                 
-                // Sub Type Headers with chevrons
+                // Sub Type Headers with carets
                 if ($row->is_subtype_header ?? false) {
                     $hasChildren = $row->has_children ?? false;
                     $subtypeId = $row->subtype_id ?? 'subtype_' . str_replace(' ', '_', strtolower($row->name));
-                    $chevron = '';
+                    $caret = '';
                     
                     if ($hasChildren) {
-                        $chevron = '<i class="fas fa-chevron-down chevron-icon" data-parent-type="subtype" data-parent-id="' . $subtypeId . '" style="margin-right: 8px; cursor: pointer; color: #007bff;"></i>';
+                        $caret = '<i class="fas fa-caret-down caret-icon" data-parent-type="subtype" data-parent-id="' . $subtypeId . '" style="margin-right: 8px; cursor: pointer;"></i>';
                     }
                     
                     $indent = str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', (int) ($row->depth ?? 0));
-                    return $indent . $chevron . '<strong class="subtotal-label">' . e($row->name) . '</strong>';
+                    return $indent . $caret . '<strong class="subtotal-label">' . e($row->name) . '</strong>';
                 }
                 
                 if ($row->is_subtotal ?? false) {

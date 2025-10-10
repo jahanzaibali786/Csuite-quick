@@ -51,7 +51,7 @@ class ProfitLossComparisonDataTable extends DataTable
                 // Section header
                 if ($row->is_section_header ?? false) {
                     $chevronHtml = $row->has_children
-                        ? '<i class="fas fa-chevron-down toggle-chevron mr-2"></i>'
+                        ? '<i class="fas fa-caret-down toggle-caret mr-2"></i>'
                         : '';
 
                     return '<span class="toggle-section" data-group="' . $row->group_key . '" style="cursor: ' . ($row->has_children ? 'pointer' : 'default') . ';">
