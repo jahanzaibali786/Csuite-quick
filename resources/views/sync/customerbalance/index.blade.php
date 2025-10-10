@@ -1156,6 +1156,9 @@
         .parent-row {
             cursor: pointer;
         }
+        .summary-total{
+            font-weight: bold;
+        }
     </style>
 
     {!! $dataTable->scripts() !!}
@@ -1175,6 +1178,22 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
+    <script>
+$(document).on('click', '.group-toggle', function() {
+    const key = $(this).data('group');
+    const icon = $(this).find('i.fas');
+    const rows = $('.group-' + key);
+
+    if (rows.is(':visible')) {
+        rows.hide();
+        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+    } else {
+        rows.show();
+        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+    }
+});
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script>
         let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');

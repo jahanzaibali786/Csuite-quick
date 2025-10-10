@@ -48,6 +48,21 @@
                 </div>
             </div>
         </div>
+        <script>
+$(document).on('click', '.group-toggle', function() {
+    const group = $(this).data('group');
+    const icon = $(this).find('i.fas');
+    const rows = $('.group-' + group);
+
+    if (rows.is(':visible')) {
+        rows.hide();
+        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+    } else {
+        rows.show();
+        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+    }
+});
+</script>
 
         <script>
             // Show modal on export button click
