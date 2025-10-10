@@ -549,6 +549,8 @@
 
 
 
+
+
         window.viewState = {};
         window.viewState.viewType = 'detailed'; // default view
 
@@ -632,22 +634,25 @@
         $(document).ready(expandCollapseInit);
 
 
-        // Attach once for chevron-icon style tables
-        $(document).on('click', '.chevron-icon', function(e) {
+        const collapseFunction3 = function(e) {
             e.preventDefault();
 
-            const $icon = $(this);
-            const parentType = $icon.data('parent-type'); // "subtype" or "account"
-            const parentId = $icon.data('parent-id'); // e.g. "subtype_current_asset" or "3"
+            // Find the icon inside the clicked row
+            const $row = $(this);
+            const $icon = $row.find('.chevron-icon');
+
+            const parentType = $icon.data('parent-type');
+            const parentId = $icon.data('parent-id');
 
             if (!parentType || !parentId) return;
 
-            // Build selector for children
+            // Build selector for children rows
             const childSelector = `.child-of-${parentType}-${parentId}`;
             const $children = $(childSelector);
 
             if ($children.length === 0) return;
 
+            // Toggle collapse/expand
             if ($icon.text().trim() === "▼") {
                 // Collapse
                 $children.hide();
@@ -657,13 +662,33 @@
                 $children.show();
                 $icon.text("▼");
             }
-        });
+        }
+
+        // Attach once for chevron-icon style tables
+        $(document).on('click', '.subtype-header-row', collapseFunction3);
+
+        $(document).on('click', '.account-header-row', collapseFunction3);
+
+        $(document).on('click', '.chevron-icon', collapseFunction3)
+
+        $(document).on('click', '.section-header-row', collapseFunction3)
     </script>
 
     <style>
         /* Base styling */
         * {
             box-sizing: border-box;
+        }
+
+        
+        .account-header-row,
+        subtype-header-row
+         {
+            cursor: pointer;
+        }
+
+        .toggle-section {
+            cursor: pointer;
         }
 
         .content-wrapper {
@@ -1126,10 +1151,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                                                                                                                    flex-direction: column;
-                                                                                                                                                                                                                                                    width: 100%;
-                                                                                                                                                                                                                                                    gap: 16px;
-                                                                                                                                                                                                                                                } */
+                                                                                                                                                                                                                                                                flex-direction: column;
+                                                                                                                                                                                                                                                                width: 100%;
+                                                                                                                                                                                                                                                                gap: 16px;
+                                                                                                                                                                                                                                                            } */
 
             .filter-item {
                 width: 100%;
@@ -1156,8 +1181,9 @@
         .parent-row {
             cursor: pointer;
         }
-        .summary-total{
-            font-weight: bold;
+
+        i {
+            font-style: normal;
         }
     </style>
 

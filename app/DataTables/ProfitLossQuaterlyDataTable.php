@@ -266,7 +266,7 @@ class ProfitLossQuaterlyDataTable extends DataTable
 
                 // account_name HTML
                 if ($row['is_section_header']) {
-                    $chev = $row['has_children'] ? '<i class="fas fa-chevron-down toggle-chevron mr-2"></i>' : '';
+                    $chev = $row['has_children'] ? '<i class="fas fa-caret-down toggle-caret mr-2"></i>' : '';
                     $row['account_name'] = '<span class="account-name-cell toggle-section" data-group="' . e($row['group_key']) . '" style="cursor:' . ($row['has_children'] ? 'pointer' : 'default') . '">'
                         . $chev . '<strong class="section-header">' . e($row['name']) . '</strong>'
                         // optional collapsed small total next to header (visible when collapsed)
