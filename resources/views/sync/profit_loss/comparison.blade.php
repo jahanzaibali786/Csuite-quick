@@ -3,7 +3,7 @@
 @section('content')
     <style>
         .section-row {
-            background-color: #f2f2f2 !important;
+            /* background-color: #f2f2f2 !important; */
             font-weight: bold;
         }
 
@@ -15,7 +15,7 @@
             background-color: #f8f9fa;
             border-bottom: 2px solid #dee2e6;
             font-weight: 600;
-            color: #495057;
+            /* color: #495057; */
         }
 
         .profit-loss-table tbody tr:hover {
@@ -37,8 +37,8 @@
         .section-header {
             font-weight: 700;
             font-size: 1.1em;
-            color: #495057;
-            text-transform: uppercase;
+            /* color: #495057; */
+            /* text-transform: uppercase; */
         }
 
         .section-total-amount {
@@ -51,12 +51,12 @@
         }
 
         .toggle-section[style*="pointer"]:hover {
-            color: #007bff;
+            /* color: #007bff; */
         }
 
-        .toggle-chevron {
+        .toggle-caret {
             transition: transform 0.2s ease;
-            color: #007bff;
+            /* color: #007bff; */
             font-size: 12px;
         }
 
@@ -70,18 +70,18 @@
         }
 
         .subtotal-row .total-amount {
-            border-top: 1px solid #000;
+            /* border-top: 1px solid #000; */
             font-weight: bold;
         }
 
         .total-row .total-amount {
-            border-top: 2px solid #000;
-            border-bottom: 2px double #000;
+            /* border-top: 2px solid #000; */
+            /* border-bottom: 2px double #000; */
             font-weight: bold;
         }
 
         .section-row {
-            background-color: #f8f9fa !important;
+            /* background-color: #f8f9fa !important; */
             font-weight: bold;
         }
 
@@ -413,7 +413,7 @@
             display: inline-block !important;
         }
 
-        .compact-view .toggle-chevron {
+        .compact-view .toggle-caret {
             transform: rotate(-90deg);
         }
 
@@ -1092,6 +1092,505 @@
         }
     </style>
 
+
+    <style>
+        /* Base styling */
+        * {
+            box-sizing: border-box;
+        }
+
+        .content-wrapper {
+            background-color: #f5f6fa;
+            min-height: 100vh;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 14px;
+            color: #262626;
+        }
+
+        /* Header */
+        .report-header {
+            background: white;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e6e6e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .report-header h4 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #262626;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .last-updated {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-icon {
+            background: transparent;
+            color: #6b7280;
+            padding: 8px;
+            width: 32px;
+            height: 32px;
+            justify-content: center;
+        }
+
+        .btn-icon:hover {
+            background: #f3f4f6;
+            color: #262626;
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: white;
+            font-weight: 500;
+        }
+
+        .btn-success:hover {
+            background: #16a34a;
+        }
+
+        .btn-save {
+            padding: 8px 16px;
+        }
+
+        /* Filter Controls */
+        .filter-controls {
+            background: white;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            min-width: 140px;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
+            background: white;
+            color: #262626;
+            height: 36px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #0969da;
+            box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.1);
+        }
+
+        .date-input {
+            position: relative;
+        }
+
+        .view-options {
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-view-options {
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        .btn-view-options:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        /* Action buttons row */
+        .action-buttons-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        .btn-outline:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .badge {
+            background: #e5e7eb;
+            color: #374151;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 4px;
+        }
+
+        /* Report Content */
+        .report-content {
+            background: white;
+            margin: 24px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .report-title-section {
+            text-align: center;
+            padding: 32px 24px 24px !important;
+            border-bottom: 1px solid #e6e6e6;
+        }
+
+        .report-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #262626;
+            margin: 0 0 8px;
+        }
+
+        .company-name {
+            font-size: 16px;
+            color: #6b7280;
+            margin: 0 0 12px;
+        }
+
+        .date-range {
+            font-size: 14px;
+            color: #374151;
+            margin: 0;
+        }
+
+        /* Table Container */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .profit-loss-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .profit-loss-table th {
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .profit-loss-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #262626;
+        }
+
+        .profit-loss-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            overflow-y: auto;
+        }
+
+        .general-options-modal,
+        .columns-modal {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 360px;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e6e6e6;
+            background: #f9fafb;
+        }
+
+        .modal-header h5 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #262626;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+
+        .btn-close:hover {
+            color: #262626;
+        }
+
+        .modal-content {
+            padding: 24px;
+        }
+
+        .modal-subtitle {
+            color: #6b7280;
+            font-size: 13px;
+            margin: 0 0 24px;
+        }
+
+        /* Option Sections */
+        .option-section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #262626;
+            margin: 0 0 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #374151;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin: 0;
+            width: 16px;
+            height: 16px;
+        }
+
+        .negative-format-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .negative-format-group select {
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .alignment-group {
+            margin-top: 12px;
+        }
+
+        .alignment-label {
+            display: block;
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        /* Columns Modal Specific */
+        .columns-list {
+            margin-bottom: 20px;
+        }
+
+        .column-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: move;
+        }
+
+        .handle {
+            color: #9ca3af;
+            margin-right: 12px;
+            cursor: grab;
+        }
+
+        .handle:active {
+            cursor: grabbing;
+        }
+
+        .additional-columns {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .additional-columns .column-item {
+            padding-left: 28px;
+            cursor: default;
+        }
+
+        /* Enhanced form controls */
+        select.form-control {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 12px;
+            padding-right: 32px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        /* Table enhancements */
+        .text-right {
+            text-align: right;
+        }
+
+        .negative-amount {
+            color: #dc2626;
+        }
+
+        .account-group {
+            background-color: #f8fafc;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .account-row {
+            font-weight: normal;
+        }
+
+        .opening-balance {
+            font-style: italic;
+            color: #6b7280;
+        }
+
+        .expand-icon {
+            margin-right: 6px;
+            font-size: 11px;
+        }
+
+        /* QuickBooks specific styling */
+        .fa-info-circle {
+            color: #0969da;
+            font-size: 12px;
+        }
+
+        .fa-chevron-up {
+            font-size: 10px;
+            color: #6b7280;
+        }
+
+        .option-section hr {
+            border: none;
+            border-top: 1px solid #e6e6e6;
+            margin: 20px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            /* .filter-group {
+                                                                                                                                                                            flex-direction: column;
+                                                                                                                                                                            width: 100%;
+                                                                                                                                                                            gap: 16px;
+                                                                                                                                                                        } */
+
+            .filter-item {
+                width: 100%;
+                min-width: auto;
+            }
+
+            .general-options-modal,
+            .columns-modal {
+                width: 100%;
+                left: 0;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-end;
+            }
+
+            .actions {
+                flex-wrap: wrap;
+            }
+        }
+
+        .parent-row {
+            cursor: pointer;
+        }
+    </style>
+
     <div class="report-header">
         <h4 class="mb-0">{{ __('Profit & Loss Comparison') }}</h4>
         <div class="header-actions">
@@ -1307,9 +1806,12 @@
 
                 <div class="filter-item col-md-3 pt-4">
                     <div class="view-options" style="position: relative;">
-                        <button class="btn btn-view-options" id="view-options-btn">
-                            <i class="fa fa-eye"></i> View options
-                        </button>
+                        <div class="filter-item col-md-2">
+                            <button class="btn btn-view-options" id="view-options-btn"
+                                style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
+                                <i class="fa fa-eye"></i> View options
+                            </button>
+                        </div>
                         <div class="view-options-dropdown" id="view-options-dropdown">
                             <div class="view-option-item" data-value="normal">
                                 <span class="checkmark"><i class="fa fa-check"></i></span>
@@ -1431,7 +1933,7 @@
 
                 <!-- Number format section -->
                 <div class="option-section">
-                    <h6 class="section-title">Number format <i class="fa fa-chevron-up"></i></h6>
+                    <h6 class="section-title">Number format <i class="fa fa-caret-up"></i></h6>
                     <div class="option-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="divide-by-1000"> Divide by 1000
@@ -1464,7 +1966,7 @@
 
                 <!-- Header section -->
                 <div class="option-section">
-                    <h6 class="section-title">Header <i class="fa fa-chevron-up"></i></h6>
+                    <h6 class="section-title">Header <i class="fa fa-caret-up"></i></h6>
                     <div class="option-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="company-logo"> Company logo
@@ -1488,7 +1990,7 @@
 
                 <!-- Footer section -->
                 <div class="option-section">
-                    <h6 class="section-title">Footer <i class="fa fa-chevron-up"></i></h6>
+                    <h6 class="section-title">Footer <i class="fa fa-caret-up"></i></h6>
                     <div class="option-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="date-prepared" checked> Date prepared
@@ -1899,13 +2401,13 @@
 
         function handleExpandAll() {
             $('.child-row, .subtotal-row').show();
-            $('.toggle-chevron').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+            $('.toggle-caret').removeClass('fa-caret-right').addClass('fa-caret-down');
             $('.section-total-amount').hide();
         }
 
         function handleCollapseAll() {
             $('.child-row, .subtotal-row').hide();
-            $('.toggle-chevron').removeClass('fa-chevron-right').removeClass('fa-chevron-down');
+            $('.toggle-caret').removeClass('fa-caret-right').removeClass('fa-caret-down');
             $('.section-total-amount').show();
         }
 
@@ -1919,44 +2421,44 @@
             const $this = $(this);
             const group = $this.data('group');
             const $row = $this.closest('tr');
-            const $chevron = $this.find('.toggle-chevron');
+            const $caret = $this.find('.toggle-caret');
             const $sectionTotal = $row.find('.section-total-amount[data-group="' + group + '"]');
             const $childRows = $('.group-' + group);
 
-            if ($chevron.length === 0) return;
-            if ($chevron.hasClass('fa-chevron-down')) {
+            if ($caret.length === 0) return;
+            if ($caret.hasClass('fa-caret-down')) {
                 $childRows.hide();
-                $chevron.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+                $caret.removeClass('fa-caret-down').addClass('fa-caret-right');
                 $sectionTotal.show();
             } else {
                 $childRows.show();
-                $chevron.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+                $caret.removeClass('fa-caret-right').addClass('fa-caret-down');
                 $sectionTotal.hide();
             }
         }
 
         function initializeTableState() {
             $('.child-row, .subtotal-row').show();
-            $('.toggle-chevron').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+            $('.toggle-caret').removeClass('fa-caret-right').addClass('fa-caret-down');
             $('.section-total-display').hide();
 
             $('.toggle-section').each(function() {
                 const group = $(this).data('group');
                 const hasChildren = $('.group-' + group).length > 0;
-                const $chevron = $(this).find('.toggle-chevron');
+                const $caret = $(this).find('.toggle-caret');
 
-                if (hasChildren && $chevron.length === 0) {
-                    $(this).prepend('<i class="fas fa-chevron-down toggle-chevron mr-2"></i>');
+                if (hasChildren && $caret.length === 0) {
+                    $(this).prepend('<i class="fas fa-caret-down toggle-caret mr-2"></i>');
                     $(this).css('cursor', 'pointer');
                 } else if (!hasChildren) {
-                    $chevron.remove();
+                    $caret.remove();
                     $(this).css('cursor', 'default');
                 }
             });
         }
 
         function updateButtonVisibility() {
-            const hasAnyChildren = $('.toggle-chevron').length > 0;
+            const hasAnyChildren = $('.toggle-caret').length > 0;
         }
 
         $('#general-options-btn').on('click', function() {
@@ -2116,6 +2618,33 @@
                         }
                     });
                 });
+            }
+
+            // Add footer if it doesn't exist
+            if ($('.report-footer').length === 0) {
+                const currentDate = new Date();
+                const dateStr = currentDate.toLocaleDateString();
+                const timeStr = currentDate.toLocaleTimeString();
+                const basisStr = $('#accounting-method').val() === 'accrual' ? 'Accrual Basis' : 'Cash Basis';
+
+                let footerHTML =
+                    '<div class="report-footer" style="padding: 20px; border-top: 1px solid #e6e6e6; text-align: center; font-size: 12px; color: #6b7280;">';
+
+                // if (options.datePrepared) {
+                footerHTML += '<div>Date Prepared: ' + dateStr + '</div>';
+                // }
+
+                // if (options.timePrepared) {
+                footerHTML += '<div>Time Prepared: ' + timeStr + '</div>';
+                // }
+
+                // if (options.reportBasis) {
+                footerHTML += '<div>Report Basis: ' + basisStr + '</div>';
+                // }
+
+                footerHTML += '</div>';
+
+                $('.w-tables').append(footerHTML);
             }
         });
 

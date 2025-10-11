@@ -85,27 +85,36 @@ class SalesByCustomerSummaryDataTable extends DataTable
         $query = DB::table('customers')
             ->select([
                 'customers.name as customer_name',
+                // DB::raw('
+                //     COALESCE(
+                //         SUM(
+                //             (invoice_products.price * invoice_products.quantity) - 
+                //             COALESCE(invoice_products.discount, 0) + 
+                //             COALESCE(
+                //                 (
+                //                     SELECT SUM(t.rate * ((invoice_products.price * invoice_products.quantity) - COALESCE(invoice_products.discount, 0)) / 100)
+                //                     FROM taxes t
+                //                     WHERE FIND_IN_SET(t.id, COALESCE(invoice_products.tax, "")) > 0
+                //                 ), 0
+                //             )
+                //         ), 0
+                //     ) as total'
+                // )
                 DB::raw('
-                    COALESCE(
-                        SUM(
-                            (invoice_products.price * invoice_products.quantity) - 
-                            COALESCE(invoice_products.discount, 0) + 
-                            COALESCE(
-                                (
-                                    SELECT SUM(t.rate * ((invoice_products.price * invoice_products.quantity) - COALESCE(invoice_products.discount, 0)) / 100)
-                                    FROM taxes t
-                                    WHERE FIND_IN_SET(t.id, COALESCE(invoice_products.tax, "")) > 0
-                                ), 0
-                            )
-                        ), 0
-                    ) as total'
+    COALESCE(
+        SUM(
+            (invoice_products.price * invoice_products.quantity) - COALESCE(invoice_products.discount, 0)
+        ), 0
+    ) as total'
                 )
+
+
             ])
             ->leftJoin('invoices', function ($join) use ($ownerId, $start, $end) {
                 $join->on('customers.id', '=', 'invoices.customer_id')
                     ->where('invoices.created_by', $ownerId)
                     ->whereBetween('invoices.issue_date', [$start, $end])
-                    ->whereIn('invoices.status', [1, 2, 3, 4]); // Exclude draft (0)
+                    ->where('invoices.status', '!=', 0); // Exclude draft (0)
             })
             ->leftJoin('invoice_products', 'invoice_products.invoice_id', '=', 'invoices.id')
             ->where('customers.created_by', $ownerId)

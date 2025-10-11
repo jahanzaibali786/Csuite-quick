@@ -67,7 +67,7 @@ class ProfitLossByMonth extends DataTable
                     $chevronHtml = '';
                     $hasChildren = isset($row->has_children) && $row->has_children;
                     if ($hasChildren) {
-                        $chevronHtml = '<i class="fas fa-chevron-down toggle-chevron mr-2"></i>';
+                        $chevronHtml = '<i class="fas fa-caret-down toggle-chevron mr-2"></i>';
                     }
                     
                     return '<span class="toggle-section" data-group="' . ($row->group_key ?? '') . '" style="cursor: ' . ($hasChildren ? 'pointer' : 'default') . ';">
@@ -407,6 +407,7 @@ class ProfitLossByMonth extends DataTable
     {
         return $this->builder()
             ->setTableId('profit-loss-table')
+            // ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([

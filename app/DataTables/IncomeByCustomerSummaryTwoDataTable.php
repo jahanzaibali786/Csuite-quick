@@ -14,8 +14,13 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
     {
         $user = Auth::user();
 
-        // Get all rows first so we can manipulate and add a grand total row
         $rows = collect($query->get());
+
+        // Calculate per-row net income
+        $rows = $rows->map(function ($r) {
+            $r->net_income = ($r->income ?? 0) - ($r->expenses ?? 0);
+            return $r;
+        });
 
         // Calculate grand totals
         $grandIncome = $rows->sum('income');
@@ -31,30 +36,6 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
             'isGrandTotal' => true,
         ]);
 
-        /*return datatables()
-            ->eloquent($query)
-            ->addColumn('customer', fn($r) => $r->name ?? '-')
-            ->addColumn('income', fn($r) => number_format($r->income ?? 0))
-            ->addColumn('expenses', fn($r) => number_format($r->expenses ?? 0))
-            ->addColumn('net_income', fn($r) => number_format(($r->income ?? 0) - ($r->expenses ?? 0)))
-            ->with('totals', function () use ($query) {
-                // Compute totals on the same base query
-                try {
-                    $rows = (clone $query)->get();
-                    $income = (float) $rows->sum('income');
-                    $expenses = (float) $rows->sum('expenses');
-                    $net = $income - $expenses;
-
-                    \Log::info('DataTable Totals calculated:', compact('income', 'expenses', 'net'));
-
-                    return compact('income', 'expenses', 'net');
-                } catch (\Exception $e) {
-                    \Log::error('Error calculating totals: ' . $e->getMessage());
-                    return ['income' => 0, 'expenses' => 0, 'net' => 0];
-                }
-            })
-            ->rawColumns(['customer', 'income', 'expenses', 'net_income']);*/
-
         return datatables()
             ->collection($rows)
             ->addColumn('customer', fn($r) => $r->isGrandTotal ?? false ? $r->customer : ($r->name ?? '-'))
@@ -64,106 +45,199 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
             ->rawColumns(['customer', 'income', 'expenses', 'net_income']);
     }
 
+
+    // public function query()
+    // {
+    //     $user = Auth::user();
+    //     $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    //     $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+    //     // Get start and end dates from request, fallback to defaults
+    //     $startDate = request()->get('start_date')
+    //         ?? request()->get('startDate')
+    //         ?? date('Y-01-01');
+    //     $endDate = request()->get('end_date')
+    //         ?? request()->get('endDate')
+    //         ?? date('Y-m-d');
+    //     $reportPeriod = request('report_period', 'all_dates');
+
+    //     // Calculate date range based on report period (only if not 'all_dates')
+    //     if ($reportPeriod && $reportPeriod !== 'all_dates' && $reportPeriod !== 'custom') {
+    //         $dates = $this->calculateDateRange($reportPeriod);
+    //         $startDate = $dates['start'];
+    //         $endDate = $dates['end'];
+    //     }
+
+    //     // Debug the date values
+    //     \Log::info('Date Filters Applied:', [
+    //         'report_period' => $reportPeriod,
+    //         'start_date' => $startDate,
+    //         'end_date' => $endDate,
+    //         'request_start' => request('start_date'),
+    //         'request_end' => request('end_date')
+    //     ]);
+
+    //     /**
+    //      * ===== FIXED: Using Eloquent Customer model with proper subqueries =====
+    //      */
+
+    //     // Create subquery for income calculation
+    //     $incomeSubquery = DB::table('invoices as i')
+    //         ->join('invoice_products as ip', 'ip.invoice_id', '=', 'i.id')
+    //         ->select(
+    //             'i.customer_id',
+    //             // DB::raw('SUM(
+    //             //     (ip.price * ip.quantity - COALESCE(ip.discount, 0)) + 
+    //             //     COALESCE((
+    //             //         SELECT SUM((ipp.price * ipp.quantity - COALESCE(ipp.discount, 0)) * (COALESCE(t.rate, 0) / 100))
+    //             //         FROM invoice_products ipp
+    //             //         LEFT JOIN taxes t ON FIND_IN_SET(t.id, ipp.tax) > 0
+    //             //         WHERE ipp.id = ip.id
+    //             //     ), 0)
+    //             // ) as income')
+    //             DB::raw('SUM(ip.price * ip.quantity - COALESCE(ip.discount, 0)) as income')
+
+    //         )
+    //         ->where('i.created_by', $ownerId)
+    //         ->where('i.status', '!=', 0);
+
+    //     // Apply date filters to income subquery (only if dates are provided)
+    //     if ($startDate && $startDate !== '') {
+    //         $incomeSubquery->whereDate('i.issue_date', '>=', $startDate);
+    //         \Log::info('Applied income start date filter: ' . $startDate);
+    //     }
+    //     if ($endDate && $endDate !== '') {
+    //         $incomeSubquery->whereDate('i.issue_date', '<=', $endDate);
+    //         \Log::info('Applied income end date filter: ' . $endDate);
+    //     }
+
+    //     $incomeSubquery->groupBy('i.customer_id');
+
+    //     // Create subquery for expenses calculation
+    //     $expenseSubquery = DB::table('bills as b')
+    //         ->leftJoin('bill_products as bp', 'bp.bill_id', '=', 'b.id')
+    //         ->leftJoin('bill_accounts as ba', 'ba.ref_id', '=', 'b.id')
+    //         ->select(
+    //             'b.vender_id as customer_id',
+    //             // DB::raw('SUM(
+    //             //     COALESCE((bp.price * bp.quantity - COALESCE(bp.discount, 0)), 0) + 
+    //             //     COALESCE((
+    //             //         SELECT SUM((bpp.price * bpp.quantity - COALESCE(bpp.discount, 0)) * (COALESCE(t.rate, 0) / 100))
+    //             //         FROM bill_products bpp
+    //             //         LEFT JOIN taxes t ON FIND_IN_SET(t.id, bpp.tax) > 0
+    //             //         WHERE bpp.id = bp.id
+    //             //     ), 0) +
+    //             //     COALESCE(ba.price, 0)
+    //             // ) as expenses')
+    //             DB::raw('SUM(COALESCE(bp.price * bp.quantity - COALESCE(bp.discount, 0), 0) + COALESCE(ba.price, 0)) as expenses')
+    //         )
+    //         ->where('b.created_by', $ownerId)
+    //         ->where('b.user_type', 'customer')
+    //         ->where('b.status', '!=', 0);
+
+    //     // Apply date filters to expense subquery (only if dates are provided)
+    //     if ($startDate && $startDate !== '') {
+    //         $expenseSubquery->whereDate('b.bill_date', '>=', $startDate);
+    //         \Log::info('Applied expense start date filter: ' . $startDate);
+    //     }
+    //     if ($endDate && $endDate !== '') {
+    //         $expenseSubquery->whereDate('b.bill_date', '<=', $endDate);
+    //         \Log::info('Applied expense end date filter: ' . $endDate);
+    //     }
+
+    //     $expenseSubquery->groupBy('b.vender_id');
+
+    //     // Main query using Eloquent Customer model
+    //     $model = new \App\Models\Customer();
+    //     $q = $model->newQuery()
+    //         ->where('customers.' . $column, $ownerId)
+    //         ->leftJoinSub($incomeSubquery, 'inc', function ($join) {
+    //             $join->on('customers.id', '=', 'inc.customer_id');
+    //         })
+    //         ->leftJoinSub($expenseSubquery, 'exp', function ($join) {
+    //             $join->on('customers.id', '=', 'exp.customer_id');
+    //         })
+    //         ->select([
+    //             'customers.*',
+    //             DB::raw('COALESCE(inc.income, 0) as income'),
+    //             DB::raw('COALESCE(exp.expenses, 0) as expenses'),
+    //         ]);
+
+    //     // Apply customer name filter if provided
+    //     if (request()->filled('customer_name') && request('customer_name') !== '') {
+    //         $q->where('customers.name', 'like', '%' . request('customer_name') . '%');
+    //     }
+
+    //     return $q;
+    // }
+
     public function query()
     {
         $user = Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
         $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
 
-        // Get start and end dates from request, fallback to defaults
-        $startDate = request()->get('start_date')
-            ?? request()->get('startDate')
-            ?? date('Y-01-01');
-        $endDate = request()->get('end_date')
-            ?? request()->get('endDate')
-            ?? date('Y-m-d');
+        // Handle date filters
+        $startDate = request()->get('start_date') ?? request()->get('startDate') ?? date('Y-01-01');
+        $endDate = request()->get('end_date') ?? request()->get('endDate') ?? date('Y-m-d');
         $reportPeriod = request('report_period', 'all_dates');
 
-        // Calculate date range based on report period (only if not 'all_dates')
         if ($reportPeriod && $reportPeriod !== 'all_dates' && $reportPeriod !== 'custom') {
             $dates = $this->calculateDateRange($reportPeriod);
             $startDate = $dates['start'];
             $endDate = $dates['end'];
         }
 
-        // Debug the date values
-        \Log::info('Date Filters Applied:', [
-            'report_period' => $reportPeriod,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'request_start' => request('start_date'),
-            'request_end' => request('end_date')
-        ]);
-
         /**
-         * ===== FIXED: Using Eloquent Customer model with proper subqueries =====
+         * ===== INCOME SUBQUERY =====
          */
-
-        // Create subquery for income calculation
         $incomeSubquery = DB::table('invoices as i')
             ->join('invoice_products as ip', 'ip.invoice_id', '=', 'i.id')
             ->select(
                 'i.customer_id',
-                DB::raw('SUM(
-                    (ip.price * ip.quantity - COALESCE(ip.discount, 0)) + 
-                    COALESCE((
-                        SELECT SUM((ipp.price * ipp.quantity - COALESCE(ipp.discount, 0)) * (COALESCE(t.rate, 0) / 100))
-                        FROM invoice_products ipp
-                        LEFT JOIN taxes t ON FIND_IN_SET(t.id, ipp.tax) > 0
-                        WHERE ipp.id = ip.id
-                    ), 0)
-                ) as income')
+                DB::raw('SUM(ip.price * ip.quantity - COALESCE(ip.discount, 0)) as income')
             )
             ->where('i.created_by', $ownerId)
             ->where('i.status', '!=', 0);
 
-        // Apply date filters to income subquery (only if dates are provided)
-        if ($startDate && $startDate !== '') {
+        if ($startDate) {
             $incomeSubquery->whereDate('i.issue_date', '>=', $startDate);
-            \Log::info('Applied income start date filter: ' . $startDate);
         }
-        if ($endDate && $endDate !== '') {
+        if ($endDate) {
             $incomeSubquery->whereDate('i.issue_date', '<=', $endDate);
-            \Log::info('Applied income end date filter: ' . $endDate);
         }
 
         $incomeSubquery->groupBy('i.customer_id');
 
-        // Create subquery for expenses calculation
+        /**
+         * ===== EXPENSES SUBQUERY =====
+         * Bills will now be counted as expenses.
+         */
         $expenseSubquery = DB::table('bills as b')
             ->leftJoin('bill_products as bp', 'bp.bill_id', '=', 'b.id')
             ->leftJoin('bill_accounts as ba', 'ba.ref_id', '=', 'b.id')
             ->select(
                 'b.vender_id as customer_id',
-                DB::raw('SUM(
-                    COALESCE((bp.price * bp.quantity - COALESCE(bp.discount, 0)), 0) + 
-                    COALESCE((
-                        SELECT SUM((bpp.price * bpp.quantity - COALESCE(bpp.discount, 0)) * (COALESCE(t.rate, 0) / 100))
-                        FROM bill_products bpp
-                        LEFT JOIN taxes t ON FIND_IN_SET(t.id, bpp.tax) > 0
-                        WHERE bpp.id = bp.id
-                    ), 0) +
-                    COALESCE(ba.price, 0)
-                ) as expenses')
+                DB::raw('SUM(COALESCE(bp.price * bp.quantity - COALESCE(bp.discount, 0), 0) + COALESCE(ba.price, 0)) as expenses')
             )
             ->where('b.created_by', $ownerId)
-            ->where('b.user_type', 'customer')
+            // → Remove or broaden user_type restriction so all bills are included
+            // ->where('b.user_type', 'customer')
             ->where('b.status', '!=', 0);
 
-        // Apply date filters to expense subquery (only if dates are provided)
-        if ($startDate && $startDate !== '') {
+        if ($startDate) {
             $expenseSubquery->whereDate('b.bill_date', '>=', $startDate);
-            \Log::info('Applied expense start date filter: ' . $startDate);
         }
-        if ($endDate && $endDate !== '') {
+        if ($endDate) {
             $expenseSubquery->whereDate('b.bill_date', '<=', $endDate);
-            \Log::info('Applied expense end date filter: ' . $endDate);
         }
 
         $expenseSubquery->groupBy('b.vender_id');
 
-        // Main query using Eloquent Customer model
-        $model = new \App\Models\Customer();
+        /**
+         * ===== MAIN QUERY =====
+         */
+        $model = new Customer();
         $q = $model->newQuery()
             ->where('customers.' . $column, $ownerId)
             ->leftJoinSub($incomeSubquery, 'inc', function ($join) {
@@ -178,7 +252,6 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
                 DB::raw('COALESCE(exp.expenses, 0) as expenses'),
             ]);
 
-        // Apply customer name filter if provided
         if (request()->filled('customer_name') && request('customer_name') !== '') {
             $q->where('customers.name', 'like', '%' . request('customer_name') . '%');
         }

@@ -17,8 +17,8 @@ class IncomeByCustomerSummaryDataTable extends DataTable
             ->addColumn('full_name', fn($r) => $r->name)
             ->addColumn('type', fn($r) => ucwords($r->type))
             ->addColumn('memo_description', fn($r) => $r->description ?? '-')
-            ->addColumn('sales_price', fn($r) => \Auth::user()->priceFormat($r->sale_price))
-            ->addColumn('purchase_price', fn($r) => \Auth::user()->priceFormat($r->purchase_price))
+            ->addColumn('sales_price', fn($r) =>$r->sale_price)
+            ->addColumn('purchase_price', fn($r) =>$r->purchase_price)
             ->addColumn('quantity_on_hand', fn($r) => $r->type === 'product' ? (string) (float) $r->total_quantity : '-');
     }
 

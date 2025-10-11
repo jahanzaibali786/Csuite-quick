@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\BillProduct;
+use App\Models\PurchaseProduct;
 use Carbon\Carbon;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
@@ -36,12 +36,12 @@ class OpenPurchaseOrderDetail extends DataTable
                 'open_balance' => 0,
             ];
 
-            // Category header
+            // Category header (parent)
             $finalData->push((object) [
                 'transaction_date' => '',
-                'category' => $category,
-                'transaction' => '<span class="" data-bucket="' . \Str::slug($category) . '"> <span class="icon">▼</span> <strong>' . $category . '</strong></span>',
-                'vendor_name' => '',
+                'vendor_name' => '<span class="toggle-bucket" data-bucket="' . \Str::slug($category) . '">
+                <span class="icon">▼</span> <strong>' . e($category) . '</strong></span>',
+                'transaction' => '',
                 'product_name' => '',
                 'full_name' => '',
                 'quantity' => '',
@@ -51,13 +51,18 @@ class OpenPurchaseOrderDetail extends DataTable
                 'received_amount' => '',
                 'open_balance' => '',
                 'isParent' => true,
-                'isCategory' => true,
+                'category_name' => $category,
             ]);
 
-            $products = $rowsByCategory->groupBy('product_name');
+            // Group inside category by purchase order
+            $purchases = $rowsByCategory->groupBy('purchase_id');
 
-            foreach ($products as $product => $rowsByProduct) {
-                $productTotals = [
+            foreach ($purchases as $purchaseId => $rowsByPurchase) {
+                $purchase = $rowsByPurchase->first();
+                $purchaseNumber = \Auth::user()->purchaseNumberFormat($purchase->purchase ?? $purchaseId);
+
+                // Compute PO-level totals
+                $purchaseTotals = [
                     'quantity' => 0,
                     'received_quantity' => 0,
                     'backordered_quantity' => 0,
@@ -66,72 +71,80 @@ class OpenPurchaseOrderDetail extends DataTable
                     'open_balance' => 0,
                 ];
 
-                // Product header
+                // Calculate totals for the purchase before rendering items
+                foreach ($rowsByPurchase as $row) {
+                    $row->backordered_quantity = $row->quantity - $row->received_quantity;
+                    $row->total_amount = ($row->price * $row->quantity)
+                        - ($row->discount ?? 0)
+                        + ($row->tax_amount ?? 0);
+                    $row->category_name = $category;
+
+                    $purchaseTotals['quantity'] += $row->quantity;
+                    $purchaseTotals['received_quantity'] += $row->received_quantity;
+                    $purchaseTotals['backordered_quantity'] += $row->backordered_quantity;
+                    $purchaseTotals['total_amount'] += $row->total_amount;
+                }
+
+                // Add purchase-level paid and open balance once
+                $purchaseTotals['received_amount'] = $purchase->paid_amount ?? 0;
+                $purchaseTotals['open_balance'] = $purchaseTotals['total_amount'] - $purchaseTotals['received_amount'];
+
+                // Purchase Order header row (shows totals once)
                 $finalData->push((object) [
                     'transaction_date' => '',
-                    'category' => $category,
-                    'transaction' => "&nbsp;&nbsp;<strong>{$product}</strong>",
-                    'vendor_name' => '',
-                    'product_name' => '',
-                    'full_name' => '',
+                    'transaction' => '<strong>' . e($purchaseNumber) . '</strong>',
+                    'vendor_name' => '<strong>' . e($purchaseNumber) . '</strong>',
+                    'product_name' => '<em>' . ($purchase->memo ?? '') . '</em>',
+                    'full_name' => $purchase->ship_via ?? '',
                     'quantity' => '',
                     'received_quantity' => '',
                     'backordered_quantity' => '',
                     'total_amount' => '',
-                    'received_amount' => '',
-                    'open_balance' => '',
-                    // 'isParent' => true,
-                    'isProduct' => true,
+                    // 'received_amount' => $purchaseTotals['received_amount'],
+                    // 'open_balance' => $purchaseTotals['open_balance'],
+                    'received_amount' => $purchaseTotals['received_amount'],
+                    'open_balance' => $purchaseTotals['open_balance'],
+                    'isPurchase' => true,
+                    'category_name' => $category,
                 ]);
 
-                foreach ($rowsByProduct as $row) {
-                    $row->transaction = \Auth::user()->billNumberFormat($row->bill ?? $row->bill_id);
-                    $row->full_name = $row->full_name ?? '';
-                    $row->backordered_quantity = $row->quantity - $row->received_quantity;
-                    $row->total_amount = ($row->price * $row->quantity) - ($row->discount ?? 0) + ($row->tax_amount ?? 0);
-                    $row->received_amount = $row->price * $row->received_quantity;
-                    $row->open_balance = $row->total_amount - $row->received_amount;
-                    $row->category = $category;
-                    $productTotals['quantity'] += $row->quantity;
-                    $productTotals['received_quantity'] += $row->received_quantity;
-                    $productTotals['backordered_quantity'] += $row->backordered_quantity;
-                    $productTotals['total_amount'] += $row->total_amount;
-                    $productTotals['received_amount'] += $row->received_amount;
-                    $productTotals['open_balance'] += $row->open_balance;
-
+                // Item rows (no received/open balance)
+                foreach ($rowsByPurchase as $row) {
+                    $row->transaction = $purchaseNumber;
+                    $row->received_amount = ''; // empty for item rows
+                    $row->open_balance = ''; // empty for item rows
                     $finalData->push($row);
                 }
 
-                // Product subtotal
+                // Purchase subtotal
                 $finalData->push((object) [
                     'transaction_date' => '',
-                    'category' => $category,
-                    'transaction' => "<strong>Subtotal for {$product}</strong>",
-                    'vendor_name' => '',
+                    'vendor_name' => "<strong>Subtotal for {$purchaseNumber}</strong>",
+                    'transaction' => '',
                     'product_name' => '',
                     'full_name' => '',
-                    'quantity' => $productTotals['quantity'],
-                    'received_quantity' => $productTotals['received_quantity'],
-                    'backordered_quantity' => $productTotals['backordered_quantity'],
-                    'total_amount' => $productTotals['total_amount'],
-                    'received_amount' => $productTotals['received_amount'],
-                    'open_balance' => $productTotals['open_balance'],
+                    'quantity' => $purchaseTotals['quantity'],
+                    'received_quantity' => $purchaseTotals['received_quantity'],
+                    'backordered_quantity' => $purchaseTotals['backordered_quantity'],
+                    'total_amount' => $purchaseTotals['total_amount'],
+                    'received_amount' => $purchaseTotals['received_amount'],
+                    'open_balance' => $purchaseTotals['open_balance'],
                     'isSubtotal' => true,
+                    'category_name' => $category,
                 ]);
 
-                foreach ($productTotals as $key => $val) {
-                    $categoryTotals[$key] += $val;
+                foreach (array_keys($categoryTotals) as $key) {
+                    $categoryTotals[$key] += $purchaseTotals[$key];
                 }
             }
 
             // Category subtotal
             $finalData->push((object) [
                 'transaction_date' => '',
-                'transaction' => "<strong>Subtotal for {$category}</strong>",
-                'vendor_name' => '',
+                'vendor_name' => "<strong>Subtotal for {$category}</strong>",
+                'transaction' => '',
                 'product_name' => '',
                 'full_name' => '',
-                'category' => $category,
                 'quantity' => $categoryTotals['quantity'],
                 'received_quantity' => $categoryTotals['received_quantity'],
                 'backordered_quantity' => $categoryTotals['backordered_quantity'],
@@ -139,9 +152,10 @@ class OpenPurchaseOrderDetail extends DataTable
                 'received_amount' => $categoryTotals['received_amount'],
                 'open_balance' => $categoryTotals['open_balance'],
                 'isSubtotal' => true,
+                'category_name' => $category,
             ]);
 
-            // Empty placeholder row
+            // Blank spacer row
             $finalData->push((object) [
                 'transaction_date' => '',
                 'transaction' => '',
@@ -155,6 +169,7 @@ class OpenPurchaseOrderDetail extends DataTable
                 'received_amount' => '',
                 'open_balance' => '',
                 'isPlaceholder' => true,
+                'category_name' => $category,
             ]);
 
             foreach ($categoryTotals as $key => $val) {
@@ -162,11 +177,11 @@ class OpenPurchaseOrderDetail extends DataTable
             }
         }
 
-        // Grand total
+        // Grand Total row
         $finalData->push((object) [
             'transaction_date' => '',
-            'transaction' => '<strong>Grand Total</strong>',
-            'vendor_name' => '',
+            'vendor_name' => '<strong>Grand Total</strong>',
+            'transaction' => '',
             'product_name' => '',
             'full_name' => '',
             'quantity' => $grandTotal['quantity'],
@@ -180,62 +195,38 @@ class OpenPurchaseOrderDetail extends DataTable
 
         return datatables()
             ->collection($finalData)
-            ->editColumn(
-                'transaction_date',
-                fn($row) =>
-                isset($row->isSubtotal) || isset($row->isParent) || isset($row->isGrandTotal) || isset($row->isPlaceholder)
-                ? ''
-                : ($row->transaction_date ? Carbon::parse($row->transaction_date)->format('Y-m-d') : '')
-            )
-
-            ->editColumn(
-                'vendor_name',
-                fn($row) =>
-                isset($row->isSubtotal) || isset($row->isParent) || isset($row->isGrandTotal) || isset($row->isPlaceholder)
-                ? ''
-                : $row->vendor_name
-            )
-            ->setRowClass(function ($row) {
-                if (isset($row->isCategory))
-                    return 'category-row';
-                if (isset($row->isProduct))
-                    return 'product-row';
-                if (isset($row->isSubtotal))
-                    return 'subtotal-row';
-                if (isset($row->isGrandTotal))
-                    return 'grandtotal-row';
-                if (isset($row->isPlaceholder))
-                    return 'placeholder-row';
-                return 'detail-row';
+            ->editColumn('transaction_date', function ($row) {
+                return (isset($row->isParent) || isset($row->isSubtotal) || isset($row->isGrandTotal) || isset($row->isPlaceholder) || isset($row->isPurchase))
+                    ? ''
+                    : ($row->transaction_date ? Carbon::parse($row->transaction_date)->format('Y-m-d') : '');
             })
             ->setRowClass(function ($row) {
-                if (property_exists($row, 'isParent') && $row->isParent) {
-                    return 'parent-row toggle-bucket bucket-' . \Str::slug($row->category ?? 'na');
-                }
+                $bucket = \Str::slug($row->category_name ?? 'na');
 
-                if (property_exists($row, 'isSubtotal') && $row->isSubtotal && !property_exists($row, 'isGrandTotal')) {
-                    return 'subtotal-row bucket-' . \Str::slug($row->category ?? 'na');
-                }
+                if (property_exists($row, 'isParent') && $row->isParent)
+                    return 'parent-row toggle-bucket bucket-' . $bucket;
 
-                if (
-                    !property_exists($row, 'isParent') &&
-                    !property_exists($row, 'isSubtotal') &&
-                    !property_exists($row, 'isGrandTotal') &&
-                    !property_exists($row, 'isPlaceholder')
-                ) {
-                    return 'child-row bucket-' . \Str::slug($row->category ?? 'na');
-                }
+                if (property_exists($row, 'isPurchase') && $row->isPurchase)
+                    return 'purchase-row bucket-' . $bucket;
 
-                if (property_exists($row, 'isGrandTotal') && $row->isGrandTotal) {
+                if (property_exists($row, 'isSubtotal') && $row->isSubtotal)
+                    return 'subtotal-row bucket-' . $bucket;
+
+                if (property_exists($row, 'isGrandTotal') && $row->isGrandTotal)
                     return 'grandtotal-row';
-                }
 
-                return '';
+                if (property_exists($row, 'isPlaceholder') && $row->isPlaceholder)
+                    return 'placeholder-row bucket-' . $bucket;
+
+                return 'child-row bucket-' . $bucket;
             })
-            ->rawColumns(['transaction']);
+            ->rawColumns(['transaction', 'product_name', "vendor_name"]);
     }
 
-    public function query(BillProduct $model)
+
+
+
+    public function query(PurchaseProduct $model)
     {
         $start = request()->get('start_date')
             ?? request()->get('startDate')
@@ -247,30 +238,53 @@ class OpenPurchaseOrderDetail extends DataTable
 
         return $model->newQuery()
             ->select(
-                'bill_products.*',
-                'bills.bill_id as bill',
-                'bills.bill_date as transaction_date', // 👈 alias for consistency
+                'purchase_products.*',
+                'purchases.id as purchase_id',
+                'purchases.purchase_id as purchase',
+                'purchases.purchase_date as transaction_date',
                 'venders.name as vendor_name',
                 'product_services.name as product_name',
                 'product_service_categories.name as category_name',
                 'product_services.name as full_name',
-                DB::raw('IFNULL(SUM(invoice_products.quantity),0) as received_quantity'),
-                DB::raw('(SELECT IFNULL(SUM((bp.price * bp.quantity - bp.discount) * (taxes.rate / 100)),0) 
-                FROM bill_products bp
-                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bp.tax) > 0
-                WHERE bp.id = bill_products.id) as tax_amount')
+
+                // ✅ Total paid (same as before)
+                DB::raw('(SELECT IFNULL(SUM(ppay.amount),0)
+                      FROM purchase_payments ppay
+                      WHERE ppay.purchase_id = purchases.id) as paid_amount'),
+
+                // ✅ Updated tax_amount logic to fully match Query #1’s nested subquery
+                DB::raw('(SELECT IFNULL(SUM((pp.price * pp.quantity - IFNULL(pp.discount,0)) * (taxes.rate / 100)),0)
+                      FROM purchase_products pp
+                      LEFT JOIN taxes ON FIND_IN_SET(taxes.id, pp.tax) > 0
+                      WHERE pp.purchase_id = purchases.id) as tax_amount'),
+
+                // ✅ Optional: add total amount per purchase (for consistency)
+                DB::raw('(
+                SELECT IFNULL(SUM(
+                    (pp.price * pp.quantity)
+                    - IFNULL(pp.discount, 0)
+                    + IFNULL(
+                        (SELECT IFNULL(SUM((pp2.price * pp2.quantity - pp2.discount) * (taxes.rate / 100)), 0)
+                         FROM purchase_products pp2
+                         LEFT JOIN taxes ON FIND_IN_SET(taxes.id, pp2.tax) > 0
+                         WHERE pp2.purchase_id = purchases.id),
+                    0)
+                ), 0)
+                FROM purchase_products pp
+                WHERE pp.purchase_id = purchases.id
+            ) as total_amount')
             )
-            ->join('bills', 'bills.id', '=', 'bill_products.bill_id')
-            ->join('venders', 'venders.id', '=', 'bills.vender_id')
-            ->join('product_services', 'product_services.id', '=', 'bill_products.product_id')
+            ->join('purchases', 'purchases.id', '=', 'purchase_products.purchase_id')
+            ->join('venders', 'venders.id', '=', 'purchases.vender_id')
+            ->join('product_services', 'product_services.id', '=', 'purchase_products.product_id')
             ->join('product_service_categories', 'product_service_categories.id', '=', 'product_services.category_id')
-            ->leftJoin('invoice_products', 'invoice_products.product_id', '=', 'bill_products.product_id')
-            ->where('bills.created_by', \Auth::user()->creatorId())
-            ->whereBetween('bills.bill_date', [$start, $end])
+            ->where('purchases.created_by', \Auth::user()->creatorId())
+            ->whereBetween('purchases.purchase_date', [$start, $end])
             ->groupBy(
-                'bill_products.id',
-                'bills.bill_id',
-                'bills.bill_date',
+                'purchase_products.id',
+                'purchases.id',
+                'purchases.purchase_id',
+                'purchases.purchase_date',
                 'venders.name',
                 'product_services.name',
                 'product_service_categories.name'
@@ -297,15 +311,14 @@ class OpenPurchaseOrderDetail extends DataTable
     {
         return [
             Column::make('transaction_date')->title('Date'),
-            Column::make('transaction')->title('Transaction'),
+            // Column::make('transaction')->title('Transaction'),
             Column::make('vendor_name')->title('Vendor Name'),
             Column::make('product_name')->title('Product/Service Name'),
             Column::make('full_name')->title('Full Name'),
             Column::make('quantity')->title('Quantity'),
-            Column::make('received_quantity')->title('Received Quantity'),
             Column::make('backordered_quantity')->title('Backordered Quantity'),
             Column::make('total_amount')->title('Total Amount'),
-            Column::make('received_amount')->title('Received Amount'),
+            Column::make('received_amount')->title('Received (Paid) Amount'),
             Column::make('open_balance')->title('PO Open Balance'),
         ];
     }

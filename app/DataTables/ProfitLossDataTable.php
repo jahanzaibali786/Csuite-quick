@@ -42,7 +42,7 @@ class ProfitLossDataTable extends DataTable
                 if ($row->is_section_header ?? false) {
                     $chevronHtml = '';
                     if ($row->has_children ?? false) {
-                        $chevronHtml = '<i class="fas fa-chevron-down toggle-chevron mr-2"></i>';
+                        $chevronHtml = '<i class="fas toggle-chevron mr-2"></i>';
                     }
 
                     return '<span class="toggle-section" data-group="' . $row->group_key . '" style="cursor: ' . ($row->has_children ? 'pointer' : 'default') . ';">

@@ -5,110 +5,232 @@ namespace App\DataTables;
 use App\Models\InvoiceProduct;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
+use Carbon\Carbon;
 
 class SalesByProductServiceDetailDataTable extends DataTable
 {
+    // public function dataTable($query)
+    // {
+    //     $user = Auth::user();
+
+    //     // Get all rows first (for running balance + total row)
+    //     $rows = $query->get();
+
+    //     $data = collect();
+    //     $runningBalance = 0;
+    //     $totalAmount = 0;
+    //     $totalQuantity = 0;
+
+    //     foreach ($rows as $r) {
+    //         // Calculate amount = (price * quantity) - discount + tax
+    //         $baseAmount = ($r->price ?? 0) * ($r->quantity ?? 0);
+    //         $discount = $r->discount ?? 0;
+    //         $taxAmount = $this->calculateTaxAmount($r);
+    //         $amount = $baseAmount - $discount + $taxAmount;
+
+    //         // Update totals
+    //         $runningBalance += $amount;
+    //         $totalAmount += $amount;
+    //         $totalQuantity += ($r->quantity ?? 0);
+
+    //         // Add each transaction row
+    //         $data->push([
+    //             'transaction_date' => \Carbon\Carbon::parse($r->transaction_date)->format('m/d/Y'),
+    //             'transaction_type' => $r->transaction_type ?? 'Invoice',
+    //             'num' => $r->invoice_number ?? '-',
+    //             'customer_full_name' => $r->customer_name ?? '-',
+    //             'memo_description' => $r->description ?? '-',
+    //             'quantity' => number_format($r->quantity ?? 0, 2),
+    //             'sales_price' => number_format($r->price ?? 0),
+    //             'amount' => number_format($amount, 2),
+    //             'balance' => number_format($runningBalance, 2),
+    //         ]);
+    //     }
+
+    //     // Add total row (all bold, empty placeholders)
+    //     if ($rows->count() > 0) {
+    //         $data->push([
+    //             'transaction_date' => '<strong>Total</strong>',
+    //             'transaction_type' => '<strong></strong>',
+    //             'num' => '<strong></strong>',
+    //             'customer_full_name' => '<strong></strong>',
+    //             'memo_description' => '<strong></strong>',
+    //             'quantity' => '<strong>' . number_format($totalQuantity, 2) . '</strong>',
+    //             'sales_price' => '<strong></strong>',
+    //             'amount' => '<strong>' . number_format($totalAmount, 2) . '</strong>',
+    //             'balance' => '<strong>' . number_format($runningBalance, 2) . '</strong>',
+    //             'DT_RowClass' => 'summary-total'
+    //         ]);
+    //     } else {
+    //         $data->push([
+    //             'transaction_date' => 'No records found.',
+    //             'transaction_type' => '',
+    //             'num' => '',
+    //             'customer_full_name' => '',
+    //             'memo_description' => '',
+    //             'quantity' => '',
+    //             'sales_price' => '',
+    //             'amount' => '',
+    //             'balance' => '',
+    //             'DT_RowClass' => 'no-data-row'
+    //         ]);
+    //     }
+
+    //     return datatables()
+    //         ->collection($data)
+    //         ->rawColumns([
+    //             'transaction_date',
+    //             'transaction_type',
+    //             'num',
+    //             'customer_full_name',
+    //             'memo_description',
+    //             'quantity',
+    //             'sales_price',
+    //             'amount',
+    //             'balance',
+    //         ]);
+    // }
+
     public function dataTable($query)
     {
-        $user = Auth::user();
+        $rows = $query->get();
+
+        // Group by product_id to avoid name differences (trailing spaces / unicode etc.)
+        $grouped = $rows->groupBy('product_id');
+
+        $finalData = collect();
+
+        foreach ($grouped as $productId => $transactions) {
+            // Use product_id as stable key
+            $groupKey = 'product-' . (string)$productId;
+
+            // Display name from first transaction (preserve original case/label)
+            $displayName = $transactions->first()->product_name ?? 'Unknown';
+
+            // --- Calculate group total using numeric arithmetic (no formatted strings) ---
+            $groupTotalRaw = 0.0;
+            foreach ($transactions as $t) {
+                $price = (float) $t->price;
+                $qty = (float) $t->quantity;
+                $discount = (float) ($t->discount ?? 0);
+                $taxAmount = (float) $this->calculateTaxAmount($t);
+
+                $amountRaw = ($price * $qty) - $discount + $taxAmount;
+                $groupTotalRaw += $amountRaw;
+            }
+
+            // Log group info for debugging
+            \Log::info('SalesByProduct grouping', [
+                'product_id'   => $productId,
+                'product_name' => $displayName,
+                'count'        => $transactions->count(),
+                'ids'          => $transactions->pluck('id')->toArray(),
+                'group_total'  => $groupTotalRaw,
+            ]);
+
+            // --- Push group header first (so header shows above the items) ---
+            $finalData->push([
+                'group_key' => $groupKey,
+                'group' => $displayName,
+                'transaction_date' => '',
+                'transaction_type' => '',
+                'num' => '',
+                'customer_full_name' => '',
+                'memo_description' => '',
+                'quantity' => '',
+                'sales_price' => '',
+                'amount' => '',
+                'balance' => number_format($groupTotalRaw, 2),
+                'is_group_header' => true,
+            ]);
+
+            // --- Push each transaction under this group with running balance ---
+            $runningBalance = 0.0;
+            foreach ($transactions as $transaction) {
+                $price = (float) $transaction->price;
+                $qty = (float) $transaction->quantity;
+                $discount = (float) ($transaction->discount ?? 0);
+                $taxAmount = (float) $this->calculateTaxAmount($transaction);
+
+                $amountRaw = ($price * $qty) - $discount + $taxAmount;
+                $runningBalance += $amountRaw;
+
+                $finalData->push([
+                    'group_key' => $groupKey,
+                    'group' => $displayName,
+                    'transaction_date' => Carbon::parse($transaction->transaction_date)->format('m/d/Y'),
+                    'transaction_type' => $transaction->transaction_type ?? 'Invoice',
+                    'num' => $transaction->invoice_number ?? '-',
+                    'customer_full_name' => $transaction->customer_name ?? '-',
+                    'memo_description' => $transaction->description ?? '-',
+                    'quantity' => number_format($qty, 2),
+                    'sales_price' => number_format($price, 2),
+                    'amount' => number_format($amountRaw, 2),
+                    'balance' => number_format($runningBalance, 2),
+                    'is_group_header' => false,
+                ]);
+            }
+        }
 
         return datatables()
-            ->eloquent($query)
-            ->addColumn('transaction_date', fn($r) => \Carbon\Carbon::parse($r->transaction_date)->format('m/d/Y'))
-            ->addColumn('transaction_type', fn($r) => $r->transaction_type ?? 'Invoice')
-            ->addColumn('num', fn($r) => $r->invoice_number ?? '-')
-            ->addColumn('customer_full_name', fn($r) => $r->customer_name ?? '-')
-            ->addColumn('memo_description', fn($r) => $r->description ?? '-')
-            ->addColumn('quantity', fn($r) => number_format($r->quantity ?? 0, 2))
-            ->addColumn('sales_price', fn($r) => number_format($r->price ?? 0))
-            ->addColumn('amount', function ($r) use ($user) {
-                // Calculate amount: (price * quantity) - discount + tax
-                $baseAmount = ($r->price ?? 0) * ($r->quantity ?? 0);
-                $discount = $r->discount ?? 0;
-                $taxAmount = $this->calculateTaxAmount($r);
-                $amount = $baseAmount - $discount + $taxAmount;
-                return number_format($amount);
-            })
-            ->addColumn('balance', function ($r) use ($user) {
-                // Running balance calculation will be handled by grouping
-                $baseAmount = ($r->price ?? 0) * ($r->quantity ?? 0);
-                $discount = $r->discount ?? 0;
-                $taxAmount = $this->calculateTaxAmount($r);
-                $amount = $baseAmount - $discount + $taxAmount;
-                return number_format($amount);
-            })
-            ->with('groupedData', function () use ($query) {
-                // Group data by product/service for the hierarchical display
-                try {
-                    $rows = (clone $query)->get();
-                    $grouped = $rows->groupBy('product_name');
-
-                    $groupedData = [];
-                    foreach ($grouped as $productName => $transactions) {
-                        $totalAmount = 0;
-                        $transactionData = [];
-
-                        foreach ($transactions as $transaction) {
-                            $baseAmount = ($transaction->price ?? 0) * ($transaction->quantity ?? 0);
-                            $discount = $transaction->discount ?? 0;
-                            $taxAmount = $this->calculateTaxAmount($transaction);
-                            $amount = $baseAmount - $discount + $taxAmount;
-                            $totalAmount += $amount;
-
-                            $transactionData[] = [
-                                'transaction_date' => $transaction->transaction_date,
-                                'transaction_type' => $transaction->transaction_type ?? 'Invoice',
-                                'num' => $transaction->invoice_number ?? '-',
-                                'customer_full_name' => $transaction->customer_name ?? '-',
-                                'memo_description' => $transaction->description ?? '-',
-                                'quantity' => $transaction->quantity ?? 0,
-                                'sales_price' => $transaction->price ?? 0,
-                                'amount' => $amount,
-                                'balance' => $totalAmount // Running total for this product
-                            ];
-                        }
-
-                        $groupedData[$productName] = [
-                            'transactions' => $transactionData,
-                            'total' => $totalAmount,
-                            'count' => count($transactionData)
-                        ];
-                    }
-
-                    \Log::info('SalesByProductService Detail grouped data calculated:', [
-                        'products' => count($groupedData),
-                        'total_transactions' => $rows->count()
-                    ]);
-
-                    return $groupedData;
-                } catch (\Exception $e) {
-                    \Log::error('Error calculating sales by product service detail data: ' . $e->getMessage());
-                    return [];
+            ->collection($finalData)
+            ->addColumn('transaction_date', function ($r) {
+                if ($r['is_group_header']) {
+                    return '<span class="group-toggle" data-group="' . e($r['group_key']) . '">
+                                <i class="fas fa-chevron-right me-2"></i>
+                                <strong>' . e($r['group']) . '</strong>
+                            </span>';
                 }
+                return e($r['transaction_date']);
             })
-            ->rawColumns(['transaction_date', 'transaction_type', 'num', 'customer_full_name', 'memo_description', 'quantity', 'sales_price', 'amount', 'balance']);
+            ->addColumn('transaction_type', fn($r) => $r['is_group_header'] ? '' : e($r['transaction_type']))
+            ->addColumn('num', fn($r) => $r['is_group_header'] ? '' : e($r['num']))
+            ->addColumn('customer_full_name', fn($r) => $r['is_group_header'] ? '' : e($r['customer_full_name']))
+            ->addColumn('memo_description', fn($r) => $r['is_group_header'] ? '' : e($r['memo_description']))
+            ->addColumn('quantity', fn($r) => $r['is_group_header'] ? '' : $r['quantity'])
+            ->addColumn('sales_price', fn($r) => $r['is_group_header'] ? '' : $r['sales_price'])
+            ->addColumn('amount', fn($r) => $r['is_group_header'] ? '' : $r['amount'])
+            ->addColumn('balance', fn($r) => $r['is_group_header'] ? '' : $r['balance'])
+            ->setRowAttr([
+                'class' => function ($r) {
+                    return $r['is_group_header'] ? 'group-header' : 'group-row group-' . $r['group_key'];
+                },
+                'data-group' => function ($r) {
+                    return $r['group_key'];
+                },
+                'style' => function ($r) {
+                    return $r['is_group_header']
+                        ? 'background-color:#f8f9fa; font-weight:600; cursor:pointer;'
+                        : 'display:none;';
+                },
+            ])
+            ->rawColumns(['transaction_date']);
     }
+
+
 
     private function calculateTaxAmount($transaction)
     {
         if (empty($transaction->tax)) {
-            return 0;
+            return 0.0;
         }
 
         $taxIds = explode(',', $transaction->tax);
-        $totalTaxRate = 0;
+        $totalTaxRate = 0.0;
 
         foreach ($taxIds as $taxId) {
             $tax = DB::table('taxes')->where('id', $taxId)->first();
-            if ($tax) {
-                $totalTaxRate += $tax->rate;
+            if ($tax && isset($tax->rate)) {
+                $totalTaxRate += (float) $tax->rate;
             }
         }
 
-        $baseAmount = ($transaction->price ?? 0) * ($transaction->quantity ?? 0) - ($transaction->discount ?? 0);
-        return ($baseAmount * $totalTaxRate) / 100;
+        $baseAmount = ((float) $transaction->price * (float) $transaction->quantity) - ((float) ($transaction->discount ?? 0));
+        $taxValue = ($baseAmount * $totalTaxRate) / 100.0;
+        return (float) round($taxValue, 2);
     }
 
     public function query()
@@ -116,34 +238,17 @@ class SalesByProductServiceDetailDataTable extends DataTable
         $user = Auth::user();
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
 
-        // Get date range filters
-        // Get start and end dates from request, fallback to defaults
-        $startDate = request()->get('start_date')
-            ?? request()->get('startDate')
-            ?? date('Y-01-01');
-        $endDate = request()->get('end_date')
-            ?? request()->get('endDate')
-            ?? date('Y-m-d');
+        $startDate = request()->get('start_date') ?? request()->get('startDate') ?? date('Y-01-01');
+        $endDate = request()->get('end_date') ?? request()->get('endDate') ?? date('Y-m-d');
         $reportPeriod = request('report_period', 'all_dates');
 
-        // Calculate date range based on report period (only if not 'all_dates')
         if ($reportPeriod && $reportPeriod !== 'all_dates' && $reportPeriod !== 'custom') {
             $dates = $this->calculateDateRange($reportPeriod);
             $startDate = $dates['start'];
             $endDate = $dates['end'];
         }
 
-        // Debug the date values
-        \Log::info('SalesByProductService Detail Date Filters Applied:', [
-            'report_period' => $reportPeriod,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'request_start' => request('start_date'),
-            'request_end' => request('end_date')
-        ]);
-
-        // Main query using InvoiceProduct model with all necessary joins
-        $model = new \App\Models\InvoiceProduct();
+        $model = new InvoiceProduct();
         $q = $model->newQuery()
             ->join('invoices as i', 'i.id', '=', 'invoice_products.invoice_id')
             ->join('product_services as ps', 'ps.id', '=', 'invoice_products.product_id')
@@ -154,48 +259,43 @@ class SalesByProductServiceDetailDataTable extends DataTable
                 'i.invoice_id as invoice_number',
                 'ps.name as product_name',
                 'c.name as customer_name',
-                DB::raw("'Invoice' as transaction_type")
+                DB::raw("'Invoice' as transaction_type"),
             ])
             ->where('i.created_by', $ownerId)
-            ->where('i.status', '!=', 0); // Only include non-draft invoices
+            ->where('i.status', '!=', 0);
 
-        // Apply date filters (only if dates are provided)
-        if ($startDate && $startDate !== '') {
+        if ($startDate) {
             $q->whereDate('i.issue_date', '>=', $startDate);
-            \Log::info('Applied detail start date filter: ' . $startDate);
         }
-        if ($endDate && $endDate !== '') {
+        if ($endDate) {
+        if ($endDate) {
             $q->whereDate('i.issue_date', '<=', $endDate);
-            \Log::info('Applied detail end date filter: ' . $endDate);
         }
 
-        // Apply product/service name filter if provided
-        if (request()->filled('product_name') && request('product_name') !== '') {
+        if (request()->filled('product_name')) {
             $q->where('ps.name', 'like', '%' . request('product_name') . '%');
         }
 
-        // Apply customer filter if provided
-        if (request()->filled('customer_name') && request('customer_name') !== '') {
+        if (request()->filled('customer_name')) {
             $q->where('c.name', 'like', '%' . request('customer_name') . '%');
         }
 
-        // Apply category filter if provided
-        if (request()->filled('category') && request('category') !== '') {
+        if (request()->filled('category')) {
             $q->where('ps.category_id', request('category'));
         }
 
-        // Apply type filter if provided
-        if (request()->filled('type') && request('type') !== '') {
+        if (request()->filled('type')) {
             $q->where('ps.type', request('type'));
         }
 
-        return $q->orderBy('ps.name', 'ASC')
-            ->orderBy('i.issue_date', 'DESC');
+        return $q->orderBy('i.issue_date', 'desc');
     }
+
+
 
     private function calculateDateRange($period)
     {
-        $today = \Carbon\Carbon::today();
+        $today = Carbon::today();
 
         switch ($period) {
             case 'today':
@@ -221,13 +321,13 @@ class SalesByProductServiceDetailDataTable extends DataTable
                 $lastYear = $today->subYear();
                 return ['start' => $lastYear->startOfYear()->format('Y-m-d'), 'end' => $lastYear->endOfYear()->format('Y-m-d')];
             case 'last_7_days':
-                return ['start' => $today->subDays(7)->format('Y-m-d'), 'end' => \Carbon\Carbon::today()->format('Y-m-d')];
+                return ['start' => $today->subDays(7)->format('Y-m-d'), 'end' => Carbon::today()->format('Y-m-d')];
             case 'last_30_days':
-                return ['start' => $today->subDays(30)->format('Y-m-d'), 'end' => \Carbon\Carbon::today()->format('Y-m-d')];
+                return ['start' => $today->subDays(30)->format('Y-m-d'), 'end' => Carbon::today()->format('Y-m-d')];
             case 'last_90_days':
-                return ['start' => $today->subDays(90)->format('Y-m-d'), 'end' => \Carbon\Carbon::today()->format('Y-m-d')];
+                return ['start' => $today->subDays(90)->format('Y-m-d'), 'end' => Carbon::today()->format('Y-m-d')];
             case 'last_12_months':
-                return ['start' => $today->subMonths(12)->format('Y-m-d'), 'end' => \Carbon\Carbon::today()->format('Y-m-d')];
+                return ['start' => $today->subMonths(12)->format('Y-m-d'), 'end' => Carbon::today()->format('Y-m-d')];
             default:
                 return ['start' => null, 'end' => null];
         }
@@ -236,7 +336,7 @@ class SalesByProductServiceDetailDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('customer-balance-table')
+            ->setTableId('sales-by-product-detail-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('rt')
@@ -247,8 +347,6 @@ class SalesByProductServiceDetailDataTable extends DataTable
                 'searching' => false,
                 'info' => false,
                 'ordering' => false,
-                'colReorder' => true,
-                'fixedHeader' => true,
                 'scrollY' => '400px',
                 'scrollX' => true,
                 'scrollCollapse' => true,
@@ -258,15 +356,15 @@ class SalesByProductServiceDetailDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            Column::make('transaction_date')->data('transaction_date')->name('transaction_date')->title(__('Transaction Date'))->addClass('text-left'),
-            Column::make('transaction_type')->data('transaction_type')->name('transaction_type')->title(__('Transaction Type'))->addClass('text-left'),
-            Column::make('num')->data('num')->name('num')->title(__('Num'))->addClass('text-left'),
-            Column::make('customer_full_name')->data('customer_full_name')->name('customer_full_name')->title(__('Customer Full Name'))->addClass('text-left'),
-            Column::make('memo_description')->data('memo_description')->name('memo_description')->title(__('Memo/Description'))->addClass('text-left'),
-            Column::make('quantity')->data('quantity')->name('quantity')->title(__('Quantity'))->addClass('text-right'),
-            Column::make('sales_price')->data('sales_price')->name('sales_price')->title(__('Sales Price'))->addClass('text-right'),
-            Column::make('amount')->data('amount')->name('amount')->title(__('Amount'))->addClass('text-right'),
-            Column::make('balance')->data('balance')->name('balance')->title(__('Balance'))->addClass('text-right'),
+            Column::make('transaction_date')->title(__('Product / Transaction Date'))->addClass('text-left'),
+            Column::make('transaction_type')->title(__('Type'))->addClass('text-left'),
+            Column::make('num')->title(__('Num'))->addClass('text-left'),
+            Column::make('customer_full_name')->title(__('Customer'))->addClass('text-left'),
+            Column::make('memo_description')->title(__('Description'))->addClass('text-left'),
+            Column::make('quantity')->title(__('Qty'))->addClass('text-right'),
+            Column::make('sales_price')->title(__('Price'))->addClass('text-right'),
+            Column::make('amount')->title(__('Amount'))->addClass('text-right'),
+            Column::make('balance')->title(__('Balance'))->addClass('text-right'),
         ];
     }
 

@@ -394,40 +394,14 @@
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
-
                 success: function(response) {
-                    // Mark notification as seen
-                    markAsSeen(notificationId);
-                    
-                    // Show success message
-                    if (response.message) {
-                        alert(response.message);
-                    } else {
-                        alert('Action processed successfully.');
-                        window.location.reload();
-                    }
-                    
-                    // Remove the notification from view
-                    notificationElement.style.opacity = '0.5';
-                    setTimeout(() => {
-                        notificationElement.remove();
-                    }, 300);
+                    console.log('Notification marked as seen:', response);
                 },
-                error: function(xhr, status, error) {                    
-                    // Re-enable button
-                    button.disabled = false;
-                    button.textContent = originalText;
-                    
-                    // Show error message
-                    let errorMessage = 'Something went wrong ...';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-                    alert(errorMessage);
-
+                error: function(xhr, status, error) {
+                    console.error('Error marking notification as seen:', error);
                 }
             });
-        });
+        }
 
         // Handle approve/reject button clicks
         document.querySelectorAll('.notification_model form').forEach(function(form) {
@@ -463,7 +437,6 @@
                             alert(response.message);
                         } else {
                             alert('Action processed successfully.');
-                            // window.location.reload();
                         }
 
                         // Remove the notification from view
@@ -480,8 +453,7 @@
                         button.textContent = originalText;
 
                         // Show error message
-                        let errorMessage =
-                            'An error occurred while processing the action.';
+                        let errorMessage = 'An error occurred while processing the action.';
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             errorMessage = xhr.responseJSON.message;
                         }

@@ -267,7 +267,7 @@
 
                 <!-- Number format section -->
                 <div class="option-section">
-                    <h6 class="section-title">Number format <i class="fa fa-chevron-up"></i></h6>
+                    <h6 class="section-title">Number format <i class="fa fa-caret-up"></i></h6>
                     <div class="option-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="divide-by-1000"> Divide by 1000
@@ -300,7 +300,7 @@
 
                 <!-- Header section -->
                 <div class="option-section">
-                    <h6 class="section-title">Header <i class="fa fa-chevron-up"></i></h6>
+                    <h6 class="section-title">Header <i class="fa fa-caret-up"></i></h6>
                     <div class="option-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="company-logo"> Company logo
@@ -324,7 +324,7 @@
 
                 <!-- Footer section -->
                 <div class="option-section">
-                    <h6 class="section-title">Footer <i class="fa fa-chevron-up"></i></h6>
+                    <h6 class="section-title">Footer <i class="fa fa-caret-up"></i></h6>
                     <div class="option-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="date-prepared" checked> Date prepared
@@ -866,7 +866,7 @@
             font-size: 12px;
         }
 
-        .fa-chevron-up {
+        .fa-caret-up {
             font-size: 10px;
             color: #6b7280;
         }
@@ -1570,13 +1570,13 @@
             // Collapsible sections in General Options
             $('.section-title').on('click', function() {
                 const section = $(this).next('.option-group');
-                const icon = $(this).find('.fa-chevron-up, .fa-chevron-down');
+                const icon = $(this).find('.fa-caret-up, .fa-caret-down');
 
                 section.slideToggle();
-                if (icon.hasClass('fa-chevron-up')) {
-                    icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                if (icon.hasClass('fa-caret-up')) {
+                    icon.removeClass('fa-caret-up').addClass('fa-caret-down');
                 } else {
-                    icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                    icon.removeClass('fa-caret-down').addClass('fa-caret-up');
                 }
             });
 

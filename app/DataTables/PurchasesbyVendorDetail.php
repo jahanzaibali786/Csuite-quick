@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
+use App\Models\PurchaseProduct;
 
 class PurchasesByVendorDetail extends DataTable
 {
@@ -88,8 +89,8 @@ class PurchasesByVendorDetail extends DataTable
 
         $finalData->push((object) [
             'transaction_date' => '',
-            'transaction_type' => '',
-            'transaction' => 'Grand Total',
+            'transaction_type' => '<strong>Grand Total</strong>',
+            'transaction' => '',
             'product_service' => '',
             'memo' => '',
             'quantity' => 0,
@@ -111,6 +112,25 @@ class PurchasesByVendorDetail extends DataTable
                 }
                 return number_format((float) $row->amount, 2);
             })
+            ->editColumn('quantity', function ($row) {
+                if (isset($row->isVendorHeader) || isset($row->isSubtotal) || isset($row->isPlaceholder) || isset($row->isGrandTotal)) {
+                    return '';
+                }
+                return $row->quantity;
+            })
+            ->editColumn('rate', function ($row) {
+                if (isset($row->isVendorHeader) || isset($row->isSubtotal) || isset($row->isPlaceholder) || isset($row->isGrandTotal)) {
+                    return '';
+                }
+                return number_format((float) $row->rate, 2);
+            })
+            ->editColumn('balance', function ($row) {
+                if (isset($row->isVendorHeader) || isset($row->isPlaceholder)) {
+                    return '';
+                }
+                return number_format((float) $row->balance, 2);
+            })
+
             ->setRowClass(function ($row) {
                 $vendorSlug = $row->vendor_name ? \Str::slug($row->vendor_name) : 'no-vendor';
                 if (isset($row->isVendorHeader) && $row->isVendorHeader)
@@ -126,7 +146,7 @@ class PurchasesByVendorDetail extends DataTable
             ->rawColumns(['transaction', 'transaction_type']);
     }
 
-    public function query(BillProduct $model)
+    public function query(PurchaseProduct $model)
     {
         $start = request()->get('start_date')
             ?? request()->get('startDate')
@@ -138,22 +158,23 @@ class PurchasesByVendorDetail extends DataTable
 
         return $model->newQuery()
             ->select(
-                'bill_products.*',
-                'bills.bill_id as bill',
-                'bills.bill_date as transaction_date',
+                'purchase_products.*',
+                'purchases.purchase_id as purchase',
+                'purchases.purchase_date as transaction_date',
                 'venders.name as vendor_name',
                 'product_services.name as product_service_name',
-                DB::raw('(SELECT IFNULL(SUM((bp.price * bp.quantity - bp.discount) * (taxes.rate / 100)),0) 
-                    FROM bill_products bp
-                    LEFT JOIN taxes ON FIND_IN_SET(taxes.id, bp.tax) > 0
-                    WHERE bp.id = bill_products.id) as tax_amount')
+                DB::raw('(SELECT IFNULL(SUM((pp.price * pp.quantity - pp.discount) * (taxes.rate / 100)),0)
+                FROM purchase_products pp
+                LEFT JOIN taxes ON FIND_IN_SET(taxes.id, pp.tax) > 0
+                WHERE pp.id = purchase_products.id) as tax_amount')
             )
-            ->join('bills', 'bills.id', '=', 'bill_products.bill_id')
-            ->join('venders', 'venders.id', '=', 'bills.vender_id')
-            ->join('product_services', 'product_services.id', '=', 'bill_products.product_id')
-            ->where('bills.created_by', \Auth::user()->creatorId())
-            ->whereBetween('bills.bill_date', [$start, $end]);
+            ->join('purchases', 'purchases.id', '=', 'purchase_products.purchase_id')
+            ->join('venders', 'venders.id', '=', 'purchases.vender_id')
+            ->join('product_services', 'product_services.id', '=', 'purchase_products.product_id')
+            ->where('purchases.created_by', \Auth::user()->creatorId())
+            ->whereBetween('purchases.purchase_date', [$start, $end]);
     }
+
 
     public function html()
     {

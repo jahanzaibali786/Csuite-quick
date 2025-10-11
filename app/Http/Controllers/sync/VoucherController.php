@@ -288,7 +288,14 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
+        
         return $dataTable->render('sync.profit_loss.by_month', $this->data);
+
+        // return $dataTable->render('sync.DoubleDateReport.index', [
+        //     'pageTitle' => $this->pageTitle,
+        //     'startDate' => $request->get('start_date', date('Y-01-01')),
+        //     'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        // ]);
 
     }
     public function profitLossComparison(\App\DataTables\ProfitLossComparisonDataTable $dataTable, Request $request)
@@ -356,6 +363,7 @@ class VoucherController extends Controller
 
         // return $dataTable->render('sync.balance-sheet-standard.index', $this->data);
         return $dataTable->render('sync.customerbalance.index', [
+            'accounting_method' => true,
             'pageTitle' => $this->pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
@@ -774,6 +782,12 @@ class VoucherController extends Controller
         return $dataTable->render('sync.balance-sheet-comparison.index', $this->data, [
             'pageTitle' => $this->pageTitle,
         ]);
+
+        // return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
+        //     'pageTitle' => $this->pageTitle,
+        //     'startDate' => $request->get('start_date', date('Y-01-01')),
+        //     'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
+        // ]);
     }
 
     public function purchaselist(\App\DataTables\PurchaseList $dataTable, Request $request)
