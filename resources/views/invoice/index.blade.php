@@ -261,7 +261,7 @@
                 {{-- Left Section - Unpaid (mirrors Right section layout) --}}
                 @php
                     $overdue = (float) ($invoiceData['overdue']['amount'] ?? 0);
-                    $notDueYet = (float) ($invoiceData['sent']['amount'] ?? 0); // invoices sent but not yet due
+                    $notDueYet = (float) ($invoiceData['not_due_yet']['amount'] ?? 0);
                     $unpaidTotal = $overdue + $notDueYet;
 
                     // progress ratios with sensible minimums for visibility

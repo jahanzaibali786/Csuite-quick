@@ -1759,7 +1759,7 @@ Route::group(['middleware' => ['verified']], function () {
     );
     Route::get('export/productservice', [ProductServiceController::class, 'export'])->name('productservice.export');
     Route::get('import/productservice/file', [ProductServiceController::class, 'importFile'])->name('productservice.file.import');
-    Route::get('productservice/inventory-valuation-detail', [ProductServiceController::class, 'inventoryValuationDetail'])->name('productservice.inventoryValuationDetail');
+    Route::get('productservices/inventory-valuation-detail', [ProductServiceController::class, 'inventoryValuationDetail'])->name('productservice.inventoryValuationDetail');
     Route::get('productservices/purchases-by-product-service-detail', [ProductServiceController::class, 'purchasesByProductServiceDetail'])->name('productservice.purchasesByProductServiceDetail');
     Route::post('import/productservice', [ProductServiceController::class, 'import'])->name('productservice.import');
     Route::get('export/customer', [CustomerController::class, 'export'])->name('customer.export');

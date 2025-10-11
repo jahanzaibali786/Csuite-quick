@@ -182,8 +182,8 @@
 
         <div class="btn-box-searchSB">
             <div class="searchable-dropdownSB" id="reportDropdownSB">
-                <input type="text" class="dropdown-inputSB" id="reportInputSB" placeholder="Search reports by name or category..."
-                    autocomplete="off">
+                <input type="text" class="dropdown-inputSB" id="reportInputSB"
+                    placeholder="Search reports by name or category..." autocomplete="off">
                 <div class="dropdown-arrowSB"></div>
                 <div class="dropdown-listSB" id="reportListSB"></div>
             </div>
@@ -259,7 +259,8 @@
 
                 renderOptions() {
                     if (this.filteredOptions.length === 0) {
-                        this.list.innerHTML = '<div class="no-resultsSB">No reports found matching your search</div>';
+                        this.list.innerHTML =
+                            '<div class="no-resultsSB">No reports found matching your search</div>';
                         return;
                     }
 
@@ -287,7 +288,8 @@
                     this.list.querySelectorAll('.dropdown-itemSB').forEach(item => {
                         item.addEventListener('click', (e) => {
                             const value = e.currentTarget.dataset.value;
-                            const option = this.filteredOptions.find(opt => opt.value === value);
+                            const option = this.filteredOptions.find(opt => opt.value ===
+                            value);
                             this.selectOption(option);
                         });
 
@@ -324,7 +326,7 @@
 
                 highlightNext() {
                     this.highlightedIndex = Math.min(this.highlightedIndex + 1, this.filteredOptions.length -
-                    1);
+                        1);
                     this.updateHighlight();
                     this.scrollToHighlighted();
                 }
@@ -382,9 +384,334 @@
                 }
             }
 
-            // ✅ COMPLETE Report list with categories and icons
             const reportOptions = [
-                // ================== ACCOUNTING REPORTS ==================
+                // ================== Business Overview ==================
+                {
+                    category: "Business Overview",
+                    value: "{{ route('balance-sheet.index') }}",
+                    label: "Balance Sheet",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('reports.profit_loss') }}",
+                    label: "Profit and Loss",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('balance-sheet-detail.index') }}",
+                    label: "Balance Sheet Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('profit-loss-detail.index') }}",
+                    label: "Profit and Loss Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('balance-sheet-standard.index') }}",
+                    label: "Balance Sheet Summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('profit-loss-by-month') }}",
+                    label: "Profit and Loss By Month",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('balance-sheet-comparison.index') }}",
+                    label: "Balance Sheet Comparison",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('profit-loss-comparison') }}",
+                    label: "Profit and Loss Comparison",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('ledger.index') }}",
+                    label: "General Ledger",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('profit-loss-quaterly') }}",
+                    label: "Profit and Loss Quarterly",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Business Overview",
+                    value: "{{ route('cash-flow.index') }}",
+                    label: "Statement of Cash Flows",
+                    icon: "bi bi-file-earmark-text"
+                },
+
+                // ================== Who Owes You ==================
+                {
+                    category: "Who Owes You",
+                    value: "{{ route('receivables.aging_summary') }}",
+                    label: "Accounts receivable aging summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who Owes You",
+                    value: "{{ route('receivables.invoices_received_payments') }}",
+                    label: "Invoices and received payments",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who Owes You",
+                    value: "{{ route('receivables.aging_details') }}",
+                    label: "Accounts receivable aging details",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who Owes You",
+                    value: "{{ route('receivables.open_invoice_list') }}",
+                    label: "Open Invoice",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who Owes You",
+                    value: "{{ route('receivables.collection_details') }}",
+                    label: "Collection Report",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who Owes You",
+                    value: "{{ route('receivables.invoice_list') }}",
+                    label: "Invoice list",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who Owes You",
+                    value: "{{ route('receivables.customer_balance') }}",
+                    label: "Customer balance summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who Owes You",
+                    value: "{{ route('receivables.customer_balance_detail') }}",
+                    label: "Customer balance detail report",
+                    icon: "bi bi-file-earmark-text"
+                },
+
+                // ================== Sales and Customers ==================
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('report.salesbyCustomerTypeDetail') }}",
+                    label: "Sales by Customer Type Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('productservice.inventoryValuationSummary') }}",
+                    label: "Inventory Valuation Summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('productservice.incomeByCustomerSummary') }}",
+                    label: "Product/Service List",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('customercontact.list') }}",
+                    label: "Customer Contact List",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('productservice.SalesByProductServiceSummary') }}",
+                    label: "Sales by Product/Service Summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('productservice.incomeByCustomerSummaryTwo') }}",
+                    label: "Income by Customer Summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('productservice.SalesByProductServiceDetail') }}",
+                    label: "Sales by Product/Service Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('customercontact.list.phone.numbers') }}",
+                    label: "Customer Phone List",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('report.sales.salesByCustomerSummary') }}",
+                    label: "Sales by Customer Summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('report.sales.salesByCustomerDetail') }}",
+                    label: "Sales by Customer Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('report.depositDetail') }}",
+                    label: "Deposit Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('productservice.transactionListByCustomer') }}",
+                    label: "Transaction List by Customer",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('productservice.estimatesByCustomer') }}",
+                    label: "Estimates by Customer",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales and Customers",
+                    value: "{{ route('productservice.inventoryValuationDetail') }}",
+                    label: "Inventory Valuation Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+
+                // ================== Who You Owe ==================
+                {
+                    category: "Who You Owe",
+                    value: "{{ route('payables.aging_summary') }}",
+                    label: "Accounts payable aging summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who You Owe",
+                    value: "{{ route('payables.unpaid_bills_report') }}",
+                    label: "Unpaid Bills",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who You Owe",
+                    value: "{{ route('payables.aging_details') }}",
+                    label: "Accounts payable aging details",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who You Owe",
+                    value: "{{ route('payables.vendor_balance_summary') }}",
+                    label: "Vendor balance summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who You Owe",
+                    value: "{{ route('payables.bills_payments') }}",
+                    label: "Bills and Applied payments",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who You Owe",
+                    value: "{{ route('payables.vendor_balance_detail') }}",
+                    label: "Vendor balance detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Who You Owe",
+                    value: "{{ route('payables.bill_payment_list') }}",
+                    label: "Bill Payment List",
+                    icon: "bi bi-file-earmark-text"
+                },
+
+                // ================== Expenses And Vendors ==================
+                {
+                    category: "Expenses And Vendors",
+                    value: "{{ route('expenses.open_purchase_order_detail') }}",
+                    label: "Open Purchase Order Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Expenses And Vendors",
+                    value: "{{ route('expenses.vendors_phone_list') }}",
+                    label: "Vendors Phone List",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Expenses And Vendors",
+                    value: "{{ route('expenses.open_purchase_order_list') }}",
+                    label: "Open Purchase Order List",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Expenses And Vendors",
+                    value: "{{ route('expenses.transaction_list_by_vendor') }}",
+                    label: "Transaction List by Vendor",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Expenses And Vendors",
+                    value: "{{ route('expenses.purchase_list') }}",
+                    label: "Purchase List",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Expenses And Vendors",
+                    value: "{{ route('expenses.expenses_by_vendor_summary') }}",
+                    label: "Expenses by Vendor Summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Expenses And Vendors",
+                    value: "{{ route('expenses.purchase_by_vendor') }}",
+                    label: "Purchase by Vendor Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Expenses And Vendors",
+                    value: "{{ route('expenses.vendors_contact_list') }}",
+                    label: "Vendors Contact List",
+                    icon: "bi bi-file-earmark-text"
+                },
+
+                // ================== Sales Tax ==================
+                {
+                    category: "Sales Tax",
+                    value: "{{ route('SalesTaxLiabilityReport') }}",
+                    label: "Sales Tax Liability Report",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales Tax",
+                    value: "{{ route('report.taxableSalesSummary') }}",
+                    label: "Taxable Sales Summary",
+                    icon: "bi bi-file-earmark-text"
+                },
+                {
+                    category: "Sales Tax",
+                    value: "{{ route('report.taxableSalesDetail') }}",
+                    label: "Taxable Sales Detail",
+                    icon: "bi bi-file-earmark-text"
+                },
+
+                // ================== Employees ==================
+                {
+                    category: "Employees",
+                    value: "{{ route('employees.employeecontactlist') }}",
+                    label: "Employee Contact List",
+                    icon: "bi bi-people"
+                },
+
+                // ================== Accounting Reports ==================
                 {
                     category: "Accounting Reports",
                     value: "{{ route('report.account.statement') }}",
@@ -483,19 +810,13 @@
                 },
                 {
                     category: "Accounting Reports",
-                    value: "{{ route('report.balance.sheet') }}",
-                    label: "Balance Sheet",
-                    icon: "bi bi-file-earmark-text"
-                },
-                {
-                    category: "Accounting Reports",
                     value: "{{ route('report.profit.loss') }}",
-                    label: "Profit & Loss",
+                    label: "Profit & Loss (Alt)",
                     icon: "bi bi-file-earmark-text"
                 },
                 {
                     category: "Accounting Reports",
-                    value: "{{ route('trial.balance') }}",
+                    value: "{{ route('trial-balance.index') }}",
                     label: "Trial Balance",
                     icon: "bi bi-file-earmark-text"
                 },
@@ -512,7 +833,7 @@
                     icon: "bi bi-file-earmark-text"
                 },
 
-                // ================== HRM REPORTS ==================
+                // ================== HRM Reports ==================
                 {
                     category: "HRM Reports",
                     value: "{{ route('report.payroll') }}",
@@ -532,7 +853,7 @@
                     icon: "bi bi-people"
                 },
 
-                // ================== CRM REPORTS ==================
+                // ================== CRM Reports (if enabled) ==================
                 {
                     category: "CRM Reports",
                     value: "{{ route('report.lead') }}",
@@ -546,7 +867,7 @@
                     icon: "bi bi-person-check"
                 },
 
-                // ================== PROJECT REPORTS ==================
+                // ================== Project Reports (if enabled) ==================
                 {
                     category: "Project Reports",
                     value: "{{ route('project.dashboard') }}",
@@ -554,7 +875,7 @@
                     icon: "bi bi-kanban"
                 },
 
-                // ================== POS REPORTS ==================
+                // ================== POS Reports (existing) ==================
                 {
                     category: "POS Reports",
                     value: "{{ route('report.warehouse') }}",
@@ -580,6 +901,7 @@
                     icon: "bi bi-shop"
                 }
             ];
+
 
             // Initialize dropdown
             new SearchableDropdownSB(

@@ -1257,31 +1257,23 @@
                                     {{ __('Transactions') }}
                                     <span class="dash-arrow"><i data-feather="chevron-right"></i></span>
                                 </a>
-                                <ul class="dash-submenu">
-                                    {{-- <li class="dash-item {{ Request::route()->getName() == 'transaction.index' ? 'active' : '' }}">
+                             <ul class="dash-submenu">
+                    {{-- <li class="dash-item {{ Request::route()->getName() == 'transaction.index' ? 'active' : '' }}">
                             <a class="dash-link" href="{{ route('transaction.index') }}">{{ __('All Transactions') }}</a>
                         </li> --}}
-                                    <li
-                                        class="dash-item {{ Request::route()->getName() == 'transaction.bankTransactions' ? 'active' : '' }}">
-                                        <a class="dash-link"
-                                            href="{{ route('transaction.bankTransactions') }}">{{ __('Bank Transactions') }}</a>
-                                    </li>
-                                    <li
-                                        class="dash-item {{ Request::route()->getName() == 'reciept.index' ? 'active' : '' }}">
-                                        <a class="dash-link"
-                                            href="{{ route('reciept.index') }}">{{ __('Receipts') }}</a>
-                                    </li>
-                                    <li
-                                        class="dash-item {{ Request::route()->getName() == 'chart-of-account.index' ? 'active' : '' }}">
-                                        <a class="dash-link"
-                                            href="{{ route('chart-of-account.index') }}">{{ __('Chart of Accounts') }}</a>
-                                    </li>
-                                    <li
-                                        class="dash-item {{ Request::route()->getName() == 'report.recurring' ? 'active' : '' }}">
-                                        <a class="dash-link"
-                                            href="{{ route('report.recurring') }}">{{ __('Recurring Transactions') }}</a>
-                                    </li>
-                                </ul>
+                    <li class="dash-item {{ Request::route()->getName() == 'transaction.bankTransactions' ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('transaction.bankTransactions') }}">{{ __('Bank Transactions') }}</a>
+                    </li>
+                    <li class="dash-item {{ Request::route()->getName() == 'reciept.index' ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('reciept.index') }}">{{ __('Receipts') }}</a>
+                    </li>
+                    <li class="dash-item {{ Request::route()->getName() == 'chart-of-account.index' ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('chart-of-account.index') }}">{{ __('Chart of Accounts') }}</a>
+                    </li>
+                    <li class="dash-item {{ Request::route()->getName() == 'report.recurring' ? 'active' : '' }}">
+                        <a class="dash-link" href="{{ route('report.recurring') }}">{{ __('Recurring Transactions') }}</a>
+                    </li>
+                </ul>
                             </li>
 
                             {{-- Sales --}}
@@ -1291,75 +1283,60 @@
                                     Gate::check('manage revenue') ||
                                     Gate::check('manage credit note'))
                                 <li
-                                    class="dash-item dash-hasmenu {{ Request::segment(1) == 'customer' || Request::segment(1) == 'proposal' || Request::segment(1) == 'invoice' || Request::segment(1) == 'revenue' || Request::segment(1) == 'credit-note' ? 'active dash-trigger' : '' }}">
-                                    <a class="dash-link" href="#">
+                                    class="dash-item {{ Request::segment(1) == 'customer' || Request::segment(1) == 'proposal' || Request::segment(1) == 'invoice' || Request::segment(1) == 'revenue' || Request::segment(1) == 'credit-note' ? 'active dash-trigger' : '' }}">
+                                    <a href="{{ route('allSales') }}" class="dash-link">
                                         {{ __('Sales') }}
-                                        <span class="dash-arrow"><i data-feather="chevron-right"></i></span>
+                                        {{-- <span class="dash-arrow"><i data-feather="chevron-right"></i></span> --}}
                                     </a>
-                                    <ul class="dash-submenu">
-                                        <li
-                                            class="dash-item {{ Request::route()->getName() == 'allSales' ? 'active' : '' }}">
-                                            <a class="dash-link"
-                                                href="{{ route('allSales') }}">{{ __('All Sales') }}</a>
-                                        </li>
-                                        <li
-                                            class="dash-item {{ Request::route()->getName() == 'invoice.index' ? 'active' : '' }}">
-                                            <a class="dash-link"
-                                                href="{{ route('invoice.index') }}">{{ __('Invoices') }}</a>
-                                        </li>
-                                        @if (Gate::check('manage proposal'))
-                                            <li
-                                                class="dash-item {{ Request::segment(1) == 'proposal' ? 'active' : '' }}">
-                                                <a class="dash-link"
-                                                    href="{{ route('proposal.index') }}">{{ __('Estimates') }}</a>
-                                            </li>
-                                        @endif
-                                        <li
-                                            class="dash-item {{ Request::route()->getName() == 'invoice.orders' ? 'active' : '' }}">
-                                            <a class="dash-link" href="#">{{ __('Sales Orders') }}</a>
-                                        </li>
-                                        <li
-                                            class="dash-item {{ Request::route()->getName() == 'invoice.recurring-invoices' ? 'active' : '' }}">
-                                            <a class="dash-link"
-                                                href="{{ route('invoice.recurring-invoices') }}">{{ __('Recurring Invoices') }}</a>
-                                        </li>
-                                        <li
-                                            class="dash-item {{ Request::route()->getName() == 'report.income.summaryTransactionsDeposites' ? 'active' : '' }}">
-                                            <a class="dash-link"
-                                                href="{{ route('report.income.summaryTransactionsDeposites') }}">{{ __('Deposits') }}</a>
-                                        </li>
-                                        @if (Gate::check('manage customer'))
-                                            <li
-                                                class="dash-item {{ Request::segment(1) == 'customer' ? 'active' : '' }}">
-                                                <a class="dash-link"
-                                                    href="{{ route('customer.index') }}">{{ __('Customers') }}</a>
-                                            </li>
-                                        @endif
-                                        {{-- <li class="dash-item {{ Request::route()->getName() == 'revenue.index' ? 'active' : '' }}">
+                                    <!-- <ul class="dash-submenu">
+                        <li class="dash-item {{ Request::route()->getName() == 'allSales' ? 'active' : '' }}">
+                            <a class="dash-link" href="{{ route('allSales') }}">{{ __('All Sales') }}</a>
+                        </li>
+                        <li class="dash-item {{ Request::route()->getName() == 'invoice.index' ? 'active' : '' }}">
+                            <a class="dash-link" href="{{ route('invoice.index') }}">{{ __('Invoices') }}</a>
+                        </li>
+                        @if (Gate::check('manage proposal'))
+<li class="dash-item {{ Request::segment(1) == 'proposal' ? 'active' : '' }}">
+                                <a class="dash-link" href="{{ route('proposal.index') }}">{{ __('Estimates') }}</a>
+                            </li>
+@endif
+                        <li class="dash-item {{ Request::route()->getName() == 'invoice.orders' ? 'active' : '' }}">
+                            <a class="dash-link" href="#">{{ __('Sales Orders') }}</a>
+                        </li>
+                        <li class="dash-item {{ Request::route()->getName() == 'invoice.recurring' ? 'active' : '' }}">
+                            <a class="dash-link" href="#">{{ __('Recurring Payments') }}</a>
+                        </li>
+                        <li class="dash-item {{ Request::route()->getName() == 'transaction.deposits' ? 'active' : '' }}">
+                            <a class="dash-link" href="#">{{ __('Deposits') }}</a>
+                        </li>
+                        {{-- @if (Gate::check('manage customer'))
+                                <li class="dash-item {{ Request::segment(1) == 'customer' ? 'active' : '' }}">
+                                    <a class="dash-link" href="{{ route('customer.index') }}">{{ __('Customers') }}</a>
+                                </li>
+                            @endif --}}
+                        {{-- <li class="dash-item {{ Request::route()->getName() == 'revenue.index' ? 'active' : '' }}">
                                 <a class="dash-link" href="{{ route('revenue.index') }}">{{ __('Revenue') }}</a>
                             </li>
                             <li class="dash-item {{ Request::route()->getName() == 'credit.note' ? 'active' : '' }}">
                                 <a class="dash-link" href="{{ route('credit.note') }}">{{ __('Credit Note') }}</a>
                             </li> --}}
-                                        @if (Gate::check('manage product & service'))
-                                            <li
-                                                class="dash-item {{ Request::segment(1) == 'productservice' ? 'active' : '' }}">
-                                                <a class="dash-link"
-                                                    href="{{ route('productservice.index') }}">{{ __('Product & Services') }}</a>
-                                            </li>
-                                        @endif
-                                    </ul>
+                        @if (Gate::check('manage product & service'))
+<li class="dash-item {{ Request::segment(1) == 'productservice' ? 'active' : '' }}">
+                                <a class="dash-link" href="{{ route('productservice.index') }}">{{ __('Product & Services') }}</a>
+                            </li>
+@endif
+                    </ul> -->
                                 </li>
                             @endif
 
                             {{-- Expenses --}}
                             <li
                                 class="dash-item {{ Request::segment(1) == 'expense' || Request::segment(1) == 'bill' || Request::segment(1) == 'payment' || Request::segment(1) == 'vender' ? 'active dash-trigger' : '' }}">
-                                <a class="dash-link" href="#">
+                                <a href="{{ route('expense.index') }}" class="dash-link">
                                     {{ __('Expenses') }}
-                                    <span class="dash-arrow"><i data-feather="chevron-right"></i></span>
+                                    {{-- <span class="dash-arrow"><i data-feather="chevron-right"></i></span> --}}
                                 </a>
-                                <ul class="dash-submenu">
+                                {{-- <ul class="dash-submenu">
                                                 <li
                                                     class="dash-item {{ Request::route()->getName() == 'expense.index' ? 'active' : '' }}">
                                                     <a class="dash-link"
@@ -1379,7 +1356,7 @@
                                                     <a class="dash-link"
                                                         href="{{ route('vender.index') }}">{{ __('Vendors') }}</a>
                                                 </li>
-                                            </ul>
+                                            </ul> --}}
                             </li>
 
                             {{-- Budgets --}}

@@ -421,179 +421,108 @@
             toggleRecurringPanel();
         });
     </script>
-    <script>
-        function handleNextDatePreview() {
-            const repeat = $('#recurring_repeat').val();
-            const startDateVal = $('#recurring_start_date').val();
-            const endType = $('#recurring_end_type').val();
+<script>
+  /** ===== Minimal Schedule Preview =====
+   * Renders:
+   *  - under Start date:  "Next Invoice Date YYYY-MM-DD."
+   *  - under Repeat:      "Last invoice date YYYY-MM-DD"
+   *
+   * Rules:
+   *  - "Next invoice date" is ALWAYS start date + 12 months (1 year)
+   *    (independent of the selected repeat) — per the example:
+   *      start = 2025-01-01 -> next = 2026-01-01 even if user switches to "monthly".
+   *  - "Last invoice date" uses the selected repeat interval and count
+   *    (e.g., monthly/quarterly/6months/yearly with every_n = count).
+   */
 
-            if (!startDateVal || endType !== 'never') {
-                $('#next-date-preview').text('');
-                return;
-            }
+  // --- Helpers ---
+  function addMonthsNoOverflow(date, months) {
+    const d = new Date(date.getTime());
+    const day = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + months);
+    // snap to last day if original day doesn't exist in target month
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, lastDay));
+    return d;
+  }
 
-            const startDate = new Date(startDateVal);
-            let nextDate = new Date(startDate);
+  function toISO(d) {
+    // Format as YYYY-MM-DD (avoid TZ drift)
+    const tz = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    return tz.toISOString().slice(0, 10);
+  }
 
-            switch (repeat) {
-                case 'monthly':
-                    nextDate.setMonth(nextDate.getMonth() + 1);
-                    break;
-                case 'quarterly':
-                    nextDate.setMonth(nextDate.getMonth() + 3);
-                    break;
-                case '6months':
-                    nextDate.setMonth(nextDate.getMonth() + 6);
-                    break;
-                case 'yearly':
-                    nextDate.setFullYear(nextDate.getFullYear() + 1);
-                    break;
-            }
+  function monthsForRepeat(repeat) {
+    switch (repeat) {
+      case 'monthly':   return 1;
+      case 'quarterly': return 3;  // typical calendar quarterly = 3 months
+      case '6months':   return 6;
+      case 'yearly':    return 12;
+      default:          return 1;
+    }
+  }
 
-            // Format date as YYYY-MM-DD
-            const formatted = nextDate.toISOString().slice(0, 10);
-            $('#next-date-preview').text('Next date: ' + formatted);
-        }
+  function ensurePreviewHolders() {
+    // small under Start date
+    if (!$('#schedule-summary').length) {
+      $('<small id="schedule-summary" class="text-muted d-block mt-1"></small>')
+        .insertAfter('#recurring_start_date');
+    }
+    // small under Repeat
+    if (!$('#schedule-preview').length) {
+      $('<small id="schedule-preview" class="text-muted d-block mt-1"></small>')
+        .insertAfter('#recurring_repeat');
+    }
+  }
 
-        // Hook into changes
-        $(document).on('change', '#recurring_repeat', handleNextDatePreview);
-        $(document).on('change keyup', '#recurring_start_date', handleNextDatePreview);
-        $(document).on('change', '#recurring_end_type', handleNextDatePreview);
+  function computeSchedulePreview() {
+    ensurePreviewHolders();
 
-        // Init on load
-        $(function() {
-            handleNextDatePreview();
-        });
-    </script>
-    <script>
-        /** ===== Schedule preview (DATES + SUMMARY) =====
-         * Renders:
-         *  - under Start date:  "Creates N invoices starting YYYY-MM-DD."
-         *  - under Repeat:      "Next invoice: YYYY-MM-DD" (next only)
-         * Matches backend intervals (Quarterly = 4 months).
-         */
+    const startVal = $('#recurring_start_date').val();   // e.g. "2025-01-01"
+    const repeat   = $('#recurring_repeat').val();       // monthly|quarterly|6months|yearly
+    const everyRaw = $('#recurring_every_n').val();      // count
+    let count = parseInt(everyRaw, 10);
 
-        function addMonthsNoOverflow(date, months) {
-            const d = new Date(date.getTime());
-            const day = d.getDate();
-            d.setDate(1);
-            d.setMonth(d.getMonth() + months);
-            // snap to last day if original day doesn't exist in target month
-            const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-            d.setDate(Math.min(day, lastDay));
-            return d;
-        }
+    if (!startVal) {
+      $('#schedule-summary').text('');
+      $('#schedule-preview').text('');
+      return;
+    }
+    if (isNaN(count) || count < 1) count = 1;
 
-        function toISO(d) {
-            // format as YYYY-MM-DD
-            const tz = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            return tz.toISOString().slice(0, 10);
-        }
+    const start = new Date(startVal + 'T00:00:00');
 
-        function monthsForRepeat(repeat) {
-            switch (repeat) {
-                case 'monthly':
-                    return 1;
-                case 'quarterly':
-                    return 4; // IMPORTANT: keep in sync with backend
-                case '6months':
-                    return 6;
-                case 'yearly':
-                    return 12;
-                default:
-                    return 1;
-            }
-        }
 
-        function ensurePreviewHolders() {
-            // small under Start date
-            if (!$('#schedule-summary').length) {
-                $('<small id="schedule-summary" class="text-muted d-block mt-1"></small>')
-                    .insertAfter('#recurring_start_date');
-            }
-            // small under Repeat
-            if (!$('#schedule-preview').length) {
-                $('<small id="schedule-preview" class="text-muted d-block mt-1"></small>')
-                    .insertAfter('#recurring_repeat');
-            }
-        }
+    // --- Last invoice date: based on repeat + count ---
+    // If count = 1 -> last = start; otherwise add (count - 1) * interval
+    const stepMonths = monthsForRepeat(repeat);
+        // --- Next invoice date: ALWAYS start + 12 months (1 year) ---
+    const nextDate = addMonthsNoOverflow(start, stepMonths);
+    $('#schedule-summary').text('Next Invoice Date ' + toISO(nextDate) + '.');
+    let lastDate = new Date(start.getTime());
+    if (count > 1) {
+      lastDate = addMonthsNoOverflow(start, stepMonths * (count));
+    }
+    $('#schedule-preview').text('Last invoice date ' + toISO(lastDate));
 
-        function computeSchedulePreview() {
-            ensurePreviewHolders();
 
-            const isOn = $('#recurring').val() === 'yes';
-            if (!isOn) {
-                $('#schedule-summary, #schedule-preview').text('');
-                return;
-            }
+    // --- Next invoice date: based on start + 12 months ---
+    
+  }
 
-            const when = $('#recurring_when').val(); // now|future
-            const repeat = $('#recurring_repeat').val(); // monthly|quarterly|6months|yearly
-            const everyNRaw = $('#recurring_every_n').val();
-            const endType = $('#recurring_end_type').val(); // never|by
-            const endDateVal = $('#recurring_end_date').val();
+  // Hook into changes on only the relevant fields (simple version)
+  $(document).on('change keyup',
+    '#recurring_start_date, #recurring_repeat, #recurring_every_n',
+    computeSchedulePreview
+  );
 
-            let count = parseInt(everyNRaw, 10);
-            if (isNaN(count) || count < 1) count = 1;
+  // Init on load
+  $(function () {
+    computeSchedulePreview();
+  });
+</script>
 
-            let startVal = $('#recurring_start_date').val();
-            let start;
-            if (when === 'now') {
-                // today
-                const today = new Date();
-                start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                // reflect in UI if disabled field hides value
-                $('#recurring_start_date').val(toISO(start));
-            } else {
-                if (!startVal) {
-                    $('#schedule-summary').text('');
-                    $('#schedule-preview').text('');
-                    return; // start date required visually; your other handler shows "Required"
-                }
-                start = new Date(startVal + 'T00:00:00'); // avoid TZ drifting
-            }
-
-            const stepMonths = monthsForRepeat(repeat);
-            const endBy = (endType === 'by' && endDateVal) ? new Date(endDateVal + 'T23:59:59') : null;
-
-            // Build dates: include the master (start), then count-1 children
-            let dates = [];
-            let cursor = new Date(start.getTime());
-            dates.push(toISO(cursor));
-
-            for (let i = 1; i < count; i++) {
-                cursor = addMonthsNoOverflow(cursor, stepMonths);
-                if (endBy && cursor > endBy) break; // respect end-by
-                dates.push(toISO(cursor));
-                if (dates.length > 1000) break; // guard
-            }
-
-            // Render summary (under Start date)
-            if (dates.length) {
-                $('#schedule-summary').text(
-                    'Creates ' + dates.length + ' invoice' + (dates.length > 1 ? 's' : '') + ' starting ' + dates[0] +
-                    '.'
-                );
-            } else {
-                $('#schedule-summary').text('');
-            }
-
-            // --- Render ONLY the next date (under Repeat) ---
-            const nextDate = (dates.length >= 2) ? dates[1] : '';
-            $('#schedule-preview').text(nextDate ? ('Next invoice: ' + nextDate) : '');
-        }
-
-        // Hook into changes
-        $(document).on('change keyup',
-            '#recurring, #recurring_when, #recurring_start_date, #recurring_repeat, #recurring_every_n, #recurring_end_type, #recurring_end_date',
-            computeSchedulePreview
-        );
-
-        // Init on load
-        $(function() {
-            computeSchedulePreview();
-        });
-    </script>
     <script>
         $(document).ready(function() {
             var currentSelect = null;
@@ -800,78 +729,77 @@
                                         </div>
                                     @endif
                                 </div>
-                                
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            {{ Form::label('ref_number', __('Ref Number'), ['class' => 'form-label']) }}
-                                            <div class="form-icon-user">
-                                                <span><i class="ti ti-joint"></i></span>
-                                                {{ Form::text('ref_number', '', ['class' => 'form-control', 'placeholder' => __('Enter Ref NUmber')]) }}
-                                            </div>
+
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        {{ Form::label('ref_number', __('Ref Number'), ['class' => 'form-label']) }}
+                                        <div class="form-icon-user">
+                                            <span><i class="ti ti-joint"></i></span>
+                                            {{ Form::text('ref_number', '', ['class' => 'form-control', 'placeholder' => __('Enter Ref NUmber')]) }}
                                         </div>
                                     </div>
-                                    {{-- Recurring toggle --}}
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            {{ Form::label('recurring', __('Recurring'), ['class' => 'form-label']) }}
-                                            <div class="form-icon-user">
-                                                {{ Form::select('recurring', ['no' => 'No', 'yes' => 'Yes'], null, ['class' => 'form-control select', 'id' => 'recurring']) }}
-                                            </div>
+                                </div>
+                                {{-- Recurring toggle --}}
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        {{ Form::label('recurring', __('Recurring'), ['class' => 'form-label']) }}
+                                        <div class="form-icon-user">
+                                            {{ Form::select('recurring', ['no' => 'No', 'yes' => 'Yes'], null, ['class' => 'form-control select', 'id' => 'recurring']) }}
                                         </div>
                                     </div>
+                                </div>
                             </div>
 
                         </div>
-                                                    <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 d-none" id="recurring-options">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            {{ Form::label('recurring_when', __('When to charge'), ['class' => 'form-label']) }}
-                                            {{ Form::select('recurring_when', ['future' => 'Select future date', 'now' => 'Immediately'], null, ['class' => 'form-control', 'id' => 'recurring_when']) }}
-                                        </div>
+                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 d-none" id="recurring-options">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        {{ Form::label('recurring_when', __('When to charge'), ['class' => 'form-label']) }}
+                                        {{ Form::select('recurring_when', ['future' => 'Select future date', 'now' => 'Immediately'], null, ['class' => 'form-control', 'id' => 'recurring_when']) }}
                                     </div>
-
-                                    {{-- Start date --}}
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            {{ Form::label('recurring_start_date', __('Start date'), ['class' => 'form-label']) }}
-                                            <div class="form-icon-user">
-                                                {{ Form::date('recurring_start_date', null, ['class' => 'form-control', 'id' => 'recurring_start_date']) }}
-                                            </div>
-                                            <small class="text-danger d-none"
-                                                id="start-required">{{ __('Required') }}</small>
-                                        </div>
-                                    </div>
-
-                                    {{-- Repeat frequency --}}
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            {{ Form::label('recurring_repeat', __('Repeat'), ['class' => 'form-label']) }}
-                                            {{ Form::select(
-                                                'recurring_repeat',
-                                                [
-                                                    'monthly' => 'Monthly',
-                                                    'quarterly' => 'Quarterly',
-                                                    '6months' => '6 Months',
-                                                    'yearly' => 'Yearly',
-                                                ],
-                                                'monthly',
-                                                ['class' => 'form-control', 'id' => 'recurring_repeat'],
-                                            ) }}
-                                            <small id="next-date-preview" class="text-muted d-block mt-1"></small>
-                                        </div>
-                                    </div>
-
-                                    {{-- Every N months --}}
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            {{ Form::label('recurring_every_n', __('Invoice Count'), ['class' => 'form-label']) }}
-                                            {{ Form::number('recurring_every_n', 1, ['class' => 'form-control', 'id' => 'recurring_every_n', 'min' => 1]) }}
-                                        </div>
-                                    </div>
-
                                 </div>
+
+                                {{-- Start date --}}
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        {{ Form::label('recurring_start_date', __('Start date'), ['class' => 'form-label']) }}
+                                        <div class="form-icon-user">
+                                            {{ Form::date('recurring_start_date', null, ['class' => 'form-control', 'id' => 'recurring_start_date']) }}
+                                        </div>
+                                        <small class="text-danger d-none" id="start-required">{{ __('Required') }}</small>
+                                    </div>
+                                </div>
+
+                                {{-- Repeat frequency --}}
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        {{ Form::label('recurring_repeat', __('Repeat'), ['class' => 'form-label']) }}
+                                        {{ Form::select(
+                                            'recurring_repeat',
+                                            [
+                                                'monthly' => 'Monthly',
+                                                'quarterly' => 'Quarterly',
+                                                '6months' => '6 Months',
+                                                'yearly' => 'Yearly',
+                                            ],
+                                            'monthly',
+                                            ['class' => 'form-control', 'id' => 'recurring_repeat'],
+                                        ) }}
+                                        <small id="next-date-preview" class="text-muted d-block mt-1"></small>
+                                    </div>
+                                </div>
+
+                                {{-- Every N months --}}
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        {{ Form::label('recurring_every_n', __('Invoice Count'), ['class' => 'form-label']) }}
+                                        {{ Form::number('recurring_every_n', 1, ['class' => 'form-control', 'id' => 'recurring_every_n', 'min' => 1]) }}
+                                    </div>
+                                </div>
+
                             </div>
+                        </div>
 
                     </div>
                 </div>

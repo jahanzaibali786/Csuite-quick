@@ -23,28 +23,28 @@ use Illuminate\Support\Facades\Auth;
 class TransactionController extends Controller
 {
 
-        private function yearMonth()
-{
-    return [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-    ];
-}
+    private function yearMonth()
+    {
+        return [
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+        ];
+    }
 
-private function yearList()
-{
-    return range(date('Y') - 5, date('Y'));
-}
+    private function yearList()
+    {
+        return range(date('Y') - 5, date('Y'));
+    }
 
     public function index(Request $request)
     {
@@ -144,7 +144,7 @@ private function yearList()
         }
     }
 
-            public function incomeSummary(Request $request)
+    public function incomeSummary(Request $request)
     {
         if (\Auth::user()->can('income report')) {
             $account = BankAccount::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('holder_name', 'id');
@@ -180,15 +180,13 @@ private function yearList()
             $filter['customer'] = __('All');
 
             if ($request->period === 'yearly') {
-            $year = array_reverse($this->yearList());
-            $yearList = [];
-            foreach ($year as $value) {
-                $yearList[$value] = $value;
-            }
-            }
-            else
-            {
-            $yearList[($request->year) ? $request->year : date('Y')] = ($request->year) ? $request->year : date('Y');
+                $year = array_reverse($this->yearList());
+                $yearList = [];
+                foreach ($year as $value) {
+                    $yearList[$value] = $value;
+                }
+            } else {
+                $yearList[($request->year) ? $request->year : date('Y')] = ($request->year) ? $request->year : date('Y');
             }
 
             if (isset($request->year)) {
@@ -205,8 +203,8 @@ private function yearList()
 
             // ------------------------------REVENUE INCOME-----------------------------------
 
-                $incomes = Revenue::selectRaw('sum(revenues.amount) as amount,MONTH(date) as month,YEAR(date) as year, product_service_categories.name as category_id')->leftjoin('product_service_categories', 'revenues.category_id', '=', 'product_service_categories.id')->where('product_service_categories.type', '=', 'income');
-                $incomes->where('revenues.created_by', '=', \Auth::user()->creatorId());
+            $incomes = Revenue::selectRaw('sum(revenues.amount) as amount,MONTH(date) as month,YEAR(date) as year, product_service_categories.name as category_id')->leftjoin('product_service_categories', 'revenues.category_id', '=', 'product_service_categories.id')->where('product_service_categories.type', '=', 'income');
+            $incomes->where('revenues.created_by', '=', \Auth::user()->creatorId());
             if ($request->period != 'yearly') {
                 $incomes->whereRAW('YEAR(date) =?', [$year]);
             }
@@ -256,9 +254,9 @@ private function yearList()
                 ->leftjoin('product_service_categories', 'invoices.category_id', '=', 'product_service_categories.id')
                 ->where('invoices.created_by', \Auth::user()->creatorId())->where('status', '!=', 0);
 
-                if ($request->period != 'yearly') {
-            $invoices->whereRAW('YEAR(send_date) =?', [$year]);
-                }
+            if ($request->period != 'yearly') {
+                $invoices->whereRAW('YEAR(send_date) =?', [$year]);
+            }
 
             if (!empty($request->customer)) {
                 $invoices->where('customer_id', '=', $request->customer);
@@ -303,7 +301,7 @@ private function yearList()
                 }
             }
 
-            $invoicesum = Utility::billInvoiceData($invoiceArray, $request , $yearList);
+            $invoicesum = Utility::billInvoiceData($invoiceArray, $request, $yearList);
 
             $invoiceTotalArray = [];
 
@@ -316,25 +314,24 @@ private function yearList()
             $invoiceArr = [];
             $incomesum = [];
 
-        foreach ($yearList as $year) {
-            $invoiceArr[$year] = [];
+            foreach ($yearList as $year) {
+                $invoiceArr[$year] = [];
 
-            for ($i = 1; $i <= 12; $i++) {
-                $invoiceArr[$year][$i] = 0;
-            }
+                for ($i = 1; $i <= 12; $i++) {
+                    $invoiceArr[$year][$i] = 0;
+                }
 
-            if (isset($invoiceTotalArray[$year])) {
-                foreach ($invoiceTotalArray[$year] as $month => $values) {
-                    $invoiceArr[$year][$month] = array_sum($values);
+                if (isset($invoiceTotalArray[$year])) {
+                    foreach ($invoiceTotalArray[$year] as $month => $values) {
+                        $invoiceArr[$year][$month] = array_sum($values);
+                    }
                 }
             }
-        }
 
 
             foreach ($array as $key => $categoryData) {
 
-                $incomesum[] = Utility::revenuePaymentData($key , $categoryData, $request ,$yearList);
-
+                $incomesum[] = Utility::revenuePaymentData($key, $categoryData, $request, $yearList);
             }
 
             $revenueTotalArray = [];
@@ -358,7 +355,7 @@ private function yearList()
             }
 
 
-            $chartIncomeArr = Utility::totalData($invoiceArr, $incomeArr, $request ,$yearList);
+            $chartIncomeArr = Utility::totalData($invoiceArr, $incomeArr, $request, $yearList);
 
 
             $data['chartIncomeArr'] = $chartIncomeArr;
@@ -477,7 +474,7 @@ private function yearList()
                     $taxes = \App\Models\Utility::tax($it->tax);
                     if (!empty($taxes)) {
                         foreach ($taxes as $t) {
-                            if($t === null) continue;
+                            if ($t === null) continue;
                             $amount += \App\Models\Utility::taxRate($t->rate, $it->price, $it->quantity, $it->discount);
                         }
                     }
@@ -525,7 +522,7 @@ private function yearList()
         if ($type === 'all' || $type === 'credit_notes') {
             $credits = CreditNote::query()
                 ->when($dateFilter, fn($q) => $q->whereBetween('date', $dateFilter))
-                ->whereHas('invoice', function($q) use ($createdByScope, $customer) {
+                ->whereHas('invoice', function ($q) use ($createdByScope, $customer) {
                     $q->whereIn('created_by', $createdByScope);
                     if ($customer) {
                         $q->where('customer_id', $customer);
@@ -580,7 +577,7 @@ private function yearList()
                 $taxes = \App\Models\Utility::tax($it->tax);
                 if (!empty($taxes)) {
                     foreach ($taxes as $t) {
-                        if($t === null) continue;
+                        if ($t === null) continue;
                         $estimatesAmount += \App\Models\Utility::taxRate($t->rate, $it->price, $it->quantity, $it->discount);
                     }
                 }
@@ -620,7 +617,7 @@ private function yearList()
 
         // Get credit notes data
         $credits = CreditNote::whereBetween('date', $dateFilter)
-            ->whereHas('invoice', function($q) use ($createdByScope, $customer) {
+            ->whereHas('invoice', function ($q) use ($createdByScope, $customer) {
                 $q->whereIn('created_by', $createdByScope);
                 if ($customer) {
                     $q->where('customer_id', $customer);
@@ -637,25 +634,25 @@ private function yearList()
                 'count' => $revenues->count()
             ],
             'overdue' => [
-                'amount' => $overdueInvoices->sum(function($inv) {
+                'amount' => $overdueInvoices->sum(function ($inv) {
                     return method_exists($inv, 'getDue') ? $inv->getDue() : ($inv->total ?? 0);
                 }),
                 'count' => $overdueInvoices->count()
             ],
             'open' => [
-                'amount' => $openInvoices->sum(function($inv) {
+                'amount' => $openInvoices->sum(function ($inv) {
                     return method_exists($inv, 'getDue') ? $inv->getDue() : ($inv->total ?? 0);
                 }),
                 'count' => $openInvoices->count()
             ],
             'paid' => [
-                'amount' => $paidInvoices->sum(function($inv) {
+                'amount' => $paidInvoices->sum(function ($inv) {
                     return method_exists($inv, 'getTotal') ? $inv->getTotal() : ($inv->total ?? 0);
                 }),
                 'count' => $paidInvoices->count()
             ],
             'invoices' => [
-                'amount' => $invoices->sum(function($inv) {
+                'amount' => $invoices->sum(function ($inv) {
                     return method_exists($inv, 'getTotal') ? $inv->getTotal() : ($inv->total ?? 0);
                 }),
                 'count' => $invoices->count()
@@ -695,17 +692,18 @@ private function yearList()
         $banks = BankAccount::where('created_by', Auth::user()->creatorId())
             ->select('bank_name', 'institution_name', 'holder_name')
             ->get()
-            ->map(function($account) {
+            ->map(function ($account) {
                 // Use institution_name if bank_name is empty, or holder_name as fallback
-                $displayName = !empty($account->bank_name) ? $account->bank_name : 
-                              (!empty($account->institution_name) ? $account->institution_name : $account->holder_name);
+                $displayName = !empty($account->bank_name) ? $account->bank_name : (!empty($account->institution_name) ? $account->institution_name : $account->holder_name);
                 return $displayName;
             })
             ->unique()
             ->filter() // Remove empty values
             ->sort()
             ->flip()
-            ->map(function($value, $key) { return $key; }); // Create key-value pairs
+            ->map(function ($value, $key) {
+                return $key;
+            }); // Create key-value pairs
 
         $banks->prepend(__('Select Bank'), '');
 
@@ -762,19 +760,19 @@ private function yearList()
         // Filter by selected bank (use auto-selected or user-selected bank)
         if ($filter['bank']) {
             // Don't filter transactions by bank - only use bank to show sub-accounts
-            $accounts->where(function($q) use ($filter) {
+            $accounts->where(function ($q) use ($filter) {
                 $q->where('bank_accounts.bank_name', $filter['bank'])
-                  ->orWhere('bank_accounts.institution_name', $filter['bank'])
-                  ->orWhere('bank_accounts.holder_name', $filter['bank']);
+                    ->orWhere('bank_accounts.institution_name', $filter['bank'])
+                    ->orWhere('bank_accounts.holder_name', $filter['bank']);
             });
         }
 
         // Filter by account subtype (comes from card click) - THIS is what filters transactions
         if ($request->filled('account')) {
-            $transactions->whereHas('bankAccount', function($q) use ($request) {
+            $transactions->whereHas('bankAccount', function ($q) use ($request) {
                 $q->where('account_subtype', $request->account);
             });
-            $accounts->whereHas('bankAccount', function($q) use ($request) {
+            $accounts->whereHas('bankAccount', function ($q) use ($request) {
                 $q->where('account_subtype', $request->account);
             });
             $filter['account'] = $request->account;
@@ -801,10 +799,10 @@ private function yearList()
                 ->select('bank_accounts.account_subtype', 'bank_accounts.bank_name', 'bank_accounts.institution_name', 'bank_accounts.holder_name')
                 ->selectRaw('COUNT(DISTINCT bank_accounts.id) as account_count')
                 ->where('bank_accounts.created_by', Auth::user()->creatorId())
-                ->where(function($q) use ($filter) {
+                ->where(function ($q) use ($filter) {
                     $q->where('bank_accounts.bank_name', $filter['bank'])
-                      ->orWhere('bank_accounts.institution_name', $filter['bank'])
-                      ->orWhere('bank_accounts.holder_name', $filter['bank']);
+                        ->orWhere('bank_accounts.institution_name', $filter['bank'])
+                        ->orWhere('bank_accounts.holder_name', $filter['bank']);
                 })
                 ->whereNotNull('bank_accounts.account_subtype')
                 ->leftJoin('transactions', function ($join) use ($from, $to) {
@@ -885,7 +883,8 @@ private function yearList()
         return $data;
     }
 
-    public function recurringTrans(){
+    public function recurringTrans()
+    {
         return view('transaction.reccuringtrans');
     }
 }

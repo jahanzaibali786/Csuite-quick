@@ -163,68 +163,116 @@
         <!-- Filter Controls -->
         <div class="filter-controls">
             <div class="filter-row">
-                <div class="filter-group row mb-2">
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Report period</label>
-                        <select id="filter-period" class="form-control">
-                            <option value="this_month_to_date" selected>This month to date</option>
-                            <option value="today">Today</option>
-                            <option value="this_week">This week</option>
-                            <option value="this_month">This month</option>
-                            <option value="this_quarter">This quarter</option>
-                            <option value="this_year">This year</option>
-                            <option value="last_month">Last month</option>
-                            <option value="last_quarter">Last quarter</option>
-                            <option value="last_year">Last year</option>
-                            <option value="custom_date">Custom dates</option>
-                        </select>
+                <div class="filter-group d-flex">
+                    {{-- filter row --}}
+                    <div class="col-md-7">
+                        <div class="row">
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">Report period</label>
+                                <select id="filter-period" class="form-control">
+                                    <option value="this_month_to_date" selected>This month to date</option>
+                                    <option value="today">Today</option>
+                                    <option value="this_week">This week</option>
+                                    <option value="this_month">This month</option>
+                                    <option value="this_quarter">This quarter</option>
+                                    <option value="this_year">This year</option>
+                                    <option value="last_month">Last month</option>
+                                    <option value="last_quarter">Last quarter</option>
+                                    <option value="last_year">Last year</option>
+                                    <option value="custom_date">Custom dates</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-item col-md-1">
+                                <label class="filter-label">Date Range</label>
+                                <input type="text" id="daterange" class="form-control date-input"
+                                    value="{{ Carbon\Carbon::now()->startOfMonth()->format('m/d/Y') }} - {{ Carbon\Carbon::now()->format('m/d/Y') }}">
+                                <input type="hidden" id="filter-start-date"
+                                    value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                                <input type="hidden" id="filter-end-date"
+                                    value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                            </div>
+
+                            <div class="filter-item col-md-1">
+                                <label class="filter-label">Accounting method</label>
+                                <select id="accounting-method" class="form-control">
+                                    <option value="accrual" selected>Accrual</option>
+                                    <option value="cash">Cash</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-item col-md-2 mt-4">
+                                <button class="btn btn-view-options" id="view-options-btn"
+                                    style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;">
+                                    <i class="fa fa-eye"></i>
+                                    <span>View options</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Date Range</label>
-                        <input type="text" id="daterange" class="form-control date-input"
-                            value="{{ Carbon\Carbon::now()->startOfMonth()->format('m/d/Y') }} - {{ Carbon\Carbon::now()->format('m/d/Y') }}">
-                        <input type="hidden" id="filter-start-date"
-                            value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                        <input type="hidden" id="filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                    </div>
+                    <div class="col-md-5">
+                        <div class="row mt-4">
+                            <!-- Action buttons row -->
+                            <div class="d-flex gap-2 justify-content-end align-items-center">
+                                <button class="btn btn-outline" id="columns-btn">
+                                    <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
+                                </button>
+                                <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
+                                    data-bs-target="#filterSidebar" aria-controls="filterSidebar">
+                                    <i class="fa fa-filter"></i> Filter
+                                </button>
 
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Accounting method</label>
-                        <select id="accounting-method" class="form-control">
-                            <option value="accrual" selected>Accrual</option>
-                            <option value="cash">Cash</option>
-                        </select>
-                    </div>
-
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Account</label>
-                        <select id="filter-account" class="form-control">
-                            <option value="all">All Accounts</option>
-                            @foreach ($accounts as $account)
-                                <option value="{{ $account->id }}" {{ $accountId == $account->id ? 'selected' : '' }}>
-                                    {{ $account->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                                <button class="btn btn-outline" id="general-options-btn">
+                                    <i class="fa fa-cog"></i> General options
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Action buttons row -->
-            <div class="action-buttons-row">
-                <button class="btn btn-outline" id="columns-btn">
-                    <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
+        <!-- Filter Side Bar -->
+        <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="filterSidebar"
+            aria-labelledby="filterSidebarLabel">
+            <div class="offcanvas-header" style="background:#f9fafb; border-bottom:1px solid #e6e6e6;">
+                <h5 class="offcanvas-title" id="filterSidebarLabel">Filters</h5>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close">
+                    <i class="fa fa-close"></i>
                 </button>
-                <button class="btn btn-outline" id="filter-btn">
-                    <i class="fa fa-filter"></i> Filter
-                </button>
-                <button class="btn btn-outline" id="general-options-btn">
-                    <i class="fa fa-cog"></i> General options
-                </button>
-                <button class="btn btn-view-options" id="view-options-btn">
-                    <i class="fa fa-eye"></i> View options
-                </button>
+            </div>
+
+            <div class="offcanvas-body">
+                <!-- Account filter MOVED here -->
+                <div class="filter-item mb-3">
+                    <label class="filter-label">Account</label>
+                    <select id="filter-account" class="form-control">
+                        <option value="all">All Accounts</option>
+                        @foreach ($accounts as $account)
+                            <option value="{{ $account->id }}" {{ $accountId == $account->id ? 'selected' : '' }}>
+                                {{ $account->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="filter-item mb-3">
+                    <label class="filter-label">Report period</label>
+                    <select id="sidebar-filter-period" class="form-control">
+                        <option value="this_month_to_date" selected>This month to date</option>
+                        <option value="today">Today</option>
+                        <option value="this_week">This week</option>
+                        <option value="this_month">This month</option>
+                        <option value="this_quarter">This quarter</option>
+                        <option value="this_year">This year</option>
+                        <option value="last_month">Last month</option>
+                        <option value="last_quarter">Last quarter</option>
+                        <option value="last_year">Last year</option>
+                        <option value="custom_date">Custom dates</option>
+                    </select>
+                </div>
+
             </div>
         </div>
 
@@ -877,10 +925,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                        flex-direction: column;
-                        width: 100%;
-                        gap: 16px;
-                    } */
+                                                        flex-direction: column;
+                                                        width: 100%;
+                                                        gap: 16px;
+                                                    } */
 
             .filter-item {
                 width: 100%;
