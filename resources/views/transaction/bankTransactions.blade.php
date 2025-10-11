@@ -78,24 +78,11 @@
 
 @section('action-btn')
     <div class="float-end">
-        {{--        <a class="btn btn-sm btn-primary" data-bs-toggle="collapse" href="#multiCollapseExample1" role="button" aria-expanded="false" aria-controls="multiCollapseExample1" data-bs-toggle="tooltip" title="{{__('Filter')}}"> --}}
-        {{--            <i class="ti ti-filter"></i> --}}
-        {{--        </a> --}}
-
-        <a href="{{ route('transaction.export') }}" data-bs-toggle="tooltip" title="{{ __('Export') }}"
-            class="btn btn-sm btn-primary">
-            <i class="ti ti-file-export"></i>
-        </a>
-
-        <a href="#" class="btn btn-sm btn-primary" onclick="saveAsPDF()"data-bs-toggle="tooltip"
-            title="{{ __('Download') }}" data-original-title="{{ __('Download') }}">
-            <span class="btn-inner--icon"><i class="ti ti-download"></i></span>
-        </a>
-
         @can('create bank account')
             <a href="#" data-url="{{ route('bank-account.create') }}" data-ajax-popup="true" data-size="lg"
                 data-bs-toggle="tooltip" title="{{ __('Create') }}" data-title="{{ __('Create New Bank Account') }}"
                 class="btn btn-sm btn-primary">
+                {{ __('Create New Bank Account') }}
                 <i class="ti ti-plus"></i>
             </a>
         @endcan
@@ -107,33 +94,13 @@
 @section('content')
     {{-- tabs --}}
     @include('transaction.transactions-tabs')
-    <div class="row">
-        {{-- <div class="col-sm-12">
-            <div class="mt-2 " id="multiCollapseExample1">
-                <div class="card">
-                    <div class="card-body">
-                        {{ Form::open(['route' => ['transaction.bankTransactions'], 'method' => 'get', 'id' => 'bankTransaction']) }}
-                        <div class="row align-items-center justify-content-start">
-                            <div class="col-xl-10">
-
-
-                            </div>
-
-
-                        </div>
-                        {{ Form::close() }}
-
-                    </div>
-                </div>
-            </div>
-        </div> --}}
-
+    <div class="row mt-3">
         <div id="printableArea">
             <div class="row">
                 @if ($filter['bank'])
                     @foreach ($subAccountGroups as $bankName => $items)
-                        <div class="row align-items-center mb-2">
-                            <div class="col-12">
+                        <div class="row align-items-center">
+                            <div class="col-6 mb-2">
                                 {{-- Bank Transactions Dropdown --}}
                                 <div class="dropdown">
                                     <button class="btn dropdown-toggle d-flex align-items-center gap-2" type="button"
@@ -240,6 +207,21 @@
                                 </div>
                             </div>
 
+                            <div class="col-6 mb-2">
+                                <div class="float-end"> <a href="{{ route('transaction.export') }}"
+                                        data-bs-toggle="tooltip" title="{{ __('Export') }}"
+                                        class="btn btn-sm btn-primary">
+                                        <i class="ti ti-file-export"></i>
+                                    </a>
+
+                                    <a href="#" class="btn btn-sm btn-primary"
+                                        onclick="saveAsPDF()"data-bs-toggle="tooltip" title="{{ __('Download') }}"
+                                        data-original-title="{{ __('Download') }}">
+                                        <span class="btn-inner--icon"><i class="ti ti-download"></i></span>
+                                    </a>
+                                </div>
+                            </div>
+
                             @forelse($items as $acc)
                                 @php $isActive = (string)request('account') === (string)$acc->holder_name; @endphp
                                 <div class="col-xl-3 col-lg-4 col-md-6">
@@ -267,7 +249,8 @@
                                 </div>
                             @empty
                                 <div class="col-12">
-                                    <div class="alert alert-info mb-0">{{ __('No accounts found under this bank.') }}</div>
+                                    <div class="alert alert-info mb-0">{{ __('No accounts found under this bank.') }}
+                                    </div>
                                 </div>
                             @endforelse
                         </div>
@@ -283,102 +266,104 @@
 
             </div>
 
+            <div class="d-flex gap-2 mb-2">
+                {{-- All Dates Dropdown --}}
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" id="dateFilterDropdown"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="ti ti-calendar"></i> All Dates
+                    </button>
+                    <div class="dropdown-menu p-3" style="min-width: 350px;">
+                        <div class="card shadow-none border-0">
+                            <div class="card-body p-0">
+                                {{ Form::open(['route' => ['transaction.bankTransactions'], 'method' => 'get', 'id' => 'dateFilterForm']) }}
+                                <div class="row">
 
+                                    {{-- Start Month --}}
+                                    <div class="col-12 mb-3">
+                                        {{ Form::label('start_month', __('Start Month'), ['class' => 'form-label']) }}
+                                        {{ Form::month('start_month', request('start_month', date('Y-m', strtotime('-5 month'))), ['class' => 'form-control']) }}
+                                    </div>
+
+                                    {{-- End Month --}}
+                                    <div class="col-12 mb-3">
+                                        {{ Form::label('end_month', __('End Month'), ['class' => 'form-label']) }}
+                                        {{ Form::month('end_month', request('end_month', date('Y-m')), ['class' => 'form-control']) }}
+                                    </div>
+
+                                    {{-- Bank --}}
+                                    <div class="col-12 mb-3">
+                                        {{ Form::label('bank', __('Bank Accounts'), ['class' => 'form-label']) }}
+                                        {{ Form::select('bank', $banks, request('bank', ''), ['class' => 'form-control select']) }}
+                                    </div>
+
+                                    {{-- Buttons --}}
+                                    <div class="col-12 d-flex justify-content-between">
+                                        <a href="{{ route('transaction.bankTransactions') }}"
+                                            class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip"
+                                            title="{{ __('Reset') }}">
+                                            <i class="ti ti-trash-off"></i> {{ __('Reset') }}
+                                        </a>
+
+                                        <button type="submit" class="btn btn-success btn-sm" data-bs-toggle="tooltip"
+                                            title="{{ __('Apply') }}">
+                                            <i class="ti ti-search"></i> {{ __('Apply') }}
+                                        </button>
+                                    </div>
+
+                                </div>
+                                {{ Form::close() }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Category Dropdown --}}
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" id="categoryFilterDropdown"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="ti ti-filter"></i> All Categories
+                    </button>
+                    <div class="dropdown-menu p-3" style="min-width: 350px;">
+                        <div class="card shadow-none border-0">
+                            <div class="card-body p-0">
+                                {{ Form::open(['route' => ['transaction.bankTransactions'], 'method' => 'get', 'id' => 'categoryFilterForm']) }}
+                                <div class="row">
+
+                                    {{-- Category --}}
+                                    <div class="col-12 mb-3">
+                                        {{ Form::label('category', __('Category'), ['class' => 'form-label']) }}
+                                        {{ Form::select('category', $category, request('category', ''), ['class' => 'form-control select']) }}
+                                    </div>
+
+                                    {{-- Buttons --}}
+                                    <div class="col-12 d-flex justify-content-between">
+                                        <a href="{{ route('transaction.bankTransactions') }}"
+                                            class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip"
+                                            title="{{ __('Reset') }}">
+                                            <i class="ti ti-trash-off"></i> {{ __('Reset') }}
+                                        </a>
+
+                                        <button type="submit" class="btn btn-success btn-sm" data-bs-toggle="tooltip"
+                                            title="{{ __('Apply') }}">
+                                            <i class="ti ti-search"></i> {{ __('Apply') }}
+                                        </button>
+                                    </div>
+
+                                </div>
+                                {{ Form::close() }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-body table-border-style">
                             <div class="d-flex newOtherFilters pb-2 gap-2">
 
-                                {{-- All Dates Dropdown --}}
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-primary dropdown-toggle" type="button"
-                                        id="dateFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="ti ti-calendar"></i> All Dates
-                                    </button>
-                                    <div class="dropdown-menu p-3" style="min-width: 350px;">
-                                        <div class="card shadow-none border-0">
-                                            <div class="card-body p-0">
-                                                {{ Form::open(['route' => ['transaction.bankTransactions'], 'method' => 'get', 'id' => 'dateFilterForm']) }}
-                                                <div class="row">
 
-                                                    {{-- Start Month --}}
-                                                    <div class="col-12 mb-3">
-                                                        {{ Form::label('start_month', __('Start Month'), ['class' => 'form-label']) }}
-                                                        {{ Form::month('start_month', request('start_month', date('Y-m', strtotime('-5 month'))), ['class' => 'form-control']) }}
-                                                    </div>
-
-                                                    {{-- End Month --}}
-                                                    <div class="col-12 mb-3">
-                                                        {{ Form::label('end_month', __('End Month'), ['class' => 'form-label']) }}
-                                                        {{ Form::month('end_month', request('end_month', date('Y-m')), ['class' => 'form-control']) }}
-                                                    </div>
-
-                                                    {{-- Bank --}}
-                                                    <div class="col-12 mb-3">
-                                                        {{ Form::label('bank', __('Bank Accounts'), ['class' => 'form-label']) }}
-                                                        {{ Form::select('bank', $banks, request('bank', ''), ['class' => 'form-control select']) }}
-                                                    </div>
-
-                                                    {{-- Buttons --}}
-                                                    <div class="col-12 d-flex justify-content-between">
-                                                        <a href="{{ route('transaction.bankTransactions') }}"
-                                                            class="btn btn-outline-secondary btn-sm"
-                                                            data-bs-toggle="tooltip" title="{{ __('Reset') }}">
-                                                            <i class="ti ti-trash-off"></i> {{ __('Reset') }}
-                                                        </a>
-
-                                                        <button type="submit" class="btn btn-success btn-sm"
-                                                            data-bs-toggle="tooltip" title="{{ __('Apply') }}">
-                                                            <i class="ti ti-search"></i> {{ __('Apply') }}
-                                                        </button>
-                                                    </div>
-
-                                                </div>
-                                                {{ Form::close() }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {{-- Category Dropdown --}}
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-primary dropdown-toggle" type="button"
-                                        id="categoryFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="ti ti-filter"></i> All Categories
-                                    </button>
-                                    <div class="dropdown-menu p-3" style="min-width: 350px;">
-                                        <div class="card shadow-none border-0">
-                                            <div class="card-body p-0">
-                                                {{ Form::open(['route' => ['transaction.bankTransactions'], 'method' => 'get', 'id' => 'categoryFilterForm']) }}
-                                                <div class="row">
-
-                                                    {{-- Category --}}
-                                                    <div class="col-12 mb-3">
-                                                        {{ Form::label('category', __('Category'), ['class' => 'form-label']) }}
-                                                        {{ Form::select('category', $category, request('category', ''), ['class' => 'form-control select']) }}
-                                                    </div>
-
-                                                    {{-- Buttons --}}
-                                                    <div class="col-12 d-flex justify-content-between">
-                                                        <a href="{{ route('transaction.bankTransactions') }}"
-                                                            class="btn btn-outline-secondary btn-sm"
-                                                            data-bs-toggle="tooltip" title="{{ __('Reset') }}">
-                                                            <i class="ti ti-trash-off"></i> {{ __('Reset') }}
-                                                        </a>
-
-                                                        <button type="submit" class="btn btn-success btn-sm"
-                                                            data-bs-toggle="tooltip" title="{{ __('Apply') }}">
-                                                            <i class="ti ti-search"></i> {{ __('Apply') }}
-                                                        </button>
-                                                    </div>
-
-                                                </div>
-                                                {{ Form::close() }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
 
                                 {{-- Search Bar --}}
                                 {{-- <div class="search-bar ms-3">

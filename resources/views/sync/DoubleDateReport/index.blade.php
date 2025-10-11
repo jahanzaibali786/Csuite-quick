@@ -91,80 +91,80 @@
         <!-- Filter Controls -->
         <div class="filter-controls">
             <div class="filter-row">
-                <div class="filter-group row mb-2 align-items-end">
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Report period</label>
-                        <select id="header-filter-period" class="form-control filter-period">
-                            <option value="all_dates">All Dates</option>
-                            <option value="custom_date">Custom dates</option>
-                            <option value="today">Today</option>
-                            <option value="this_week">This week</option>
-                            <option value="this_week_to_date">This week to date</option>
-                            <option value="this_month">This month</option>
-                            <option value="this_month_to_date" selected>This month to date</option>
-                            <option value="this_quarter">This quarter</option>
-                            <option value="this_quarter_to_date">This quarter to date</option>
-                            <option value="this_year">This year</option>
-                            <option value="this_year_to_date">This year to date</option>
-                            <option value="this_year_to_last_month">This year to last month</option>
-                            <option value="yesterday">Yesterday</option>
-                            <option value="recent">Recent</option>
-                            <option value="last_week">Last week</option>
-                            <option value="last_week_to_date">Last week to date</option>
-                            <option value="last_week_to_today">Last week to today</option>
-                            <option value="last_month">Last month</option>
-                            <option value="last_month_to_date">Last month to date</option>
-                            <option value="last_month_to_today">Last month to today</option>
-                            <option value="last_quarter">Last quarter</option>
-                            <option value="last_quarter_to_date">Last quarter to date</option>
-                            <option value="last_quarter_to_today">Last quarter to today</option>
-                            <option value="last_year">Last year</option>
-                            <option value="last_year_to_date">Last year to date</option>
-                            <option value="last_year_to_today">Last year to today</option>
-                            <option value="last_7_days">Last 7 days</option>
-                            <option value="last_30_days">Last 30 days</option>
-                            <option value="last_90_days">Last 90 days</option>
-                            <option value="last_12_months">Last 12 months</option>
-                            <option value="since_30_days_ago">Since 30 days ago</option>
-                            <option value="since_60_days_ago">Since 60 days ago</option>
-                            <option value="since_90_days_ago">Since 90 days ago</option>
-                            <option value="since_365_days_ago">Since 365 days ago</option>
-                            <option value="next_week">Next week</option>
-                            <option value="next_4_weeks">Next 4 weeks</option>
-                            <option value="next_month">Next month</option>
-                            <option value="next_quarter">Next quarter</option>
-                            <option value="next_year">Next year</option>
-                        </select>
+                <div class="filter-group d-flex">
+                    {{-- filter row --}}
+                    <div class="col-md-7">
+                        <div class="row">
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">Report period</label>
+                                <select id="header-filter-period" class="form-control filter-period">
+                                    <option value="all_dates">All Dates</option>
+                                    <option value="custom_date">Custom dates</option>
+                                    <option value="today">Today</option>
+                                    <option value="this_week">This week</option>
+                                    <option value="this_week_to_date">This week to date</option>
+                                    <option value="this_month">This month</option>
+                                    <option value="this_month_to_date" selected>This month to date</option>
+                                    <option value="this_quarter">This quarter</option>
+                                    <option value="this_quarter_to_date">This quarter to date</option>
+                                    <option value="this_year">This year</option>
+                                    <option value="this_year_to_date">This year to date</option>
+                                    <option value="this_year_to_last_month">This year to last month</option>
+                                    <option value="yesterday">Yesterday</option>
+                                    <option value="recent">Recent</option>
+                                    <option value="last_week">Last week</option>
+                                    <option value="last_week_to_date">Last week to date</option>
+                                    <option value="last_week_to_today">Last week to today</option>
+                                    <option value="last_month">Last month</option>
+                                    <option value="last_month_to_date">Last month to date</option>
+                                    <option value="last_month_to_today">Last month to today</option>
+                                    <option value="last_quarter">Last quarter</option>
+                                    <option value="last_quarter_to_date">Last quarter to date</option>
+                                    <option value="last_quarter_to_today">Last quarter to today</option>
+                                    <option value="last_year">Last year</option>
+                                    <option value="last_year_to_date">Last year to date</option>
+                                    <option value="last_year_to_today">Last year to today</option>
+                                    <option value="last_7_days">Last 7 days</option>
+                                    <option value="last_30_days">Last 30 days</option>
+                                    <option value="last_90_days">Last 90 days</option>
+                                    <option value="last_12_months">Last 12 months</option>
+                                    <option value="since_30_days_ago">Since 30 days ago</option>
+                                    <option value="since_60_days_ago">Since 60 days ago</option>
+                                    <option value="since_90_days_ago">Since 90 days ago</option>
+                                    <option value="since_365_days_ago">Since 365 days ago</option>
+                                    <option value="next_week">Next week</option>
+                                    <option value="next_4_weeks">Next 4 weeks</option>
+                                    <option value="next_month">Next month</option>
+                                    <option value="next_quarter">Next quarter</option>
+                                    <option value="next_year">Next year</option>
+                                </select>
 
+                            </div>
+                            <div class="filter-item col-md-1">
+                                <label class="filter-label">From</label>
+                                {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                <input type="date" class="form-control" name="start_date" id="filter-start-date"
+                                    value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                            </div>
+                            <div class="filter-item col-md-1">
+                                <label class="filter-label">To</label>
+                                <input type="date" class="form-control " name="end_date" id="filter-end-date"
+                                    value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                            </div>
+                            <div class="filter-item col-md-2 mt-4">
+                                <button class="btn btn-view-options" id="view-options-btn"
+                                    style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;">
+                                    <i class="fa fa-eye"></i>
+                                    <span>View options</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">From</label>
-                        {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                        <input type="date" class="form-control" name="start_date" id="filter-start-date"
-                            value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                    </div>
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">To</label>
-                        <input type="date" class="form-control " name="end_date" id="filter-end-date"
-                            value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                    </div>
-                    {{-- <div class="filter-item col-md-3">
-                        <label class="filter-label">Accounting method</label>
-                        <select id="accounting-method" class="form-control">
-                            <option value="accrual" selected>Accrual</option>
-                            <option value="cash">Cash</option>
-                        </select>
-                    </div> --}}
-                    {{-- <div class="filter-item col-md-2 mt-4">
-                        <button class="btn btn-view-options" id="view-options-btn"
-                            style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
-                            <i class="fa fa-eye"></i> View options
-                        </button>
-                    </div> --}}
-
-                    <!-- Action buttons row -->
-                    <div class="d-flex align-items-end gap-2 mt-4" style="justify-content: end;">
+                    <div class="col-md-5">
+                        <div class="row mt-4">
+                            <!-- Action buttons row -->
+                            <div class="d-flex gap-2 justify-content-end align-items-center">
 
                         <button class="btn btn-outline" id="columns-btn">
                             <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
@@ -275,6 +275,8 @@
                         <button class="btn btn-outline" id="general-options-btn">
                             <i class="fa fa-cog"></i> General options
                         </button>
+                    </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1049,10 +1051,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                                flex-direction: column;
-                                                                                                                                                                width: 100%;
-                                                                                                                                                                gap: 16px;
-                                                                                                                                                            } */
+                                                                                                                                                                    flex-direction: column;
+                                                                                                                                                                    width: 100%;
+                                                                                                                                                                    gap: 16px;
+                                                                                                                                                                } */
 
             .filter-item {
                 width: 100%;
