@@ -1559,10 +1559,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                                            flex-direction: column;
-                                                                                                                                                                            width: 100%;
-                                                                                                                                                                            gap: 16px;
-                                                                                                                                                                        } */
+                                                                                                                                                                                    flex-direction: column;
+                                                                                                                                                                                    width: 100%;
+                                                                                                                                                                                    gap: 16px;
+                                                                                                                                                                                } */
 
             .filter-item {
                 width: 100%;
@@ -1770,82 +1770,101 @@
     <!-- Filter Controls -->
     <div class="filter-controls">
         <div class="filter-row">
-            <div class="filter-group row mb-2">
-                <div class="filter-item col-md-3">
-                    <label class="filter-label">Report period</label>
-                    <select id="filter-period" class="form-control">
-                        <option value="this_month_to_date" selected>This month to date</option>
-                        <option value="today">Today</option>
-                        <option value="this_week">This week</option>
-                        <option value="this_month">This month</option>
-                        <option value="this_quarter">This quarter</option>
-                        <option value="this_year">This year</option>
-                        <option value="last_month">Last month</option>
-                        <option value="last_quarter">Last quarter</option>
-                        <option value="last_year">Last year</option>
-                        <option value="custom_date">Custom dates</option>
-                    </select>
-                </div>
-
-                <div class="filter-item col-md-3">
-                    <label class="filter-label">Date Range</label>
-                    <input type="text" id="daterange" class="form-control date-input"
-                        value="{{ Carbon\Carbon::now()->startOfMonth()->format('m/d/Y') }} - {{ Carbon\Carbon::now()->format('m/d/Y') }}">
-                    <input type="hidden" id="filter-start-date"
-                        value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                    <input type="hidden" id="filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                </div>
-
-                <div class="filter-item col-md-3">
-                    <label class="filter-label">Accounting method</label>
-                    <select id="accounting-method" class="form-control">
-                        <option value="accrual" selected>Accrual</option>
-                        <option value="cash">Cash</option>
-                    </select>
-                </div>
-
-                <div class="filter-item col-md-3 pt-4">
-                    <div class="view-options" style="position: relative;">
+            <div class="filter-group d-flex">
+                <!-- filter row -->
+                <div class="col-md-7">
+                    <div class="row">
+                        <!-- Report period -->
                         <div class="filter-item col-md-2">
-                            <button class="btn btn-view-options" id="view-options-btn"
-                                style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
-                                <i class="fa fa-eye"></i> View options
-                            </button>
-                        </div>
-                        <div class="view-options-dropdown" id="view-options-dropdown">
-                            <div class="view-option-item" data-value="normal">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>
-                                Normal view
-                            </div>
-                            <div class="view-option-item" data-value="compact">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>
-                                Compact view
-                            </div>
-                            <div class="view-option-item divider" data-value="expand">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>
-                                Expand
-                            </div>
-                            <div class="view-option-item" data-value="collapse">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>
-                                Collapse
-                            </div>
+                            <label class="filter-label">Report period</label>
+                            <select id="filter-period" class="form-control">
+                                <option value="this_month_to_date" selected>This month to date</option>
+                                <option value="today">Today</option>
+                                <option value="this_week">This week</option>
+                                <option value="this_month">This month</option>
+                                <option value="this_quarter">This quarter</option>
+                                <option value="this_year">This year</option>
+                                <option value="last_month">Last month</option>
+                                <option value="last_quarter">Last quarter</option>
+                                <option value="last_year">Last year</option>
+                                <option value="custom_date">Custom dates</option>
+                            </select>
                         </div>
 
+                        <!-- Date Range -->
+                        <div class="filter-item col-md-2">
+                            <label class="filter-label">Date Range</label>
+                            <input type="text" id="daterange" class="form-control date-input"
+                                value="{{ Carbon\Carbon::now()->startOfMonth()->format('m/d/Y') }} - {{ Carbon\Carbon::now()->format('m/d/Y') }}">
+                            <input type="hidden" id="filter-start-date"
+                                value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                            <input type="hidden" id="filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                        </div>
+
+                        <!-- Accounting method -->
+                        <div class="filter-item col-md-2">
+                            <label class="filter-label">Accounting method</label>
+                            <select id="accounting-method" class="form-control">
+                                <option value="accrual" selected>Accrual</option>
+                                <option value="cash">Cash</option>
+                            </select>
+                        </div>
+
+                        <!-- View options trigger & dropdown -->
+                        <div class="filter-item col-md-2 mt-4" style="width: 140px !important;">
+                            <div class="view-options" style="position: relative; width: 150px;">
+                                <button class="btn btn-view-options text-nowrap d-inline-flex align-items-center"
+                                    id="view-options-btn"
+                                    style="border:none!important;border-left:1px solid #d1d5db!important;border-radius:0!important;width:130px;gap:6px;">
+                                    <i class="fa fa-eye"></i>
+                                    <span>View options</span>
+                                </button>
+
+
+                                <!-- keep dropdown exactly as provided -->
+                                <div class="view-options-dropdown" id="view-options-dropdown">
+                                    <div class="view-option-item" data-value="normal">
+                                        <span class="checkmark"><i class="fa fa-check"></i></span>
+                                        Normal view
+                                    </div>
+                                    <div class="view-option-item" data-value="compact">
+                                        <span class="checkmark"><i class="fa fa-check"></i></span>
+                                        Compact view
+                                    </div>
+                                    <div class="view-option-item divider" data-value="expand">
+                                        <span class="checkmark"><i class="fa fa-check"></i></span>
+                                        Expand
+                                    </div>
+                                    <div class="view-option-item" data-value="collapse">
+                                        <span class="checkmark"><i class="fa fa-check"></i></span>
+                                        Collapse
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /View options -->
                     </div>
                 </div>
+
+                <!-- Action buttons area -->
+                <div class="col-md-5">
+                    <div class="row mt-4">
+                        <div class="d-flex gap-2 justify-content-end align-items-center">
+                            <button class="btn btn-outline" id="filter-btn">
+                                <i class="fa fa-filter"></i> Filter
+                            </button>
+
+                            <button class="btn btn-outline" id="general-options-btn">
+                                <i class="fa fa-cog"></i> General options
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- /Action buttons area -->
             </div>
         </div>
-
-        <!-- Action buttons row -->
-        <div class="action-buttons-row">
-            <button class="btn btn-outline" id="filter-btn">
-                <i class="fa fa-filter"></i> Filter
-            </button>
-            <button class="btn btn-outline" id="general-options-btn">
-                <i class="fa fa-cog"></i> General options
-            </button>
-        </div>
     </div>
+
 
     <!-- Main Content -->
     <div class="content-wrapper">
