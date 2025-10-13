@@ -1,11 +1,11 @@
 @extends('layouts.admin')
 @section('page-title')
-    {{ __('Income Summary') }}
+    {{ __('Deposits Summary') }}
 @endsection
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item">{{ __('Income Summary') }}</li>
+    <li class="breadcrumb-item">{{ __('Deposits Summary') }}</li>
 @endsection
 
 @push('theme-script')
@@ -126,7 +126,7 @@
     </script>
 @endpush
 
-@section('action-btn')
+{{-- @section('action-btn')
     <div class="float-end">
 
         <a href="{{ route('allReports') }}" class="btn btn-sm btn-primary" title="{{ __('Back to All Reports') }}"
@@ -136,20 +136,20 @@
         </a>
 
     </div>
-@endsection
+@endsection --}}
 
 
 @section('content')
-
+@include('transaction.sales-tabs')
     <div id="printableArea">
         <div class="row mt-3">
             <div class="col">
                 <input type="hidden"
-                    value="{{ $filter['category'] . ' ' . __('Income Summary') . ' ' . 'Report of' . ' ' . $filter['startDateRange'] . ' to ' . $filter['endDateRange'] }}"
+                    value="{{ $filter['category'] . ' ' . __('Deposits Summary') . ' ' . 'Report of' . ' ' . $filter['startDateRange'] . ' to ' . $filter['endDateRange'] }}"
                     id="filename">
                 <div class="card p-4 mb-4">
                     <h7 class="report-text gray-text mb-0">{{ __('Report') }} :</h7>
-                    <h6 class="report-text mb-0">{{ __('Income Summary') }}</h6>
+                    <h6 class="report-text mb-0">{{ __('Deposits Summary') }}</h6>
                 </div>
             </div>
             @if ($filter['category'] != __('All'))
