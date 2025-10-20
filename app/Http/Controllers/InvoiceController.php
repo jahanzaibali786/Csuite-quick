@@ -152,6 +152,7 @@ private function calculateInvoiceSummary($ownerId, $column)
         'unpaid'         => ['amount' => 0, 'count' => 0],
         'partially_paid' => ['amount' => 0, 'count' => 0],
         'paid'           => ['amount' => 0, 'count' => 0],
+        'approved'       => ['amount' => 0, 'count' => 0],
         'overdue'        => ['amount' => 0, 'count' => 0],     // windowed (365d)
         'not_due_yet'    => ['amount' => 0, 'count' => 0],     // windowed (365d)
     ];

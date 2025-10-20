@@ -38,9 +38,9 @@ class PurchaseList extends DataTable
         // Add Grand Total row
         $data->push((object) [
             'transaction_id' => '',
-            'vendor_name' => '',
+            'vendor_name' => '<strong>Grand Total</strong>',
             'transaction_date' => '',
-            'transaction' => '<strong>Grand Total</strong>',
+            'transaction' => '',
             'memo' => '',
             'amount' => $grandTotal['amount'],
             'tax_amount' => $grandTotal['tax_amount'],
@@ -55,7 +55,7 @@ class PurchaseList extends DataTable
                 }
                 return 'detail-row';
             })
-            ->rawColumns(['transaction']);
+            ->rawColumns(['transaction','vendor_name']);
     }
 
     public function query(PurchaseProduct $model)

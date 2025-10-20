@@ -63,182 +63,191 @@
         <!-- Filter Controls -->
         <div class="filter-controls">
             <div class="filter-row">
-                <div class="filter-group row mb-2 align-items-end">
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">Report period</label>
-                        <select id="header-filter-period" class="form-control filter-period">
-                            <option value="all_dates">All Dates</option>
-                            <option value="custom_date">Custom dates</option>
-                            <option value="today">Today</option>
-                            <option value="this_week">This week</option>
-                            <option value="this_week_to_date">This week to date</option>
-                            <option value="this_month">This month</option>
-                            <option value="this_month_to_date" selected>This month to date</option>
-                            <option value="this_quarter">This quarter</option>
-                            <option value="this_quarter_to_date">This quarter to date</option>
-                            <option value="this_year">This year</option>
-                            <option value="this_year_to_date">This year to date</option>
-                            <option value="this_year_to_last_month">This year to last month</option>
-                            <option value="yesterday">Yesterday</option>
-                            <option value="recent">Recent</option>
-                            <option value="last_week">Last week</option>
-                            <option value="last_week_to_date">Last week to date</option>
-                            <option value="last_week_to_today">Last week to today</option>
-                            <option value="last_month">Last month</option>
-                            <option value="last_month_to_date">Last month to date</option>
-                            <option value="last_month_to_today">Last month to today</option>
-                            <option value="last_quarter">Last quarter</option>
-                            <option value="last_quarter_to_date">Last quarter to date</option>
-                            <option value="last_quarter_to_today">Last quarter to today</option>
-                            <option value="last_year">Last year</option>
-                            <option value="last_year_to_date">Last year to date</option>
-                            <option value="last_year_to_today">Last year to today</option>
-                            <option value="last_7_days">Last 7 days</option>
-                            <option value="last_30_days">Last 30 days</option>
-                            <option value="last_90_days">Last 90 days</option>
-                            <option value="last_12_months">Last 12 months</option>
-                            <option value="since_30_days_ago">Since 30 days ago</option>
-                            <option value="since_60_days_ago">Since 60 days ago</option>
-                            <option value="since_90_days_ago">Since 90 days ago</option>
-                            <option value="since_365_days_ago">Since 365 days ago</option>
-                            <option value="next_week">Next week</option>
-                            <option value="next_4_weeks">Next 4 weeks</option>
-                            <option value="next_month">Next month</option>
-                            <option value="next_quarter">Next quarter</option>
-                            <option value="next_year">Next year</option>
-                        </select>
+                <div class="filter-group d-flex">
 
-                    </div>
+                    {{-- filter row --}}
+                    <div class="col-md-7">
+                        <div class="row">
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">Report period</label>
+                                <select id="header-filter-period" class="form-control filter-period">
+                                    <option value="all_dates">All Dates</option>
+                                    <option value="custom_date">Custom dates</option>
+                                    <option value="today">Today</option>
+                                    <option value="this_week">This week</option>
+                                    <option value="this_week_to_date">This week to date</option>
+                                    <option value="this_month">This month</option>
+                                    <option value="this_month_to_date" selected>This month to date</option>
+                                    <option value="this_quarter">This quarter</option>
+                                    <option value="this_quarter_to_date">This quarter to date</option>
+                                    <option value="this_year">This year</option>
+                                    <option value="this_year_to_date">This year to date</option>
+                                    <option value="this_year_to_last_month">This year to last month</option>
+                                    <option value="yesterday">Yesterday</option>
+                                    <option value="recent">Recent</option>
+                                    <option value="last_week">Last week</option>
+                                    <option value="last_week_to_date">Last week to date</option>
+                                    <option value="last_week_to_today">Last week to today</option>
+                                    <option value="last_month">Last month</option>
+                                    <option value="last_month_to_date">Last month to date</option>
+                                    <option value="last_month_to_today">Last month to today</option>
+                                    <option value="last_quarter">Last quarter</option>
+                                    <option value="last_quarter_to_date">Last quarter to date</option>
+                                    <option value="last_quarter_to_today">Last quarter to today</option>
+                                    <option value="last_year">Last year</option>
+                                    <option value="last_year_to_date">Last year to date</option>
+                                    <option value="last_year_to_today">Last year to today</option>
+                                    <option value="last_7_days">Last 7 days</option>
+                                    <option value="last_30_days">Last 30 days</option>
+                                    <option value="last_90_days">Last 90 days</option>
+                                    <option value="last_12_months">Last 12 months</option>
+                                    <option value="since_30_days_ago">Since 30 days ago</option>
+                                    <option value="since_60_days_ago">Since 60 days ago</option>
+                                    <option value="since_90_days_ago">Since 90 days ago</option>
+                                    <option value="since_365_days_ago">Since 365 days ago</option>
+                                    <option value="next_week">Next week</option>
+                                    <option value="next_4_weeks">Next 4 weeks</option>
+                                    <option value="next_month">Next month</option>
+                                    <option value="next_quarter">Next quarter</option>
+                                    <option value="next_year">Next year</option>
+                                </select>
 
-                    <div class="filter-item col-md-3">
-                        <label class="filter-label">as of</label>
-                        {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                        <input type="date" class="form-control d-none" name="start_date" id="filter-start-date"
-                            value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                        <input type="date" class="form-control " name="end_date" id="filter-end-date"
-                            value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                    </div>
-
-                    @if (isset($accounting_method) && $accounting_method)
-                        <div class="filter-item col-md-3">
-                            <label class="filter-label">Accounting method</label>
-                            <select id="accounting-method" class="form-control">
-                                <option value="accrual" selected>Accrual</option>
-                                <option value="cash">Cash</option>
-                            </select>
-                        </div>
-                    @endif
-
-                    <div class="filter-item col-md-2 mt-4">
-                        <button class="btn btn-view-options" id="view-options-btn"
-                            style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
-                            <i class="fa fa-eye"></i> View options
-                        </button>
-                    </div>
-
-                    <!-- Action buttons row -->
-
-                    <div class="d-flex align-items-end gap-2 mt-1" style="justify-content: end;">
-
-
-                        <button class="btn btn-outline" id="columns-btn">
-                            <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
-                        </button>
-
-                        <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
-                            data-bs-target="#filterSidebar" aria-controls="filterSidebar">
-                            <i class="fa fa-filter"></i> Filter
-                        </button>
-
-                        {{-- Filter Side Bar --}}
-                        <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="filterSidebar"
-                            aria-labelledby="filterSidebarLabel">
-                            <div class="offcanvas-header " style="background: #f9fafb; border-bottom: 1px solid #e6e6e6;">
-                                <h5 class="offcanvas-title" id="filterSidebarLabel">
-                                    Filters
-                                </h5>
-                                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                                    aria-label="Close">
-                                    <i class="fa fa-close"></i>
+                            </div>
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">as of</label>
+                                {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                <input type="date" class="form-control d-none" name="start_date" id="filter-start-date"
+                                    value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                                <input type="date" class="form-control " name="end_date" id="filter-end-date"
+                                    value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                            </div>
+                            @if (isset($accounting_method) && $accounting_method)
+                                <div class="filter-item col-md-2">
+                                    <label class="filter-label">Accounting method</label>
+                                    <select id="accounting-method" class="form-control">
+                                        <option value="accrual" selected>Accrual</option>
+                                        <option value="cash">Cash</option>
+                                    </select>
+                                </div>
+                            @endif
+                            <div class="filter-item col-md-2 mt-4">
+                                <button class="btn btn-view-options" id="view-options-btn"
+                                    style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;">
+                                    <i class="fa fa-eye"></i>
+                                    <span>View options</span>
                                 </button>
                             </div>
-                            <div class="offcanvas-body">
-                                <div class="filter-item mb-2">
-                                    <label class="filter-label">Report period</label>
-                                    <select id="sidebar-filter-period" class="form-control filter-period">
-                                        <option value="all_dates">All Dates</option>
-                                        <option value="custom_date">Custom dates</option>
-                                        <option value="today">Today</option>
-                                        <option value="this_week">This week</option>
-                                        <option value="this_week_to_date">This week to date</option>
-                                        <option value="this_month">This month</option>
-                                        <option value="this_month_to_date" selected>This month to date</option>
-                                        <option value="this_quarter">This quarter</option>
-                                        <option value="this_quarter_to_date">This quarter to date</option>
-                                        <option value="this_year">This year</option>
-                                        <option value="this_year_to_date">This year to date</option>
-                                        <option value="this_year_to_last_month">This year to last month</option>
-                                        <option value="yesterday">Yesterday</option>
-                                        <option value="recent">Recent</option>
-                                        <option value="last_week">Last week</option>
-                                        <option value="last_week_to_date">Last week to date</option>
-                                        <option value="last_week_to_today">Last week to today</option>
-                                        <option value="last_month">Last month</option>
-                                        <option value="last_month_to_date">Last month to date</option>
-                                        <option value="last_month_to_today">Last month to today</option>
-                                        <option value="last_quarter">Last quarter</option>
-                                        <option value="last_quarter_to_date">Last quarter to date</option>
-                                        <option value="last_quarter_to_today">Last quarter to today</option>
-                                        <option value="last_year">Last year</option>
-                                        <option value="last_year_to_date">Last year to date</option>
-                                        <option value="last_year_to_today">Last year to today</option>
-                                        <option value="last_7_days">Last 7 days</option>
-                                        <option value="last_30_days">Last 30 days</option>
-                                        <option value="last_90_days">Last 90 days</option>
-                                        <option value="last_12_months">Last 12 months</option>
-                                        <option value="since_30_days_ago">Since 30 days ago</option>
-                                        <option value="since_60_days_ago">Since 60 days ago</option>
-                                        <option value="since_90_days_ago">Since 90 days ago</option>
-                                        <option value="since_365_days_ago">Since 365 days ago</option>
-                                        <option value="next_week">Next week</option>
-                                        <option value="next_4_weeks">Next 4 weeks</option>
-                                        <option value="next_month">Next month</option>
-                                        <option value="next_quarter">Next quarter</option>
-                                        <option value="next_year">Next year</option>
-                                    </select>
+                        </div>
+                    </div>
 
+                    <div class="col-md-5">
+                        <div class="row mt-4">
+                            <!-- Action buttons row -->
+                            <div class="d-flex gap-2 justify-content-end align-items-center">
+
+
+                                <button class="btn btn-outline" id="columns-btn">
+                                    <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
+                                </button>
+
+                                <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
+                                    data-bs-target="#filterSidebar" aria-controls="filterSidebar">
+                                    <i class="fa fa-filter"></i> Filter
+                                </button>
+
+                                {{-- Filter Side Bar --}}
+                                <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1"
+                                    id="filterSidebar" aria-labelledby="filterSidebarLabel">
+                                    <div class="offcanvas-header "
+                                        style="background: #f9fafb; border-bottom: 1px solid #e6e6e6;">
+                                        <h5 class="offcanvas-title" id="filterSidebarLabel">
+                                            Filters
+                                        </h5>
+                                        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                            aria-label="Close">
+                                            <i class="fa fa-close"></i>
+                                        </button>
+                                    </div>
+                                    <div class="offcanvas-body">
+                                        <div class="filter-item mb-2">
+                                            <label class="filter-label">Report period</label>
+                                            <select id="sidebar-filter-period" class="form-control filter-period">
+                                                <option value="all_dates">All Dates</option>
+                                                <option value="custom_date">Custom dates</option>
+                                                <option value="today">Today</option>
+                                                <option value="this_week">This week</option>
+                                                <option value="this_week_to_date">This week to date</option>
+                                                <option value="this_month">This month</option>
+                                                <option value="this_month_to_date" selected>This month to date</option>
+                                                <option value="this_quarter">This quarter</option>
+                                                <option value="this_quarter_to_date">This quarter to date</option>
+                                                <option value="this_year">This year</option>
+                                                <option value="this_year_to_date">This year to date</option>
+                                                <option value="this_year_to_last_month">This year to last month</option>
+                                                <option value="yesterday">Yesterday</option>
+                                                <option value="recent">Recent</option>
+                                                <option value="last_week">Last week</option>
+                                                <option value="last_week_to_date">Last week to date</option>
+                                                <option value="last_week_to_today">Last week to today</option>
+                                                <option value="last_month">Last month</option>
+                                                <option value="last_month_to_date">Last month to date</option>
+                                                <option value="last_month_to_today">Last month to today</option>
+                                                <option value="last_quarter">Last quarter</option>
+                                                <option value="last_quarter_to_date">Last quarter to date</option>
+                                                <option value="last_quarter_to_today">Last quarter to today</option>
+                                                <option value="last_year">Last year</option>
+                                                <option value="last_year_to_date">Last year to date</option>
+                                                <option value="last_year_to_today">Last year to today</option>
+                                                <option value="last_7_days">Last 7 days</option>
+                                                <option value="last_30_days">Last 30 days</option>
+                                                <option value="last_90_days">Last 90 days</option>
+                                                <option value="last_12_months">Last 12 months</option>
+                                                <option value="since_30_days_ago">Since 30 days ago</option>
+                                                <option value="since_60_days_ago">Since 60 days ago</option>
+                                                <option value="since_90_days_ago">Since 90 days ago</option>
+                                                <option value="since_365_days_ago">Since 365 days ago</option>
+                                                <option value="next_week">Next week</option>
+                                                <option value="next_4_weeks">Next 4 weeks</option>
+                                                <option value="next_month">Next month</option>
+                                                <option value="next_quarter">Next quarter</option>
+                                                <option value="next_year">Next year</option>
+                                            </select>
+
+                                        </div>
+
+                                        <div class="filter-item mb-2">
+                                            <label class="filter-label">as of</label>
+                                            {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                            <input type="date" class="form-control d-none" name="start_date"
+                                                id="sidebar-filter-start-date"
+                                                value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                                            <input type="date" class="form-control " name="end_date"
+                                                id="sidebar-filter-end-date"
+                                                value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div class="filter-item mb-2">
-                                    <label class="filter-label">as of</label>
-                                    {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                                    <input type="date" class="form-control d-none" name="start_date"
-                                        id="sidebar-filter-start-date"
-                                        value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                                    <input type="date" class="form-control " name="end_date"
-                                        id="sidebar-filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                                </div>
+
+                                {{-- JS to sync filters --}}
+                                <script>
+                                    $(document).ready(function() {
+                                        // Sync Report Period
+                                        $('#sidebar-filter-period').on('change', function() {
+                                            $('#header-filter-period').val($(this).val());
+                                        });
+                                        $('#header-filter-period').on('change', function() {
+                                            $('#sidebar-filter-period').val($(this).val());
+                                        });
+                                    });
+                                </script>
+                                {{-- Filter Side Bar --}}
+
+                                <button class="btn btn-outline" id="general-options-btn">
+                                    <i class="fa fa-cog"></i> General options
+                                </button>
                             </div>
                         </div>
-
-
-                        {{-- JS to sync filters --}}
-                        <script>
-                            $(document).ready(function() {
-                                // Sync Report Period
-                                $('#sidebar-filter-period').on('change', function() {
-                                    $('#header-filter-period').val($(this).val());
-                                });
-                                $('#header-filter-period').on('change', function() {
-                                    $('#sidebar-filter-period').val($(this).val());
-                                });
-                            });
-                        </script>
-                        {{-- Filter Side Bar --}}
-
-                        <button class="btn btn-outline" id="general-options-btn">
-                            <i class="fa fa-cog"></i> General options
-                        </button>
                     </div>
                 </div>
 
@@ -549,6 +558,8 @@
 
 
 
+
+
         window.viewState = {};
         window.viewState.viewType = 'detailed'; // default view
 
@@ -632,22 +643,25 @@
         $(document).ready(expandCollapseInit);
 
 
-        // Attach once for chevron-icon style tables
-        $(document).on('click', '.chevron-icon', function(e) {
+        const collapseFunction3 = function(e) {
             e.preventDefault();
 
-            const $icon = $(this);
-            const parentType = $icon.data('parent-type'); // "subtype" or "account"
-            const parentId = $icon.data('parent-id'); // e.g. "subtype_current_asset" or "3"
+            // Find the icon inside the clicked row
+            const $row = $(this);
+            const $icon = $row.find('.chevron-icon');
+
+            const parentType = $icon.data('parent-type');
+            const parentId = $icon.data('parent-id');
 
             if (!parentType || !parentId) return;
 
-            // Build selector for children
+            // Build selector for children rows
             const childSelector = `.child-of-${parentType}-${parentId}`;
             const $children = $(childSelector);
 
             if ($children.length === 0) return;
 
+            // Toggle collapse/expand
             if ($icon.text().trim() === "▼") {
                 // Collapse
                 $children.hide();
@@ -657,13 +671,32 @@
                 $children.show();
                 $icon.text("▼");
             }
-        });
+        }
+
+        // Attach once for chevron-icon style tables
+        $(document).on('click', '.subtype-header-row', collapseFunction3);
+
+        $(document).on('click', '.account-header-row', collapseFunction3);
+
+        $(document).on('click', '.chevron-icon', collapseFunction3)
+
+        $(document).on('click', '.section-header-row', collapseFunction3)
     </script>
 
     <style>
         /* Base styling */
         * {
             box-sizing: border-box;
+        }
+
+
+        .account-header-row,
+        subtype-header-row {
+            cursor: pointer;
+        }
+
+        .toggle-section {
+            cursor: pointer;
         }
 
         .content-wrapper {
@@ -1126,10 +1159,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                                                                                                                    flex-direction: column;
-                                                                                                                                                                                                                                                    width: 100%;
-                                                                                                                                                                                                                                                    gap: 16px;
-                                                                                                                                                                                                                                                } */
+                                                                                                                                                                                                                                                                        flex-direction: column;
+                                                                                                                                                                                                                                                                        width: 100%;
+                                                                                                                                                                                                                                                                        gap: 16px;
+                                                                                                                                                                                                                                                                    } */
 
             .filter-item {
                 width: 100%;
@@ -1155,6 +1188,10 @@
 
         .parent-row {
             cursor: pointer;
+        }
+
+        i {
+            font-style: normal;
         }
     </style>
 
