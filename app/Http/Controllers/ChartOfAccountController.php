@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Imports\ChartOfAccountsImport;
+use App\Imports\FullJournalImport;
 use App\Models\ChartOfAccount;
 use App\Models\ChartOfAccountSubType;
 use App\Models\ChartOfAccountType;
@@ -10,8 +12,7 @@ use App\Models\Utility;
 use App\Models\JournalItem;
 use App\Models\ChartOfAccountParent;
 use Illuminate\Http\Request;
-
-
+use Maatwebsite\Excel\Facades\Excel;
 
 class ChartOfAccountController extends Controller
 {
@@ -72,6 +73,45 @@ class ChartOfAccountController extends Controller
         return view('chartOfAccount.create', compact('account_type'));
     }
 
+      public function importFile()
+    {
+        return view('chartOfAccount.import');
+    }
+    public function import(Request $request)
+    {
+        $rules = [
+            'file' => 'required|mimes:csv,txt',
+        ];
+
+        $validator = \Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            $messages = $validator->getMessageBag();
+
+            return redirect()->back()->with('error', $messages->first());
+        }
+
+        Excel::import(new FullJournalImport, $request->file('file'));
+        // Excel::import(new ChartOfAccountsImport, $request->file('file'));
+        // if (session('failed_file')) {
+        //     $filePath = storage_path(session('failed_file'));
+
+        //     if (file_exists($filePath)) {
+        //         return response()->download($filePath)->deleteFileAfterSend(true);
+        //     }
+        // }
+
+    return back()->with('success', 'Chart of Accounts imported successfully!');
+    }
+     //Export
+    public function export()
+    {
+        $name = 'employee_' . date('Y-m-d i:h:s');
+        $data = Excel::download(new ChartOfAccountExport(), $name . '.xlsx');
+        ob_end_clean();
+
+        return $data;
+    }
 
     public function store(Request $request)
     {

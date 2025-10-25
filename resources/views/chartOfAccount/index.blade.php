@@ -48,7 +48,6 @@
 
                 $('.start_date').val(start_date);
                 $('.end_date').val(end_date);
-
             }
         });
     </script>
@@ -56,10 +55,16 @@
 
 @section('action-btn')
     <div class="float-end">
+        <a href="#" data-size="md"  data-bs-toggle="tooltip" title="{{__('Import')}}" data-url="{{ route('chart-of-account.file.import') }}" data-ajax-popup="true" data-title="{{__('Import Chart of Account CSV file')}}" class="btn btn-sm btn-primary">
+            <i class="ti ti-file-import"></i>
+        </a>
+        <a href="{{route('chart-of-account.export')}}" data-bs-toggle="tooltip" title="{{__('Export')}}" class="btn btn-sm btn-primary">
+            <i class="ti ti-file-export"></i>
+        </a>
         @can('create chart of account')
             <a href="#" data-url="{{ route('chart-of-account.create') }}" data-bs-toggle="tooltip" title="{{ __('Create') }}"
                 data-size="lg" data-ajax-popup="true" data-title="{{ __('Create New Account') }}"
-                class="btn btn-lg btn-primary d-flex align-items-center justify-content-center">
+                class="btn btn-sm btn-primary ">
                 <span>New account</span><i style="margin-left: 5px;" class="ti ti-plus"></i>
             </a>
         @endcan

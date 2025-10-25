@@ -38,6 +38,7 @@
         "paymentwall/paymentwall-php": "^2.2",
         "paytabscom/laravel_paytabs": "^1.4",
         "psr/simple-cache": "3.0",
+        "quickbooks/v3-php-sdk": "*",
         "rachidlaasri/laravel-installer": "^4.1",
         "spatie/browsershot": "^3.58",
         "spatie/laravel-google-calendar": "^3.5",

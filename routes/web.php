@@ -187,7 +187,39 @@ use Illuminate\Support\Facades\Route;
 
 require __DIR__ . '/auth.php';
 
+use App\Http\Controllers\QuickBooksApiController;
 
+// page and api endpoints
+Route::get('/quickbooks/sync', [QuickBooksApiController::class, 'index'])->name('quickbooks.sync');
+Route::get('/quickbooks/connect', [QuickBooksApiController::class, 'connect'])->name('quickbooks.connect');
+Route::get('/quickbooks/callback', [QuickBooksApiController::class, 'callback'])->name('quickbooks.callback');
+
+Route::post('/quickbooks/journal-report', [QuickBooksApiController::class, 'journalReport'])
+    ->name('quickbooks.journalReport');
+Route::post('/quickbooks/bill-payments', [QuickBooksApiController::class, 'billPayments'])
+    ->name('quickbooks.api.billPayments');
+Route::post('/quickbooks/bills-with-payments', [QuickBooksApiController::class, 'billsWithPayments'])
+    ->name('quickbooks.billsWithPayments');
+Route::post('/quickbooks/invoices-with-payments', [QuickBooksApiController::class, 'invoicesWithPayments'])
+    ->name('quickbooks.invoicesWithPayments');
+
+    Route::post('/quickbooks/deposits', [QuickBooksApiController::class, 'deposits'])
+    ->name('quickbooks.deposits');
+    Route::post('/quickbooks/deposits-with-voucher', [QuickBooksApiController::class, 'depositsWithVoucher'])
+    ->name('quickbooks.depositsWithVoucher');   
+    // salesreceipts
+    Route::post('/quickbooks/sales-receipts', [QuickBooksApiController::class, 'getSalesReceipts'])
+    ->name('quickbooks.salesReceipts');
+Route::post('/quickbooks/journal-fr-report', [QuickBooksApiController::class, 'journalFRReport'])
+    ->name('quickbooks.journalFRReport');
+Route::post('/quickbooks/items', [QuickBooksApiController::class, 'items'])->name('quickbooks.items');
+Route::post('/quickbooks/journals', [QuickBooksApiController::class, 'journalEntries'])->name('quickbooks.journals');
+Route::post('/quickbooks/api/invoices', [QuickBooksApiController::class, 'invoices'])->name('quickbooks.api.invoices');
+Route::post('/quickbooks/api/bills', [QuickBooksApiController::class, 'bills'])->name('quickbooks.api.bills');
+Route::post('/quickbooks/api/customers', [QuickBooksApiController::class, 'customers'])->name('quickbooks.api.customers');
+Route::post('/quickbooks/api/chart-of-accounts', [QuickBooksApiController::class, 'chartOfAccounts'])->name('quickbooks.api.chartOfAccounts');
+Route::post('/quickbooks/api/vendors', [QuickBooksApiController::class, 'vendors'])->name('quickbooks.api.vendors');
+Route::post('/quickbooks/api/query', [QuickBooksApiController::class, 'rawQuery'])->name('quickbooks.api.rawQuery');
 
 // All Reports Route
 Route::get('/reports', [ReportController::class, 'reports'])->name('allReports');
@@ -813,6 +845,10 @@ Route::group(['middleware' => ['verified']], function () {
             Route::resource('chart-of-account', ChartOfAccountController::class);
         }
     );
+
+    Route::get('export/chart-of-account', [ChartOfAccountController::class, 'export'])->name('chart-of-account.export');
+    Route::get('import/chart-of-account/file', [ChartOfAccountController::class, 'importFile'])->name('chart-of-account.file.import');
+    Route::post('import/chart-of-account', [ChartOfAccountController::class, 'import'])->name('chart-of-account.import');
 
     Route::group(
         [

@@ -820,6 +820,7 @@ class EmployeeController extends Controller
         $rules = [
             'file' => 'required|mimes:csv,txt',
         ];
+      
 
         $validator = \Validator::make($request->all(), $rules);
 
@@ -832,12 +833,13 @@ class EmployeeController extends Controller
         $employees = (new EmployeesImport())->toArray(request()->file('file'))[0];
         $totalCustomer = count($employees) - 1;
         $errorArray = [];
-
-        for ($i = 1; $i <= count($employees) - 1; $i++) {
-
+        try {    // Start a transaction
+            for ($i = 1; $i <= count($employees) - 1; $i++) {
+            DB::beginTransaction();
+            
             $employee = $employees[$i];
-            if (count($employee) >= 18) {
 
+            if (count($employee) >= 8) {
                 if ($employee[5] == null) {
                     return redirect()->back()->with('error', __('Email Filed is Required'));
                 }
@@ -846,10 +848,8 @@ class EmployeeController extends Controller
                 // dd($userByEmail);
 
                 if (!empty($employeeByEmail) && !empty($userByEmail)) {
-
                     $employeeData = $employeeByEmail;
                 } else {
-
                     $user = new User();
                     $user->name = $employee[0];
                     $user->email = $employee[5];
@@ -872,16 +872,16 @@ class EmployeeController extends Controller
                 $employeeData->email = $employee[5];
                 $employeeData->password = Hash::make($employee[6]);
                 $employeeData->employee_id = $this->employeeNumber();
-                $employeeData->branch_id = $employee[8];
-                $employeeData->department_id = $employee[9];
-                $employeeData->designation_id = $employee[10];
-                $employeeData->company_doj = $employee[11];
-                $employeeData->account_holder_name = $employee[12];
-                $employeeData->account_number = $employee[13];
-                $employeeData->bank_name = $employee[14];
-                $employeeData->bank_identifier_code = $employee[15];
-                $employeeData->branch_location = $employee[16];
-                $employeeData->tax_payer_id = $employee[17];
+                // $employeeData->branch_id = $employee[8];
+                // $employeeData->department_id = $employee[9];
+                // $employeeData->designation_id = $employee[10];
+                $employeeData->company_doj = $employee[7];
+                // $employeeData->account_holder_name = $employee[12];
+                // $employeeData->account_number = $employee[13];
+                // $employeeData->bank_name = $employee[14];
+                // $employeeData->bank_identifier_code = $employee[15];
+                // $employeeData->branch_location = $employee[16];
+                // $employeeData->tax_payer_id = $employee[17];
                 $employeeData->created_by = \Auth::user()->creatorId();
 
                 if (empty($employeeData)) {
@@ -909,11 +909,18 @@ class EmployeeController extends Controller
 
                     \Session::put('errorArray', $errorRecord);
                 }
-
+                DB::commit(); 
                 return redirect()->back()->with($data['status'], $data['msg']);
             } else {
+                DB::rollback();
                 return redirect()->back()->with('error', __('Something went wrong'));
             }
+
+        }    // Commit the transaction
+        } catch (\Exception $e) {
+            DB::rollback();
+            dd($e);
+            return redirect()->back()->with('error', $e->getMessage());
         }
 
     }
