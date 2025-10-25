@@ -219,7 +219,7 @@ Route::post('/quickbooks/api/bills', [QuickBooksApiController::class, 'bills'])-
 Route::post('/quickbooks/api/customers', [QuickBooksApiController::class, 'customers'])->name('quickbooks.api.customers');
 Route::post('/quickbooks/api/chart-of-accounts', [QuickBooksApiController::class, 'chartOfAccounts'])->name('quickbooks.api.chartOfAccounts');
 Route::post('/quickbooks/api/vendors', [QuickBooksApiController::class, 'vendors'])->name('quickbooks.api.vendors');
-Route::post('/quickbooks/api/query', [QuickBooksApiController::class, 'rawQuery'])->name('quickbooks.api.rawQuery');
+Route::post('/quickbooks/api/query', [QuickBooksApiController::class, 'rawQuery'])->name('quickbooks.api.rawQuery'); 
 
 // All Reports Route
 Route::get('/reports', [ReportController::class, 'reports'])->name('allReports');
