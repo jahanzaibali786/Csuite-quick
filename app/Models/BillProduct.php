@@ -12,6 +12,7 @@ class BillProduct extends Model
         'chart_account_id',
         'quantity',
         'tax',
+        'price',
         'discount',
         'total',
     ];

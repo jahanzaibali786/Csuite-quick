@@ -35,5 +35,13 @@ return [
         'secret' => '',
         'url' => 'https://sandbox.cashfree.com/pg/orders',
     ],
+    'yodlee' => [
+        'base' => env('YODLEE_API_BASE'),
+        'fastlink' => env('YODLEE_FASTLINK_URL'),
+        'client_id' => env('YODLEE_CLIENT_ID'),
+        'client_secret' => env('YODLEE_CLIENT_SECRET'),
+        'admin_login' => env('YODLEE_ADMIN_LOGINNAME'),
+        'api_version' => env('YODLEE_API_VERSION', '1.1'),
+    ],
 
 ];

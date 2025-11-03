@@ -14,6 +14,7 @@ class BillPayment extends Model
         'reference',
         'description',
         'voucher_id',
+        'amount',
     ];
 
 

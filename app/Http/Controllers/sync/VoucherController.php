@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\sync;
+use App\DataTables\JournalLedgerDataTable;
 use App\DataTables\LedgerDataTable;
 use App\Http\Controllers\Controller;
 use App\DataTables\VouchersDataTable;
@@ -17,6 +18,7 @@ use App\Exports\UniversalDataTableExport;
 // use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Facades\Excel as ExcelFacade;
 use Maatwebsite\Excel\Excel;
+
 
 class VoucherController extends Controller
 {
@@ -204,7 +206,22 @@ class VoucherController extends Controller
             'redirectUrl' => route('vouchers.index')
         ]);
     }
+    public function Journalledger(JournalLedgerDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Journal Ledger';
 
+
+        if (request()->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        $accounts = ChartOfAccount::get();
+
+        return $dataTable->render('sync.journal-ledger.index', [
+            'accounts' => $accounts,
+            'pageTitle' => $this->pageTitle
+        ]);
+    }
 
     // ----------------- DESTROY -----------------
     public function destroy($id)
