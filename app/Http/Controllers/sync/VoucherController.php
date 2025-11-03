@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\sync;
+use App\DataTables\JournalLedgerDataTable;
 use App\DataTables\LedgerDataTable;
 use App\Http\Controllers\Controller;
 use App\DataTables\VouchersDataTable;
@@ -17,6 +18,7 @@ use App\Exports\UniversalDataTableExport;
 // use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Facades\Excel as ExcelFacade;
 use Maatwebsite\Excel\Excel;
+
 
 class VoucherController extends Controller
 {
@@ -204,7 +206,22 @@ class VoucherController extends Controller
             'redirectUrl' => route('vouchers.index')
         ]);
     }
+    public function Journalledger(JournalLedgerDataTable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Journal Ledger';
 
+
+        if (request()->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        $accounts = ChartOfAccount::get();
+
+        return $dataTable->render('sync.journal-ledger.index', [
+            'accounts' => $accounts,
+            'pageTitle' => $this->pageTitle
+        ]);
+    }
 
     // ----------------- DESTROY -----------------
     public function destroy($id)
@@ -417,9 +434,15 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.general-journal.index', $this->data, [
+        // return $dataTable->render('sync.general-journal.index', $this->data, [
+        //     'accounts' => ChartOfAccount::get(),
+        //     'accountId' => $accountId,
+        // ]);
+
+        return $dataTable->render('sync.ledger.index', $this->data, [
             'accounts' => ChartOfAccount::get(),
             'accountId' => $accountId,
+            'pageTitle' => $this->pageTitle
         ]);
     }
 
@@ -896,6 +919,19 @@ class VoucherController extends Controller
     public function vendorsphonelist(\App\DataTables\VendorsPhoneList $dataTable, Request $request)
     {
         $this->pageTitle = 'Vendor Phone List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
+
+    public function AccountList(\App\DataTables\AccountListDatatable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Account List';
 
         if ($request->ajax()) {
             return $dataTable->ajax();

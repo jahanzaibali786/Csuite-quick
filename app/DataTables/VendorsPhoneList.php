@@ -14,7 +14,7 @@ class VendorsPhoneList extends DataTable
         return datatables()
             ->eloquent($query)
             ->editColumn('name', fn($row) => $row->name)
-            ->editColumn('contact', fn($row) => $row->contact ? (string) $row->contact : '-');
+            ->editColumn('contact', fn($row) => $row->contact ? $row->contact : '-');
     }
 
     public function query(Vender $model)

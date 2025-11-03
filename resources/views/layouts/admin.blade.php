@@ -8,11 +8,9 @@
 
     $color = !empty($setting['color']) ? $setting['color'] : 'theme-3';
 
-    if(isset($setting['color_flag']) && $setting['color_flag'] == 'true')
-    {
+    if (isset($setting['color_flag']) && $setting['color_flag'] == 'true') {
         $themeColor = 'custom-color';
-    }
-    else {
+    } else {
         $themeColor = $color;
     }
 
@@ -35,7 +33,8 @@
 <meta name="csrf-token" id="csrf-token" content="{{ csrf_token() }}">
 
 <head>
-    <title>{{ $setting['title_text'] ? $setting['title_text'] : config('app.name', 'Creative Suite') }} - @yield('page-title')
+    <title>{{ $setting['title_text'] ? $setting['title_text'] : config('app.name', 'Creative Suite') }} -
+        @yield('page-title')
     </title>
 
     <meta name="title" content="{{ $metatitle }}">
@@ -58,7 +57,8 @@
 
     <script src="{{ asset('js/html5shiv.js') }}"></script>
 
-    {{--    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script> --}}
+    {{--
+    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script> --}}
 
     <!-- Meta -->
     <meta charset="utf-8" />
@@ -69,9 +69,10 @@
         href="{{ $logo . '/' . (isset($company_favicon) && !empty($company_favicon) ? $company_favicon : 'favicon.png') }}"
         type="image" sizes="16x16">
 
-        
+
     <!-- Favicon icon -->
-    {{--    <link rel="icon" href="{{ asset('assets/images/favicon.svg') }}" type="image/x-icon"/> --}}
+    {{--
+    <link rel="icon" href="{{ asset('assets/images/favicon.svg') }}" type="image/x-icon" /> --}}
     <!-- Calendar-->
     <link rel="stylesheet" href="{{ asset('assets/css/plugins/main.css') }}">
 
@@ -113,7 +114,9 @@
 
     <style>
         :root {
-            --color-customColor: <?= $color ?>;
+            --color-customColor:
+                <?= $color ?>
+            ;
         }
     </style>
 
@@ -263,6 +266,78 @@
     </div>
     @include('partials.admin.footer')
     @include('Chatify::layouts.footerLinks')
+
+    <script>
+        //new export function
+
+        function exportDataTable(tableId, pageTitle, format = "excel") {
+            let table = $('#' + tableId).DataTable();
+
+            // Get visible columns
+            let columns = [];
+            $('#' + tableId + ' thead th:visible').each(function () {
+                columns.push($(this).text().trim());
+            });
+
+            // Get visible data rows
+            let data = [];
+            table.rows({ search: 'applied' }).every(function () {
+                let rowData = this.data();
+                if (typeof rowData === 'object') {
+                    let rowArray = [];
+                    table.columns(':visible').every(function (colIdx) {
+                        let val = rowData[this.dataSrc()] ?? '-';
+                        rowArray.push(val);
+                    });
+                    rowData = rowArray;
+                }
+                data.push(rowData);
+            });
+
+            // console.log(data)
+            if (data.length === 0) {
+                alert('No Data Found')
+                return
+            }
+            // Send as JSON string to avoid PHP input limit
+            $.ajax({
+                url: '{{ route('export.datatable') }}',
+                method: 'POST',
+                contentType: 'application/json', // Important!
+                data: JSON.stringify({
+                    columns: columns,
+                    data: data,
+                    pageTitle: pageTitle,
+                    format: format,
+                    _token: '{{ csrf_token() }}'
+                }),
+                xhrFields: { responseType: 'blob' },
+                success: function (blob, status, xhr) {
+                    let filename = xhr.getResponseHeader('Content-Disposition')
+                        ?.split('filename=')[1]
+                        ?.replace(/"/g, '') ?? `${pageTitle}.xlsx`;
+
+                    if (format === "print") {
+                        let fileURL = URL.createObjectURL(blob);
+                        let printWindow = window.open(fileURL);
+                        printWindow.onload = function () {
+                            printWindow.focus();
+                            printWindow.print();
+                        };
+                    } else {
+                        let link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(blob);
+                        link.download = filename;
+                        link.click();
+                    }
+                },
+                error: function (xhr) {
+                    console.error('Export failed:', xhr.responseText);
+                    alert('Export failed! Check console.');
+                }
+            });
+        }
+    </script>
 
 </body>
 

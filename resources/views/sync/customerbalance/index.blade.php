@@ -13,7 +13,7 @@
                         onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'print')"><i
                             class="fa fa-print"></i></button>
                     <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
-                    <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
+                    {{-- <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button> --}}
                     <button class="btn btn-success btn-save">Save As</button>
                 </div>
             </div>
@@ -130,13 +130,13 @@
                                     </select>
                                 </div>
                             @endif
-                            <div class="filter-item col-md-2 mt-4">
+                            {{-- <div class="filter-item col-md-2 mt-4">
                                 <button class="btn btn-view-options" id="view-options-btn"
                                     style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;">
                                     <i class="fa fa-eye"></i>
                                     <span>View options</span>
                                 </button>
-                            </div>
+                            </div> --}}
                         </div>
                     </div>
 
@@ -1193,6 +1193,9 @@
         i {
             font-style: normal;
         }
+        .summary-total{
+            font-weight: bold;
+        }
     </style>
 
     {!! $dataTable->scripts() !!}
@@ -1212,12 +1215,25 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
+    <script>
+$(document).on('click', '.group-toggle', function() {
+    const key = $(this).data('group');
+    const icon = $(this).find('i.fas');
+    const rows = $('.group-' + key);
+
+    if (rows.is(':visible')) {
+        rows.hide();
+        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+    } else {
+        rows.show();
+        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+    }
+});
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script>
         let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-        console.log([window.Header, window.footerAlignment])
-
         function exportDataTable(tableId, pageTitle, format = "excel") {
             let table = $('#' + tableId).DataTable();
 

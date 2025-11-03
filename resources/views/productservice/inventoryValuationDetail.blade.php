@@ -3,60 +3,334 @@
 @section('content')
   {{-- Base skin --}}
   <style>
-    body{background:#f8f9fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px}
-    .main-container{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-    .header-section{padding:16px 24px;border-bottom:1px solid #e9ecef;display:flex;justify-content:space-between;align-items:center}
-    .header-left h4{margin:0;font-size:16px;font-weight:600;color:#262626}
-    .header-right{display:flex;align-items:center;gap:8px}
-    .btn-icon{width:32px;height:32px;border:none;background:transparent;color:#6b7280;border-radius:4px;display:flex;align-items:center;justify-content:center}
-    .btn-icon:hover{background:#f3f4f6;color:#262626}
-    .btn-save{background:#22c55e;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-size:13px;font-weight:600}
-    .report-content{padding:24px}
-    .report-header{text-align:center;margin-bottom:24px}
-    .report-title{font-size:24px;font-weight:700;color:#262626;margin:0 0 8px}
-    .company-name{font-size:16px;color:#6b7280;margin:0 0 8px}
-    .date-range{font-size:14px;color:#374151;margin:0}
-    .table-container{margin-top:16px;overflow-x:auto;width:100%}
-    .ledger-table{width:100%;font-size:13px;white-space:nowrap}
-    .ledger-table thead th{background:#f9fafb;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151;padding:12px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.025em}
-    .ledger-table tbody td{padding:12px 16px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
-    .text-right{text-align:right} .text-center{text-align:center}
+    body {
+      background: #f8f9fa;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px
+    }
+
+    .main-container {
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .1)
+    }
+
+    .header-section {
+      padding: 16px 24px;
+      border-bottom: 1px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .header-left h4 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #262626
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .btn-icon {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: #6b7280;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .btn-icon:hover {
+      background: #f3f4f6;
+      color: #262626
+    }
+
+    .btn-save {
+      background: #22c55e;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600
+    }
+
+    .report-content {
+      padding: 24px
+    }
+
+    .report-header {
+      text-align: center;
+      margin-bottom: 24px
+    }
+
+    .report-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #262626;
+      margin: 0 0 8px
+    }
+
+    .company-name {
+      font-size: 16px;
+      color: #6b7280;
+      margin: 0 0 8px
+    }
+
+    .date-range {
+      font-size: 14px;
+      color: #374151;
+      margin: 0
+    }
+
+    .table-container {
+      margin-top: 16px;
+      overflow-x: auto;
+      width: 100%
+    }
+
+    .ledger-table {
+      width: 100%;
+      font-size: 13px;
+      white-space: nowrap
+    }
+
+    .ledger-table thead th {
+      background: #f9fafb;
+      border-bottom: 2px solid #e5e7eb;
+      font-weight: 600;
+      color: #374151;
+      padding: 12px 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .025em
+    }
+
+    .ledger-table tbody td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: middle
+    }
+
+    .text-right {
+      text-align: right
+    }
+
+    .text-center {
+      text-align: center
+    }
 
     /* Filters header row (styled like your GL example) */
-    .filter-controls{background:#fff;padding:20px 24px;border-bottom:1px solid #e6e6e6}
-    .filter-row{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:nowrap}
-    .filter-group{display:flex;align-items:flex-end;gap:14px;flex:1;min-width:0}
-    .filter-item{display:flex;flex-direction:column;min-width:140px}
-    .filter-label{font-size:12px;color:#6b7280;margin-bottom:6px;font-weight:500}
-    .form-control,.form-select{height:36px;border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;background:#fff}
-    .btn-outline{background:#fff;border:1px solid #d1d5db;color:#374151;padding:8px 12px;font-size:13px;border-radius:4px}
-    .btn-outline:hover{background:#f9fafb;border-color:#9ca3af}
-    .badge{background:#e5e7eb;color:#374151;font-size:11px;padding:2px 6px;border-radius:10px;margin-left:4px}
+    .filter-controls {
+      background: #fff;
+      padding: 20px 24px;
+      border-bottom: 1px solid #e6e6e6
+    }
+
+    .filter-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      flex-wrap: nowrap
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      flex: 1;
+      min-width: 0
+    }
+
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      min-width: 140px
+    }
+
+    .filter-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 6px;
+      font-weight: 500
+    }
+
+    .form-control,
+    .form-select {
+      height: 36px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 13px;
+      background: #fff
+    }
+
+    .btn-outline {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      color: #374151;
+      padding: 8px 12px;
+      font-size: 13px;
+      border-radius: 4px
+    }
+
+    .btn-outline:hover {
+      background: #f9fafb;
+      border-color: #9ca3af
+    }
+
+    .badge {
+      background: #e5e7eb;
+      color: #374151;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 4px
+    }
 
     /* DT & view toggles */
-    div.dataTables_wrapper div.dataTables_scroll{width:100%}
+    div.dataTables_wrapper div.dataTables_scroll {
+      width: 100%
+    }
+
     div.dataTables_wrapper .dataTables_scrollHead table,
-    div.dataTables_wrapper .dataTables_scrollBody table{width:100% !important}
-    .table-compact .ledger-table thead th{padding:8px 10px}
-    .table-compact .ledger-table tbody td{padding:6px 10px}
-    .table-striped .ledger-table tbody tr:nth-child(odd){background:#fafafa}
-    .table-wrap .ledger-table td,.table-wrap .ledger-table th{white-space:normal}
-    .table-bordered .ledger-table td,.table-bordered .ledger-table th{border:1px solid #e5e7eb}
-    .sticky-head .dataTables_scrollHead{position:sticky;top:0;z-index:5;background:#fff}
+    div.dataTables_wrapper .dataTables_scrollBody table {
+      width: 100% !important
+    }
+
+    .table-compact .ledger-table thead th {
+      padding: 8px 10px
+    }
+
+    .table-compact .ledger-table tbody td {
+      padding: 6px 10px
+    }
+
+    .table-striped .ledger-table tbody tr:nth-child(odd) {
+      background: #fafafa
+    }
+
+    .table-wrap .ledger-table td,
+    .table-wrap .ledger-table th {
+      white-space: normal
+    }
+
+    .table-bordered .ledger-table td,
+    .table-bordered .ledger-table th {
+      border: 1px solid #e5e7eb
+    }
+
+    .sticky-head .dataTables_scrollHead {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #fff
+    }
 
     /* Slide-in side drawers (Columns / General / View) */
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;overflow-y:auto;opacity:0;transition:opacity .2s ease}
-    .modal-overlay.open{display:block;opacity:1}
-    .drawer{position:fixed;top:0;right:0;bottom:0;width:360px;max-width:92vw;background:#fff;box-shadow:-2px 0 10px rgba(0,0,0,.1);overflow-y:auto;transform:translateX(100%);transition:transform .28s ease;will-change:transform}
-    .modal-overlay.open .drawer{transform:translateX(0)}
-    .modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e6e6e6;background:#f9fafb}
-    .modal-header h5{margin:0;font-size:16px;font-weight:600;color:#262626;display:flex;align-items:center;gap:8px}
-    .btn-close{background:none;border:none;font-size:20px;color:#6b7280;cursor:pointer;line-height:1}
-    .btn-close:hover{color:#262626}
-    .modal-content{padding:16px 20px 24px}
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .5);
+      z-index: 10000;
+      overflow-y: auto;
+      opacity: 0;
+      transition: opacity .2s ease
+    }
 
-    @media (max-width:900px){ .filter-row{flex-direction:column;align-items:stretch;gap:12px} .filter-group{flex-wrap:wrap} }
-    @media (max-width:768px){ .main-container{margin:0;border-radius:0} .filter-group{flex-direction:column;align-items:stretch;gap:10px} }
+    .modal-overlay.open {
+      display: block;
+      opacity: 1
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 360px;
+      max-width: 92vw;
+      background: #fff;
+      box-shadow: -2px 0 10px rgba(0, 0, 0, .1);
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform .28s ease;
+      will-change: transform
+    }
+
+    .modal-overlay.open .drawer {
+      transform: translateX(0)
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #e6e6e6;
+      background: #f9fafb
+    }
+
+    .modal-header h5 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #262626;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: #6b7280;
+      cursor: pointer;
+      line-height: 1
+    }
+
+    .btn-close:hover {
+      color: #262626
+    }
+
+    .modal-content {
+      padding: 16px 20px 24px
+    }
+
+    @media (max-width:900px) {
+      .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px
+      }
+
+      .filter-group {
+        flex-wrap: wrap
+      }
+    }
+
+    @media (max-width:768px) {
+      .main-container {
+        margin: 0;
+        border-radius: 0
+      }
+
+      .filter-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px
+      }
+    }
   </style>
 
   <div class="main-container">
@@ -66,10 +340,13 @@
         <h4>{{ __('Inventory Valuation Detail') }}</h4>
       </div>
       <div class="header-right">
-        <button class="btn-icon" title="{{ __('Refresh') }}" onclick="refreshData()"><i class="fas fa-sync-alt"></i></button>
+        <button class="btn-icon" title="{{ __('Refresh') }}" onclick="refreshData()"><i
+            class="fas fa-sync-alt"></i></button>
         <button class="btn-icon" title="{{ __('Print') }}" id="print-btn"><i class="fas fa-print"></i></button>
-        <a class="btn-icon" title="{{ __('Export') }}" href="{{ route('productservice.export') }}"><i class="fas fa-external-link-alt"></i></a>
-        <a class="btn-icon" title="{{ __('Import') }}" href="#" data-url="{{ route('productservice.file.import') }}" data-ajax-popup="true"><i class="fas fa-file-import"></i></a>
+        <a class="btn-icon" title="{{ __('Export') }}" href="{{ route('productservice.export') }}"><i
+            class="fas fa-external-link-alt"></i></a>
+        <a class="btn-icon" title="{{ __('Import') }}" href="#" data-url="{{ route('productservice.file.import') }}"
+          data-ajax-popup="true"><i class="fas fa-file-import"></i></a>
         <button class="btn-save">{{ __('Save As') }}</button>
       </div>
     </div>
@@ -102,13 +379,16 @@
                 <label class="filter-label">{{ __('Date Range') }}</label>
                 <input type="text" id="daterange" class="form-control"
                   value="{{ \Carbon\Carbon::now()->startOfMonth()->format('m/d/Y') }} - {{ \Carbon\Carbon::now()->format('m/d/Y') }}">
-                <input type="hidden" id="filter-start-date" value="{{ \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                <input type="hidden" id="filter-start-date"
+                  value="{{ \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
                 <input type="hidden" id="filter-end-date" value="{{ \Carbon\Carbon::now()->format('Y-m-d') }}">
               </div>
 
               {{-- View options button --}}
               <div class="filter-item col-md-2 mt-4">
-                <button class="btn btn-outline" style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;" id="view-options-btn" type="button">
+                <button class="btn btn-outline"
+                  style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;"
+                  id="view-options-btn" type="button">
                   <i class="fa fa-eye"></i> {{ __('View options') }}
                 </button>
               </div>
@@ -124,7 +404,8 @@
                 </button>
 
                 {{-- OPEN FILTERS OFFCANVAS (from side) --}}
-                <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas" data-bs-target="#filterSidebar" aria-controls="filterSidebar">
+                <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas" data-bs-target="#filterSidebar"
+                  aria-controls="filterSidebar">
                   <i class="fa fa-filter"></i> {{ __('Filter') }}
                 </button>
 
@@ -177,7 +458,8 @@
   <div class="offcanvas offcanvas-end" tabindex="-1" id="filterSidebar" aria-labelledby="filterSidebarLabel">
     <div class="offcanvas-header" style="background:#f9fafb; border-bottom:1px solid #e6e6e6;">
       <h5 class="offcanvas-title" id="filterSidebarLabel">{{ __('Filters') }}</h5>
-      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="{{ __('Close') }}"></button>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+        aria-label="{{ __('Close') }}"></button>
     </div>
     <div class="offcanvas-body">
       <div class="filter-item mb-3">
@@ -200,11 +482,12 @@
       </div>
       <div class="modal-content">
         <div class="columns-list">
-          @foreach (range(0,9) as $i)
+          @foreach (range(0, 9) as $i)
             @php
-              $labels = ['Product/Service','Transaction Date','Transaction Type','Num','Name','Qty','Rate','Inventory Cost','Qty on Hand','Asset Value'];
+              $labels = ['Product/Service', 'Transaction Date', 'Transaction Type', 'Num', 'Name', 'Qty', 'Rate', 'Inventory Cost', 'Qty on Hand', 'Asset Value'];
             @endphp
-            <div class="column-item" data-column="{{ $i }}"><label class="checkbox-label"><input type="checkbox" checked> {{ __($labels[$i]) }}</label></div>
+            <div class="column-item" data-column="{{ $i }}"><label class="checkbox-label"><input type="checkbox" checked>
+                {{ __($labels[$i]) }}</label></div>
           @endforeach
         </div>
       </div>
@@ -225,8 +508,10 @@
           <h6 class="section-title">{{ __('Number format') }} <i class="fa fa-chevron-up"></i></h6>
           <div class="option-group" style="flex-direction:row;gap:12px">
             <label class="checkbox-label"><input type="checkbox" id="divide-by-1000"> {{ __('Divide by 1000') }}</label>
-            <label class="checkbox-label"><input type="checkbox" id="hide-zero-amounts"> {{ __("Don't show zero amounts") }}</label>
-            <label class="checkbox-label"><input type="checkbox" id="round-whole-numbers"> {{ __('Round to the nearest whole number') }}</label>
+            <label class="checkbox-label"><input type="checkbox" id="hide-zero-amounts">
+              {{ __("Don't show zero amounts") }}</label>
+            <label class="checkbox-label"><input type="checkbox" id="round-whole-numbers">
+              {{ __('Round to the nearest whole number') }}</label>
           </div>
         </div>
 
@@ -248,8 +533,10 @@
           <h6 class="section-title">{{ __('Header') }} <i class="fa fa-chevron-up"></i></h6>
           <div class="option-group" style="flex-direction:row;gap:12px">
             <label class="checkbox-label"><input type="checkbox" id="company-logo"> {{ __('Company logo') }}</label>
-            <label class="checkbox-label"><input type="checkbox" id="report-period-checkbox" checked> {{ __('Report period') }}</label>
-            <label class="checkbox-label"><input type="checkbox" id="company-name-checkbox" checked> {{ __('Company name') }}</label>
+            <label class="checkbox-label"><input type="checkbox" id="report-period-checkbox" checked>
+              {{ __('Report period') }}</label>
+            <label class="checkbox-label"><input type="checkbox" id="company-name-checkbox" checked>
+              {{ __('Company name') }}</label>
           </div>
           <div class="alignment-group">
             <label class="alignment-label">{{ __('Header alignment') }}</label>
@@ -264,9 +551,12 @@
         <div class="option-section">
           <h6 class="section-title">{{ __('Footer') }} <i class="fa fa-chevron-up"></i></h6>
           <div class="option-group" style="flex-direction:row;gap:12px">
-            <label class="checkbox-label"><input type="checkbox" id="date-prepared" checked> {{ __('Date prepared') }}</label>
-            <label class="checkbox-label"><input type="checkbox" id="time-prepared" checked> {{ __('Time prepared') }}</label>
-            <label class="checkbox-label"><input type="checkbox" id="report-basis" checked> {{ __('Report basis') }}</label>
+            <label class="checkbox-label"><input type="checkbox" id="date-prepared" checked>
+              {{ __('Date prepared') }}</label>
+            <label class="checkbox-label"><input type="checkbox" id="time-prepared" checked>
+              {{ __('Time prepared') }}</label>
+            <label class="checkbox-label"><input type="checkbox" id="report-basis" checked>
+              {{ __('Report basis') }}</label>
           </div>
           <div class="alignment-group">
             <label class="alignment-label">{{ __('Footer alignment') }}</label>
@@ -300,10 +590,12 @@
         <div class="option-section">
           <h6 class="section-title">{{ __('Row style') }}</h6>
           <div class="option-group" style="flex-direction:row;gap:12px;flex-wrap:wrap">
-            <label class="checkbox-label"><input type="checkbox" id="opt-striped" checked> {{ __('Striped rows') }}</label>
+            <label class="checkbox-label"><input type="checkbox" id="opt-striped" checked>
+              {{ __('Striped rows') }}</label>
             <label class="checkbox-label"><input type="checkbox" id="opt-borders"> {{ __('Show borders') }}</label>
             <label class="checkbox-label"><input type="checkbox" id="opt-wrap"> {{ __('Wrap long text') }}</label>
-            <label class="checkbox-label"><input type="checkbox" id="opt-sticky-head" checked> {{ __('Sticky header') }}</label>
+            <label class="checkbox-label"><input type="checkbox" id="opt-sticky-head" checked>
+              {{ __('Sticky header') }}</label>
           </div>
         </div>
       </div>
@@ -325,32 +617,32 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReOrder.dataTables.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
   {!! $dataTable->scripts() !!}
 
   <script>
     // Slide-in drawers (non-BS)
-    function openDrawer(overlaySel){ const $ov=$(overlaySel); $ov.show(0); requestAnimationFrame(()=>{$ov.addClass('open');}); }
-    function closeDrawer(overlaySel){ const $ov=$(overlaySel); $ov.removeClass('open'); setTimeout(()=>{$ov.hide();},220); }
+    function openDrawer(overlaySel) { const $ov = $(overlaySel); $ov.show(0); requestAnimationFrame(() => { $ov.addClass('open'); }); }
+    function closeDrawer(overlaySel) { const $ov = $(overlaySel); $ov.removeClass('open'); setTimeout(() => { $ov.hide(); }, 220); }
 
     $(function () {
       // Global options
       window.reportOptions = {
-        divideBy1000:false, hideZeroAmounts:false, roundWholeNumbers:false,
-        negativeFormat:'-100', showInRed:false, companyLogo:false,
-        reportPeriod:true, companyName:true, headerAlignment:'center',
-        datePrepared:true, timePrepared:true, reportBasis:true, footerAlignment:'center'
+        divideBy1000: false, hideZeroAmounts: false, roundWholeNumbers: false,
+        negativeFormat: '-100', showInRed: false, companyLogo: false,
+        reportPeriod: true, companyName: true, headerAlignment: 'center',
+        datePrepared: true, timePrepared: true, reportBasis: true, footerAlignment: 'center'
       };
 
       const $visualWrap = $('#table-visual-wrapper');
 
-      function applyViewOptions(){
-        $visualWrap.toggleClass('table-compact',   $('#opt-compact').prop('checked'));
-        $visualWrap.toggleClass('table-striped',   $('#opt-striped').prop('checked'));
-        $visualWrap.toggleClass('table-wrap',      $('#opt-wrap').prop('checked'));
-        $visualWrap.toggleClass('table-bordered',  $('#opt-borders').prop('checked'));
-        $visualWrap.toggleClass('sticky-head',     $('#opt-sticky-head').prop('checked'));
+      function applyViewOptions() {
+        $visualWrap.toggleClass('table-compact', $('#opt-compact').prop('checked'));
+        $visualWrap.toggleClass('table-striped', $('#opt-striped').prop('checked'));
+        $visualWrap.toggleClass('table-wrap', $('#opt-wrap').prop('checked'));
+        $visualWrap.toggleClass('table-bordered', $('#opt-borders').prop('checked'));
+        $visualWrap.toggleClass('sticky-head', $('#opt-sticky-head').prop('checked'));
         table.columns.adjust().draw(false);
       }
 
@@ -362,15 +654,15 @@
         autoApply: true,
         locale: { format: 'MM/DD/YYYY' },
         ranges: {
-          '{{ __("Today") }}':[moment(), moment()],
-          '{{ __("Last 7 Days") }}':[moment().subtract(6,'days'), moment()],
-          '{{ __("Last 30 Days") }}':[moment().subtract(29,'days'), moment()],
-          '{{ __("This Month") }}':[moment().startOf('month'), moment().endOf('month')],
-          '{{ __("Last Month") }}':[moment().subtract(1,'month').startOf('month'), moment().subtract(1,'month').endOf('month')],
-          '{{ __("This Quarter") }}':[moment().startOf('quarter'), moment().endOf('quarter')],
-          '{{ __("This Year") }}':[moment().startOf('year'), moment().endOf('year')]
+          '{{ __("Today") }}': [moment(), moment()],
+          '{{ __("Last 7 Days") }}': [moment().subtract(6, 'days'), moment()],
+          '{{ __("Last 30 Days") }}': [moment().subtract(29, 'days'), moment()],
+          '{{ __("This Month") }}': [moment().startOf('month'), moment().endOf('month')],
+          '{{ __("Last Month") }}': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+          '{{ __("This Quarter") }}': [moment().startOf('quarter'), moment().endOf('quarter')],
+          '{{ __("This Year") }}': [moment().startOf('year'), moment().endOf('year')]
         }
-      }, function(start, end){
+      }, function (start, end) {
         $('#filter-start-date').val(start.format('YYYY-MM-DD'));
         $('#filter-end-date').val(end.format('YYYY-MM-DD'));
         updateHeaderDate();
@@ -378,20 +670,20 @@
       });
 
       // Report period -> update daterange + hidden dates
-      $('#report-period').on('change', function(){
+      $('#report-period').on('change', function () {
         const v = $(this).val(), today = moment();
         let s, e;
-        switch(v){
-          case 'today': s=today.clone(); e=today.clone(); break;
-          case 'this_week': s=today.clone().startOf('week'); e=today.clone().endOf('week'); break;
-          case 'this_month': s=today.clone().startOf('month'); e=today.clone().endOf('month'); break;
-          case 'this_month_to_date': s=today.clone().startOf('month'); e=today.clone(); break;
-          case 'this_quarter': s=today.clone().startOf('quarter'); e=today.clone().endOf('quarter'); break;
-          case 'this_year': s=today.clone().startOf('year'); e=today.clone().endOf('year'); break;
-          case 'last_month': s=today.clone().subtract(1,'month').startOf('month'); e=today.clone().subtract(1,'month').endOf('month'); break;
-          case 'last_quarter': s=today.clone().subtract(1,'quarter').startOf('quarter'); e=today.clone().subtract(1,'quarter').endOf('quarter'); break;
-          case 'last_year': s=today.clone().subtract(1,'year').startOf('year'); e=today.clone().subtract(1,'year').endOf('year'); break;
-          default: s=today.clone().startOf('month'); e=today.clone();
+        switch (v) {
+          case 'today': s = today.clone(); e = today.clone(); break;
+          case 'this_week': s = today.clone().startOf('week'); e = today.clone().endOf('week'); break;
+          case 'this_month': s = today.clone().startOf('month'); e = today.clone().endOf('month'); break;
+          case 'this_month_to_date': s = today.clone().startOf('month'); e = today.clone(); break;
+          case 'this_quarter': s = today.clone().startOf('quarter'); e = today.clone().endOf('quarter'); break;
+          case 'this_year': s = today.clone().startOf('year'); e = today.clone().endOf('year'); break;
+          case 'last_month': s = today.clone().subtract(1, 'month').startOf('month'); e = today.clone().subtract(1, 'month').endOf('month'); break;
+          case 'last_quarter': s = today.clone().subtract(1, 'quarter').startOf('quarter'); e = today.clone().subtract(1, 'quarter').endOf('quarter'); break;
+          case 'last_year': s = today.clone().subtract(1, 'year').startOf('year'); e = today.clone().subtract(1, 'year').endOf('year'); break;
+          default: s = today.clone().startOf('month'); e = today.clone();
         }
         $('#filter-start-date').val(s.format('YYYY-MM-DD'));
         $('#filter-end-date').val(e.format('YYYY-MM-DD'));
@@ -401,40 +693,44 @@
         table.draw();
       });
 
-      function updateHeaderDate(){
+      function updateHeaderDate() {
         const s = moment($('#filter-start-date').val(), 'YYYY-MM-DD');
         const e = moment($('#filter-end-date').val(), 'YYYY-MM-DD');
         $('#display-date-range').text(s.format('MMMM D, YYYY') + ' - ' + e.format('MMMM D, YYYY'));
       }
 
+      if ($.fn.DataTable.isDataTable('#inventory-valuation-detail-table')) {
+        $('#inventory-valuation-detail-table').DataTable().destroy();
+      }
+
       // DataTable
       const table = $('#inventory-valuation-detail-table').DataTable({
-        processing:true, serverSide:true, colReorder:true,
-        scrollX:true, responsive:false, scrollY:'420px', scrollCollapse:true, fixedHeader:true,
-        ajax:{
+        processing: true, serverSide: true, colReorder: true,
+        scrollX: true, responsive: false, scrollY: '420px', scrollCollapse: true, fixedHeader: true,
+        ajax: {
           url: "{{ route('productservice.inventoryValuationDetail') }}",
-          data: function(d){
+          data: function (d) {
             d.report_period = $('#report-period').val() || '';
-            d.start_date    = $('#filter-start-date').val() || '';
-            d.end_date      = $('#filter-end-date').val() || '';
-            d.category      = $('#filter-category').val() || '';
-            d.type          = $('#filter-type').val() || '';
+            d.start_date = $('#filter-start-date').val() || '';
+            d.end_date = $('#filter-end-date').val() || '';
+            d.category = $('#filter-category').val() || '';
+            d.type = $('#filter-type').val() || '';
             d.reportOptions = window.reportOptions || {};
           }
         },
-        columns:[
-          {data:'product_service', name:'product_service'},
-          {data:'transaction_date', name:'transaction_date', className:'text-center'},
-          {data:'transaction_type', name:'transaction_type'},
-          {data:'num', name:'num'},
-          {data:'name', name:'name'},
-          {data:'qty', name:'qty', className:'text-right'},
-          {data:'rate', name:'rate', className:'text-right'},
-          {data:'inventory_cost', name:'inventory_cost', className:'text-right'},
-          {data:'qty_on_hand', name:'qty_on_hand', className:'text-right'},
-          {data:'asset_value', name:'asset_value', className:'text-right'}
+        columns: [
+          { data: 'product_service', name: 'product_service' },
+          { data: 'transaction_date', name: 'transaction_date', className: 'text-center' },
+          { data: 'transaction_type', name: 'transaction_type' },
+          { data: 'num', name: 'num' },
+          { data: 'name', name: 'name' },
+          { data: 'qty', name: 'qty', className: 'text-right' },
+          { data: 'rate', name: 'rate', className: 'text-right' },
+          { data: 'inventory_cost', name: 'inventory_cost', className: 'text-right' },
+          { data: 'qty_on_hand', name: 'qty_on_hand', className: 'text-right' },
+          { data: 'asset_value', name: 'asset_value', className: 'text-right' }
         ],
-        dom:'t', paging:false, searching:false, info:false, ordering:false
+        dom: 't', paging: false, searching: false, info: false, ordering: false
       });
 
       // Side drawers open/close
@@ -451,64 +747,64 @@
       $('#view-options-overlay').on('click', e => { if (e.target.id === 'view-options-overlay') closeDrawer('#view-options-overlay'); });
 
       // Columns visibility (aware of colReorder mapping)
-      function getDT(cb){
-        const tryGet = function(n){
+      function getDT(cb) {
+        const tryGet = function (n) {
           const dt = $.fn.dataTable.isDataTable('#inventory-valuation-detail-table') ? $('#inventory-valuation-detail-table').DataTable() : null;
-          if (dt) cb(dt); else if (n>0) setTimeout(()=>tryGet(n-1), 100);
+          if (dt) cb(dt); else if (n > 0) setTimeout(() => tryGet(n - 1), 100);
         };
         tryGet(30);
       }
-      $('.columns-list input[type="checkbox"]').on('change', function(){
+      $('.columns-list input[type="checkbox"]').on('change', function () {
         const originalIndex = $(this).closest('.column-item').data('column');
         const isVisible = $(this).prop('checked');
         if (originalIndex === undefined) return;
-        getDT(function(dt){
+        getDT(function (dt) {
           const currentIndex = dt.colReorder && typeof dt.colReorder.transpose === 'function'
-              ? dt.colReorder.transpose(originalIndex, 'toCurrent')
-              : originalIndex;
+            ? dt.colReorder.transpose(originalIndex, 'toCurrent')
+            : originalIndex;
           dt.column(currentIndex).visible(isVisible, false);
           dt.columns.adjust().draw(false);
         });
       });
 
       // General options handlers
-      function applyNumberFormatting(options){
+      function applyNumberFormatting(options) {
         $('#custom-number-format').remove();
         let css = '<style id="custom-number-format">';
         if (options.showInRed) css += '.negative-amount{color:#dc2626!important}';
         if (options.hideZeroAmounts) css += '.zero-amount{display:none!important}';
         css += '</style>'; $('head').append(css);
       }
-      function applyHeaderFooterSettings(options){
+      function applyHeaderFooterSettings(options) {
         $('.report-title-section').css('text-align', options.headerAlignment);
         $('.company-name').toggle(!!options.companyName);
         $('.date-range').toggle(!!options.reportPeriod);
         if (!$('.report-footer').length) {
-          $('.report-content').append('<div class="report-footer" style="padding:12px 20px;border-top:1px solid #e6e6e6;font-size:12px;color:#6b7280;text-align:'+options.footerAlignment+';"></div>');
+          $('.report-content').append('<div class="report-footer" style="padding:12px 20px;border-top:1px solid #e6e6e6;font-size:12px;color:#6b7280;text-align:' + options.footerAlignment + ';"></div>');
         }
         const now = new Date();
         const parts = [];
         if (options.reportBasis) parts.push('{{ __("Accrual basis") }}');
         if (options.datePrepared || options.timePrepared) {
-          const dt = now.toLocaleString('en-US',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+          const dt = now.toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
           parts.push('| ' + dt);
         }
         $('.report-footer').css('text-align', options.footerAlignment).html(parts.join(' '));
       }
-      function applyGeneralOptions(){
-        window.reportOptions.divideBy1000      = $('#divide-by-1000').prop('checked');
-        window.reportOptions.hideZeroAmounts   = $('#hide-zero-amounts').prop('checked');
+      function applyGeneralOptions() {
+        window.reportOptions.divideBy1000 = $('#divide-by-1000').prop('checked');
+        window.reportOptions.hideZeroAmounts = $('#hide-zero-amounts').prop('checked');
         window.reportOptions.roundWholeNumbers = $('#round-whole-numbers').prop('checked');
-        window.reportOptions.negativeFormat    = $('#negative-format').val();
-        window.reportOptions.showInRed         = $('#show-in-red').prop('checked');
-        window.reportOptions.companyLogo       = $('#company-logo').prop('checked');
-        window.reportOptions.reportPeriod      = $('#report-period-checkbox').prop('checked');
-        window.reportOptions.companyName       = $('#company-name-checkbox').prop('checked');
-        window.reportOptions.headerAlignment   = $('#header-alignment').val();
-        window.reportOptions.datePrepared      = $('#date-prepared').prop('checked');
-        window.reportOptions.timePrepared      = $('#time-prepared').prop('checked');
-        window.reportOptions.reportBasis       = $('#report-basis').prop('checked');
-        window.reportOptions.footerAlignment   = $('#footer-alignment').val();
+        window.reportOptions.negativeFormat = $('#negative-format').val();
+        window.reportOptions.showInRed = $('#show-in-red').prop('checked');
+        window.reportOptions.companyLogo = $('#company-logo').prop('checked');
+        window.reportOptions.reportPeriod = $('#report-period-checkbox').prop('checked');
+        window.reportOptions.companyName = $('#company-name-checkbox').prop('checked');
+        window.reportOptions.headerAlignment = $('#header-alignment').val();
+        window.reportOptions.datePrepared = $('#date-prepared').prop('checked');
+        window.reportOptions.timePrepared = $('#time-prepared').prop('checked');
+        window.reportOptions.reportBasis = $('#report-basis').prop('checked');
+        window.reportOptions.footerAlignment = $('#footer-alignment').val();
         applyNumberFormatting(window.reportOptions);
         applyHeaderFooterSettings(window.reportOptions);
         table.draw(false);
@@ -516,10 +812,10 @@
       $('.general-options-modal input, .general-options-modal select').on('change', applyGeneralOptions);
 
       // Negative/zero styling on draw
-      $('#inventory-valuation-detail-table').on('draw.dt', function(){
-        $('#inventory-valuation-detail-table tbody tr').each(function(){
-          $(this).find('td').each(function(){
-            const txt = ($(this).text()||'').trim();
+      $('#inventory-valuation-detail-table').on('draw.dt', function () {
+        $('#inventory-valuation-detail-table tbody tr').each(function () {
+          $(this).find('td').each(function () {
+            const txt = ($(this).text() || '').trim();
             if (!txt) return;
             if (/^-/.test(txt) || /\((.*?)\)/.test(txt) || /-$/.test(txt)) $(this).addClass('negative-amount');
             if (txt === '0' || txt === '0.0' || txt === '0.00' || txt === '{{ \Auth::user()->priceFormat(0) }}') $(this).addClass('zero-amount');
@@ -528,20 +824,20 @@
       });
 
       // View options toggles + resize
-      $('#view-options-overlay input[type="checkbox"]').on('change', function(){ applyViewOptions(); resizeInventoryDT(); });
+      $('#view-options-overlay input[type="checkbox"]').on('change', function () { applyViewOptions(); resizeInventoryDT(); });
 
       // Print
-      $('#print-btn').on('click', function(){ window.print(); });
+      $('#print-btn').on('click', function () { window.print(); });
 
       // Keep DT within viewport
-      function resizeInventoryDT(){
-        const hHeader=$('.header-section').outerHeight(true)||0;
-        const hFilter=$('.filter-controls').outerHeight(true)||0;
-        const hReport=$('.report-title-section').outerHeight(true)||0;
-        const padding=140;
-        const available=Math.max(280, window.innerHeight - (hHeader+hFilter+hReport+padding));
+      function resizeInventoryDT() {
+        const hHeader = $('.header-section').outerHeight(true) || 0;
+        const hFilter = $('.filter-controls').outerHeight(true) || 0;
+        const hReport = $('.report-title-section').outerHeight(true) || 0;
+        const padding = 140;
+        const available = Math.max(280, window.innerHeight - (hHeader + hFilter + hReport + padding));
         table.settings()[0].oScroll.sY = available + 'px';
-        $(table.table().container()).find('.dataTables_scrollBody').css({'max-height':available+'px','height':available+'px'});
+        $(table.table().container()).find('.dataTables_scrollBody').css({ 'max-height': available + 'px', 'height': available + 'px' });
         table.columns.adjust().draw(false);
       }
 
@@ -550,12 +846,12 @@
       applyViewOptions();
       updateHeaderDate();
       resizeInventoryDT();
-      let _rsTimer; $(window).on('resize', function(){ clearTimeout(_rsTimer); _rsTimer=setTimeout(resizeInventoryDT, 120); });
+      let _rsTimer; $(window).on('resize', function () { clearTimeout(_rsTimer); _rsTimer = setTimeout(resizeInventoryDT, 120); });
 
       // Offcanvas filters -> redraw on change
-      $('#filter-category, #filter-type').on('change', function(){ table.draw(); });
+      $('#filter-category, #filter-type').on('change', function () { table.draw(); });
     });
 
-    function refreshData(){ $('#inventory-valuation-detail-table').DataTable().ajax.reload(null,false); }
+    function refreshData() { $('#inventory-valuation-detail-table').DataTable().ajax.reload(null, false); }
   </script>
 @endpush

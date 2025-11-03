@@ -12,9 +12,11 @@ class Bill extends Model
         'bill_date',
         'due_date',
         'bill_id',
+        'type',
         'order_number',
         'category_id',
         'created_by',
+        'owned_by',
     ];
 
     public static $statues = [
@@ -76,7 +78,8 @@ class Bill extends Model
         {
             $accountTotal += $account->price;
         }
-
+        // dd($this->accounts,$this->items);
+        // dd($subTotal,$accountTotal);
         return $subTotal + $accountTotal;
     }
 
@@ -150,12 +153,21 @@ class Bill extends Model
     public function getDue()
     {
         $due = 0;
+        // dd($this->payments);
         foreach($this->payments as $payment)
         {
             $due += $payment->amount;
         }
 
-            return ($this->getTotal() - $due) - ($this->billTotalDebitNote());
+        // $accdue = 0;
+        // foreach($this->accounts as $account)
+        // {
+        //     $accdue += $account->price;
+        // }
+        // dd($this->accounts,$this->payments);    
+        // $grddue = $due + $accdue;
+        // return ($this->getTotal() - $grddue) - ($this->billTotalDebitNote());
+        return ($this->getTotal() - $due) - ($this->billTotalDebitNote());
     }
 
     public function category()

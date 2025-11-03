@@ -12,6 +12,7 @@ class ChartOfAccountParent extends Model
         'sub_type',
         'type',
         'parent',
+        'account',
         'created_by',
     ];
 
