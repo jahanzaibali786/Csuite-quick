@@ -15,32 +15,35 @@ class SalesByProductServiceSummaryDataTable extends DataTable
     {
         $rows = $query->get();
 
-        // === Compute Totals ===
+        // === Compute Totals (use numeric types) ===
         $totalQuantity = (float) $rows->sum('total_quantity');
         $totalAmount   = (float) $rows->sum('total_amount');
-        $totalCogs     = (float) $rows->sum(fn($r) => ($r->purchase_price ?? 0) * ($r->total_quantity ?? 0));
+        $totalCogs     = (float) $rows->sum(fn($r) => (float)($r->purchase_price ?? 0) * (float)($r->total_quantity ?? 0));
         $totalGrossMargin = $totalAmount - $totalCogs;
         $totalGrossMarginPercent = $totalAmount > 0 ? ($totalGrossMargin / $totalAmount) * 100 : 0;
-
+        $avgCogs = $totalQuantity > 0 ? $totalCogs / $totalQuantity : 0;
+        $avgPrice = $totalQuantity > 0 ? $totalAmount / $totalQuantity : 0;
         $data = collect();
 
         foreach ($rows as $r) {
-            $cogs = ($r->purchase_price ?? 0) * ($r->total_quantity ?? 0);
-            $grossMargin = ($r->total_amount ?? 0) - $cogs;
-            $grossMarginPercent = ($r->total_amount ?? 0) > 0 ? ($grossMargin / $r->total_amount) * 100 : 0;
+            $qty = (float) ($r->total_quantity ?? 0);
+            $amt = (float) ($r->total_amount ?? 0);
+            $cogs = (float) ($r->purchase_price ?? 0) * $qty;
+            $grossMargin = $amt - $cogs;
+            $grossMarginPercent = $amt > 0 ? ($grossMargin / $amt) * 100 : 0;
 
             $data->push([
-                'product_service' => e($r->name ?? '-'),
-                'quantity' => number_format($r->total_quantity ?? 0, 2),
-                'amount' => number_format($r->total_amount ?? 0, 2),
+                // product_service shown as plain text (we'll allow HTML in totals row via rawColumns)
+                'product_service' => $r->name ?? '-',
+                // numeric columns are formatted numbers (no currency symbol)
+                'quantity' => number_format($qty, 2),
+                'amount' => number_format($amt, 2),
                 'percent_of_sales' => $totalAmount > 0
-                    ? number_format((($r->total_amount ?? 0) / $totalAmount) * 100, 1) . '%'
+                    ? number_format(($amt / $totalAmount) * 100, 1) . '%'
                     : '0.0%',
-                'average_price' => number_format(($r->total_quantity ?? 0) > 0
-                    ? ($r->total_amount / $r->total_quantity)
-                    : 0, 2),
+                'average_price' => number_format($qty > 0 ? ($amt / $qty) : 0, 2),
                 'cogs' => number_format($cogs, 2),
-                'avg_cogs' => number_format($r->purchase_price ?? 0, 2),
+                'avg_cogs' => number_format((float)($r->purchase_price ?? 0), 2),
                 'gross_margin' => number_format($grossMargin, 2),
                 'gross_margin_percent' => number_format($grossMarginPercent, 1) . '%',
             ]);
@@ -53,9 +56,9 @@ class SalesByProductServiceSummaryDataTable extends DataTable
                 'quantity' => '<strong>' . number_format($totalQuantity, 2) . '</strong>',
                 'amount' => '<strong>' . number_format($totalAmount, 2) . '</strong>',
                 'percent_of_sales' => '<strong>100%</strong>',
-                'average_price' => '<strong>-</strong>',
+                'average_price' => '<strong>' . number_format($avgPrice, 2) . '</strong>',
                 'cogs' => '<strong>' . number_format($totalCogs, 2) . '</strong>',
-                'avg_cogs' => '<strong>-</strong>',
+                'avg_cogs' => '<strong>' . number_format($avgCogs, 2) . '</strong>',
                 'gross_margin' => '<strong>' . number_format($totalGrossMargin, 2) . '</strong>',
                 'gross_margin_percent' => '<strong>' . number_format($totalGrossMarginPercent, 1) . '%</strong>',
                 'DT_RowClass' => 'summary-total'
@@ -77,6 +80,7 @@ class SalesByProductServiceSummaryDataTable extends DataTable
 
         return datatables()
             ->collection($data)
+            // allow HTML only for product_service (Total row) and for numeric totals we already wrapped with <strong>
             ->rawColumns([
                 'product_service',
                 'quantity',
@@ -114,9 +118,7 @@ class SalesByProductServiceSummaryDataTable extends DataTable
             ->select(
                 'ip.product_id',
                 DB::raw('SUM(ip.quantity) as total_quantity'),
-                //DB::raw('SUM((ip.price * ip.quantity - COALESCE(ip.discount, 0)) + ((ip.price * ip.quantity - COALESCE(ip.discount, 0)) * COALESCE(t.rate, 0) / 100)) as total_amount')
                 DB::raw('SUM(ip.price * ip.quantity - COALESCE(ip.discount, 0)) as total_amount')
-
             )
             ->where('i.' . $column, $ownerId)
             ->where('i.status', '!=', 0);
@@ -197,23 +199,26 @@ class SalesByProductServiceSummaryDataTable extends DataTable
                 'colReorder' => true,
                 'fixedHeader' => true,
                 'scrollY' => '400px',
-                'scrollX' => false,
+                'scrollX' => true, // allow horizontal scroll so equal widths are respected
                 'scrollCollapse' => true,
             ]);
     }
 
     protected function getColumns()
     {
+        // 9 columns -> use equal widths (11% each; leaves a little room)
+        $colWidth = '11%';
+
         return [
-            Column::make('product_service')->title(__('Product/Service'))->addClass('text-left'),
-            Column::make('quantity')->title(__('Quantity'))->addClass('text-right'),
-            Column::make('amount')->title(__('Amount'))->addClass('text-right'),
-            Column::make('percent_of_sales')->title(__('% Of Sales'))->addClass('text-right'),
-            Column::make('average_price')->title(__('Avg. Price'))->addClass('text-right'),
-            Column::make('cogs')->title(__('COGS'))->addClass('text-right'),
-            Column::make('avg_cogs')->title(__('Avg. COGS'))->addClass('text-right'),
-            Column::make('gross_margin')->title(__('Gross Margin'))->addClass('text-right'),
-            Column::make('gross_margin_percent')->title(__('Gross Margin %'))->addClass('text-right'),
+            Column::make('product_service')->title(__('Product/Service'))->addClass('text-left')->width($colWidth),
+            Column::make('quantity')->title(__('Quantity'))->addClass('text-right')->width($colWidth),
+            Column::make('amount')->title(__('Amount'))->addClass('text-right')->width($colWidth),
+            Column::make('percent_of_sales')->title(__('% Of Sales'))->addClass('text-right')->width($colWidth),
+            Column::make('average_price')->title(__('Avg. Price'))->addClass('text-right')->width($colWidth),
+            Column::make('cogs')->title(__('COGS'))->addClass('text-right')->width($colWidth),
+            Column::make('avg_cogs')->title(__('Avg. COGS'))->addClass('text-right')->width($colWidth),
+            Column::make('gross_margin')->title(__('Gross Margin'))->addClass('text-right')->width($colWidth),
+            Column::make('gross_margin_percent')->title(__('Gross Margin %'))->addClass('text-right')->width($colWidth),
         ];
     }
 

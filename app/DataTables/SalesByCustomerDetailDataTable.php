@@ -2,12 +2,11 @@
 
 namespace App\DataTables;
 
-use App\Models\Customer;
-use App\Models\Invoice;
 use App\Models\InvoiceProduct;
-use App\Models\ProductService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 
@@ -15,53 +14,107 @@ class SalesByCustomerDetailDataTable extends DataTable
 {
     public function dataTable($query)
     {
+        // Fetch rows from the builder
         $rows = $query->get();
-        $data = collect();
 
-        $runningBalance = 0;
-        $totalAmount = 0;
-        $totalQuantity = 0;
+        $final = collect();
 
-        foreach ($rows as $r) {
-            $amount = ($r->sales_price ?? 0) * ($r->quantity ?? 0);
-            $runningBalance += $amount;
-            $totalAmount += $amount;
-            $totalQuantity += ($r->quantity ?? 0);
+        // Group by stable customer_id (ensures names/spaces/casing don't split groups)
+        $grouped = $rows->groupBy('customer_id');
 
-            $data->push([
-                'transaction_date' => date('m/d/Y', strtotime($r->transaction_date ?? '')),
-                'transaction_type' => $r->transaction_type ?? '',
-                'num' => $r->num ?? '-',
-                'product_service_name' => $r->product_service_name ?? '-',
-                'memo_description' => $r->memo_description ?? '-',
-                'quantity' => number_format($r->quantity ?? 0, 2),
-                'sales_price' => number_format($r->sales_price ?? 0),
-                'amount' => number_format($amount, 2),
-                'balance' => number_format($runningBalance, 2),
-            ]);
-        }
+        foreach ($grouped as $customerId => $transactions) {
+            // stable group key
+            $groupKey = 'customer-' . $customerId;
 
-        // Add a total row
-        if ($rows->count() > 0) {
-            $data->push([
-                'transaction_date' => '<strong>Total</strong>',
+            // display name from first transaction (preserve actual customer label)
+            $displayName = $transactions->first()->customer_name ?? 'Unknown Customer';
+
+            // compute numeric group total and optionally running balance per group
+            $groupTotalRaw = 0.0;
+            foreach ($transactions as $t) {
+                // Prefer using amount if the query delivered it; otherwise compute
+                $amountRaw = isset($t->amount) ? (float) $t->amount : ((float)($t->sales_price ?? 0) * (float)($t->quantity ?? 0) - (float)($t->discount ?? 0));
+                $groupTotalRaw += $amountRaw;
+            }
+
+            // push group header first (so header appears above items)
+            $final->push([
+                'group_key' => $groupKey,
+                'customer_name' => $displayName,
+                'transaction_date' => '', // header uses this column to show name + chevron
                 'transaction_type' => '',
                 'num' => '',
                 'product_service_name' => '',
                 'memo_description' => '',
-                'quantity' => '<strong>' . number_format($totalQuantity, 2) . '</strong>',
+                'quantity' => '',
                 'sales_price' => '',
-                'amount' => '<strong>' . number_format($totalAmount, 2) . '</strong>',
-                'balance' => '<strong>' . number_format($runningBalance, 2) . '</strong>',
-                'DT_RowClass' => 'summary-total'
+                'amount' => '',
+                'balance' => number_format($groupTotalRaw, 2),
+                'is_group_header' => true,
             ]);
+
+            // then push each transaction under this header (with running balance)
+            $running = 0.0;
+            foreach ($transactions as $t) {
+                $amountRaw = isset($t->amount) ? (float) $t->amount : ((float)($t->sales_price ?? 0) * (float)($t->quantity ?? 0) - (float)($t->discount ?? 0));
+                $running += $amountRaw;
+                
+                $final->push([
+                    'group_key' => $groupKey,
+                    'customer_name' => $displayName,
+                    'transaction_date' => Carbon::parse($t->transaction_date ?? now())->format('m/d/Y'),
+                    'transaction_type' => $t->transaction_type ?? '',
+                    'num' => $t->num ?? ($t->invoice_id ?? '-'),
+                    'product_service_name' => $t->product_service_name ?? '',
+                    'memo_description' => $t->memo_description ?? '',
+                    'quantity' => number_format((float)($t->quantity ?? 0), 2),
+                    'sales_price' => number_format((float)($t->sales_price ?? 0), 2),
+                    'amount' => number_format($amountRaw, 2),
+                    'balance' => number_format($running, 2),
+                    'is_group_header' => false,
+                ]);
+            }
         }
 
+        // Return a datatables collection where headers have a chevron toggle element
         return datatables()
-            ->collection($data)
-            ->rawColumns(['transaction_date', 'quantity', 'amount', 'balance']);
+            ->collection($final)
+            ->addColumn('transaction_date', function ($r) {
+                if (!empty($r['is_group_header'])) {
+                    // header: chevron + customer name + total
+                    return '<span class="group-toggle" data-group="' . e($r['group_key']) . '" style="cursor:pointer;">'
+                        . '<i class="fas fa-chevron-right me-2"></i>'
+                        . '<strong>' . e($r['customer_name']) . '</strong>'
+                        . ' <span class="text-muted"></span>'
+                        . '</span>';
+                }
+                return e($r['transaction_date']);
+            })
+            ->addColumn('transaction_type', fn($r) => $r['is_group_header'] ? '' : e($r['transaction_type']))
+            ->addColumn('num', fn($r) => $r['is_group_header'] ? '' : e($r['num']))
+            ->addColumn('product_service_name', fn($r) => $r['is_group_header'] ? '' : e($r['product_service_name']))
+            ->addColumn('memo_description', fn($r) => $r['is_group_header'] ? '' : e($r['memo_description']))
+            ->addColumn('quantity', fn($r) => $r['is_group_header'] ? '' : $r['quantity'])
+            ->addColumn('sales_price', fn($r) => $r['is_group_header'] ? '' : $r['sales_price'])
+            ->addColumn('amount', fn($r) => $r['is_group_header'] ? '' : $r['amount'])
+            ->addColumn('balance', fn($r) => $r['is_group_header'] ? '' : $r['balance'])
+            ->setRowAttr([
+                'class' => function ($r) {
+                    return !empty($r['is_group_header']) ? 'group-header' : 'group-row group-' . $r['group_key'];
+                },
+                'data-group' => function ($r) {
+                    return $r['group_key'];
+                },
+                // header visible, rows hidden by default
+                'style' => function ($r) {
+                    return !empty($r['is_group_header'])
+                        ? 'background-color:#f8f9fa; font-weight:600; cursor:pointer;'
+                        : 'display:none;';
+                },
+            ])
+            ->rawColumns(['transaction_date'])
+            ;
     }
-
 
     public function query()
     {
@@ -84,9 +137,10 @@ class SalesByCustomerDetailDataTable extends DataTable
             ->join('customers', 'customers.id', '=', 'invoices.customer_id')
             ->leftJoin('product_services', 'product_services.id', '=', 'invoice_products.product_id')
             ->where($ownerColumn, $ownerId)
-            ->where('invoices.status', '!=', 0) // ✅ Exclude draft invoices
+            ->where('invoices.status', '!=', 0) // exclude draft invoices
             ->whereBetween('invoices.issue_date', [$start, $end])
             ->select([
+                'customers.id as customer_id',
                 'customers.name as customer_name',
                 'invoices.issue_date as transaction_date',
                 DB::raw("'Invoice' as transaction_type"),
@@ -95,7 +149,9 @@ class SalesByCustomerDetailDataTable extends DataTable
                 DB::raw('COALESCE(product_services.description, "") as memo_description'),
                 DB::raw('COALESCE(invoice_products.quantity, 0) as quantity'),
                 DB::raw('COALESCE(invoice_products.price, 0) as sales_price'),
+                // amount: price * qty - discount (if discount exists)
                 DB::raw('COALESCE((invoice_products.price * invoice_products.quantity - COALESCE(invoice_products.discount, 0)), 0) as amount'),
+                // balance can be same as amount here; you may adjust if needed
                 DB::raw('COALESCE((invoice_products.price * invoice_products.quantity - COALESCE(invoice_products.discount, 0)), 0) as balance'),
             ]);
 
@@ -104,12 +160,11 @@ class SalesByCustomerDetailDataTable extends DataTable
             $query->where('customers.name', 'LIKE', '%' . $selectedCustomer . '%');
         }
 
-        // Order consistently
+        // Order consistently so grouping order is nice
         $query->orderBy('customers.name', 'asc')
             ->orderBy('invoices.issue_date', 'asc')
             ->orderBy('product_services.name', 'asc');
 
-        // Log for debug (optional)
         \Log::info('SalesByCustomerDetail SQL', [
             'sql' => $query->toSql(),
             'bindings' => $query->getBindings()
@@ -117,7 +172,6 @@ class SalesByCustomerDetailDataTable extends DataTable
 
         return $query;
     }
-
 
     public function html()
     {
@@ -133,7 +187,7 @@ class SalesByCustomerDetailDataTable extends DataTable
                 'searching' => false,
                 'info' => false,
                 'ordering' => false,
-                'order' => [[0, 'asc']], // Sort by Transaction Date ascending
+                'order' => [[0, 'asc']],
                 'colReorder' => true,
                 'fixedHeader' => true,
                 'scrollY' => '420px',
@@ -141,7 +195,7 @@ class SalesByCustomerDetailDataTable extends DataTable
                 'scrollCollapse' => true,
                 'columnDefs' => [
                     [
-                        'targets' => [5, 6, 7, 8], // Quantity, Sales Price, Amount, Balance columns
+                        'targets' => [5, 6, 7, 8],
                         'className' => 'text-right'
                     ]
                 ],

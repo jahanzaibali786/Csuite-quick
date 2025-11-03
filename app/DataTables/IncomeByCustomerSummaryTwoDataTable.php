@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
-
 class IncomeByCustomerSummaryTwoDataTable extends DataTable
 {
     public function dataTable($query)

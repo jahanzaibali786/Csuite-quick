@@ -4,23 +4,21 @@
     <div class="content-wrapper">
         <!-- Header with actions -->
         <div class="report-header">
-            <h4 class="mb-0">{{ $pageTitle }}</h4>
+            <h4 class="mb-0">Journal Ledger</h4>
             <div class="header-actions">
                 <span class="last-updated">Last updated 8 minutes ago</span>
                 <div class="actions">
                     <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
                     <button class="btn btn-icon"
-                        onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'print')"><i
+                        onclick="exportDataTable('ledger-table', '{{ 'Journal Ledger' }}', 'print')"><i
                             class="fa fa-print"></i></button>
-                    <button class="btn btn-icon" type="button" data-toggle="modal" data-target="#exampleModal"
-                        title="Export">
-                        <i class="fa fa-external-link-alt"></i>
-                    </button>
-                    {{-- <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button> --}}
+                    <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
+                    <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
                     <button class="btn btn-success btn-save">Save As</button>
                 </div>
             </div>
         </div>
+
 
         <!-- Bootstrap Modal -->
         <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
@@ -32,13 +30,13 @@
                     </div>
                     <div class="modal-body text-center row">
                         <div class="col-md-6">
-                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
+                            <button onclick="exportDataTable('ledger-table', '{{ 'Journal Ledger' }}')"
                                 class="btn btn-success mx-auto w-75 justify-content-center text-center"
                                 data-action="excel">Export to
                                 Excel</button>
                         </div>
                         <div class="col-md-6">
-                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')"
+                            <button onclick="exportDataTable('ledger-table', '{{ 'Journal Ledger' }}', 'pdf')"
                                 class="btn btn-success mx-auto w-75 justify-content-center text-center"
                                 data-action="pdf">Export to
                                 PDF</button>
@@ -48,21 +46,6 @@
                 </div>
             </div>
         </div>
-        <script>
-$(document).on('click', '.group-toggle', function() {
-    const group = $(this).data('group');
-    const icon = $(this).find('i.fas');
-    const rows = $('.group-' + group);
-
-    if (rows.is(':visible')) {
-        rows.hide();
-        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-    } else {
-        rows.show();
-        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-    }
-});
-</script>
 
         <script>
             // Show modal on export button click
@@ -75,66 +58,230 @@ $(document).on('click', '.group-toggle', function() {
                 // Hide modal after action
                 $('#exportModal').modal('hide');
             });
-
-            const $last = $('.last-updated');
-            let lastUpdatedAt = Date.now();
-            let tickerId = null;
-
-            function formatRelative(ts) {
-                const s = Math.floor((Date.now() - ts) / 1000);
-                if (s < 5) return 'just now';
-                if (s < 60) return `${s} seconds ago`;
-                const m = Math.floor(s / 60);
-                if (m < 60) return m === 1 ? '1 minute ago' : `${m} minutes ago`;
-                const h = Math.floor(m / 60);
-                if (h < 24) return h === 1 ? '1 hour ago' : `${h} hours ago`;
-                const d = Math.floor(h / 24);
-                return d === 1 ? '1 day ago' : `${d} days ago`;
-            }
-
-            function updateLabel() {
-                $last.text(`Last updated ${formatRelative(lastUpdatedAt)}`);
-            }
-
-            function markNow() {
-                lastUpdatedAt = Date.now();
-                updateLabel();
-                if (tickerId) clearInterval(tickerId);
-                tickerId = setInterval(updateLabel, 30 * 1000);
-            }
-            markNow();
         </script>
 
+        <script>
+            let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            {{-- console.log([window.Header, window.footerAlignment]) --}}
+
+            function exportDataTable(tableId, pageTitle, format = 'excel') {
+                let table = $('#' + tableId).DataTable();
+
+                // Only get visible columns (skip auto-index)
+                let columns = [];
+                $('#' + tableId + ' thead th:visible').each(function() {
+                    columns.push($(this).text().trim());
+                });
+
+                // Get visible data rows
+                let data = [];
+
+                const getRealtimeTableData = () => {
+
+                    let data = [];
+
+
+                    table.rows({
+                        search: 'applied'
+                    }).every(function() {
+                        let rowData = this.data();
+
+                        if (typeof rowData === 'object') {
+                            // Only keep values for visible columns
+                            let rowArray = [];
+                            table.columns(':visible').every(function(colIdx) {
+                                let val = rowData[this.dataSrc()] ?? '-';
+                                rowArray.push(val);
+                            });
+                            rowData = rowArray;
+                        }
+                        data.push(rowData);
+                    });
+
+                    return data
+
+                }
+
+                // Get visible data rows (rendered DOM text, not raw data)
+                $('#' + tableId + ' tbody tr:visible').each(function() {
+                    let rowArray = [];
+                    $(this).find('td:visible').each(function() {
+                        rowArray.push($(this).text().trim());
+                    });
+                    data.push(rowArray);
+                });
+
+
+
+                // Send to universal export route
+                $.ajax({
+                    url: '{{ route('export.datatable') }}',
+                    method: 'POST',
+                    data: {
+                        columns: columns,
+                        data: data,
+                        pageTitle: pageTitle,
+                        ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
+                            .textContent : "",
+                        HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
+                            .footerAlignment
+                        ],
+                        format: format,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function(blob, status, xhr) {
+                        let filename = xhr.getResponseHeader('Content-Disposition')
+                            .split('filename=')[1]
+                            .replace(/"/g, ''); //"
+
+                        if (format === "print") {
+                            let fileURL = URL.createObjectURL(blob);
+                            let printWindow = window.open(fileURL);
+                            printWindow.onload = function() {
+                                printWindow.focus();
+                                printWindow.print();
+                            };
+                        } else {
+                            let link = document.createElement('a');
+                            link.href = window.URL.createObjectURL(blob);
+                            link.download = filename;
+                            link.click();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Export failed:', xhr.responseText);
+                        alert('Export failed! Check console.');
+                    }
+                });
+            }
+        </script>
+
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+            <div class="filter-row">
+                <div class="filter-group d-flex">
+                    {{-- filter row --}}
+                    <div class="col-md-7">
+                        <div class="row">
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">Report period</label>
+                                <select id="filter-period" class="form-control">
+                                    <option value="this_month_to_date" selected>This month to date</option>
+                                    <option value="today">Today</option>
+                                    <option value="this_week">This week</option>
+                                    <option value="this_month">This month</option>
+                                    <option value="this_quarter">This quarter</option>
+                                    <option value="this_year">This year</option>
+                                    <option value="last_month">Last month</option>
+                                    <option value="last_quarter">Last quarter</option>
+                                    <option value="last_year">Last year</option>
+                                    <option value="custom_date">Custom dates</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">Date Range</label>
+                                <input type="text" id="daterange" class="form-control date-input"
+                                    value="{{ Carbon\Carbon::now()->startOfMonth()->format('m/d/Y') }} - {{ Carbon\Carbon::now()->format('m/d/Y') }}">
+                                <input type="hidden" id="filter-start-date"
+                                    value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                                <input type="hidden" id="filter-end-date"
+                                    value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                            </div>
+
+                            {{-- <div class="filter-item col-md-1">
+                                <label class="filter-label">Accounting method</label>
+                                <select id="accounting-method" class="form-control">
+                                    <option value="accrual" selected>Accrual</option>
+                                    <option value="cash">Cash</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-item col-md-2 mt-4">
+                                <button class="btn btn-view-options" id="view-options-btn"
+                                    style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;">
+                                    <i class="fa fa-eye"></i>
+                                    <span>View options</span>
+                                </button>
+                            </div> --}}
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="row mt-4">
+                            <!-- Action buttons row -->
+                            <div class="d-flex gap-2 justify-content-end align-items-center">
+                                <button class="btn btn-outline" id="columns-btn">
+                                    <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
+                                </button>
+                                <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
+                                    data-bs-target="#filterSidebar" aria-controls="filterSidebar">
+                                    <i class="fa fa-filter"></i> Filter
+                                </button>
+
+                                <button class="btn btn-outline" id="general-options-btn">
+                                    <i class="fa fa-cog"></i> General options
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Side Bar -->
+        <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="filterSidebar"
+            aria-labelledby="filterSidebarLabel">
+            <div class="offcanvas-header" style="background:#f9fafb; border-bottom:1px solid #e6e6e6;">
+                <h5 class="offcanvas-title" id="filterSidebarLabel">Filters</h5>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close">
+                    <i class="fa fa-close"></i>
+                </button>
+            </div>
+
+            <div class="offcanvas-body">
+                <!-- Account filter MOVED here -->
+   
+
+                <div class="filter-item mb-3">
+                    <label class="filter-label">Report period</label>
+                    <select id="sidebar-filter-period" class="form-control">
+                        <option value="this_month_to_date" selected>This month to date</option>
+                        <option value="today">Today</option>
+                        <option value="this_week">This week</option>
+                        <option value="this_month">This month</option>
+                        <option value="this_quarter">This quarter</option>
+                        <option value="this_year">This year</option>
+                        <option value="last_month">Last month</option>
+                        <option value="last_quarter">Last quarter</option>
+                        <option value="last_year">Last year</option>
+                        <option value="custom_date">Custom dates</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
 
         <!-- Report Content -->
         <div class="report-content">
             <div class="report-title-section">
-                <h2 class="report-title">{{ $pageTitle }}</h2>
+                <h2 class="report-title">Journal Ledger</h2>
                 {{-- <p class="company-name">{{ config('app.name', 'Craig\'s Design and Landscaping Services') }}</p> --}}
-                {{-- <p class="date-range">
+                <p class="date-range">
                     <span id="date-range-display">
                         {{ Carbon\Carbon::now()->startOfMonth()->format('F j, Y') }} -
                         {{ Carbon\Carbon::now()->format('F j, Y') }}
                     </span>
-                </p> --}}
+                </p>
             </div>
-
-            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')" id="ExprotExcel"
-                class="d-none">
-                <i class="fa fa-file-excel"></i> Excel
-            </button>
-
-            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')" id="ExprotPDF"
-                class="d-none">
-                <i class="fa fa-file-excel"></i> Excel
-            </button>
-
 
             <div class="table-container p-2">
-                {!! $dataTable->table(['class' => 'table customer-balance-table', 'id' => 'customer-balance-table']) !!}
+                {!! $dataTable->table(['class' => 'table ledger-table', 'id' => 'ledger-table']) !!}
             </div>
-
-
         </div>
     </div>
 
@@ -246,43 +393,49 @@ $(document).on('click', '.group-toggle', function() {
                     <div class="column-item" data-column="0">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> Customer Name
+                            <input type="checkbox" checked> Distribution account
                         </label>
                     </div>
                     <div class="column-item" data-column="1">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> Current
+                            <input type="checkbox" checked> Transaction date
                         </label>
                     </div>
                     <div class="column-item" data-column="2">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> 1-15 DAYS
+                            <input type="checkbox" checked> Transaction type
                         </label>
                     </div>
                     <div class="column-item" data-column="3">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> 16-30 DAYS
+                            <input type="checkbox" checked> Num
                         </label>
                     </div>
                     <div class="column-item" data-column="4">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> 31-45 DAYS
+                            <input type="checkbox" checked> Name
                         </label>
                     </div>
                     <div class="column-item" data-column="5">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> > 45 DAYS
+                            <input type="checkbox" checked> Memo/Description
                         </label>
                     </div>
                     <div class="column-item" data-column="6">
                         <i class="fa fa-grip-vertical handle"></i>
                         <label class="checkbox-label">
-                            <input type="checkbox" checked> Total
+                            <input type="checkbox" checked> Split account
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="7">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> Balance
                         </label>
                     </div>
                 </div>
@@ -295,62 +448,6 @@ $(document).on('click', '.group-toggle', function() {
             </div>
         </div>
     </div>
-
-    <script>
-        function buildColumnsFromTable() {
-            const headers = document.querySelectorAll('#customer-balance-table thead th');
-            const container = document.querySelector('#sortable-columns');
-
-            // Clear the old list
-            container.innerHTML = '';
-
-            headers.forEach((th, index) => {
-                const columnName = th.innerText.trim().toUpperCase();
-
-                // Skip BUCKET column
-                if (columnName === 'BUCKET') {
-                    return;
-                }
-
-                // Build draggable/checkbox item
-                const div = document.createElement('div');
-                div.classList.add('column-item');
-                div.setAttribute('data-column', index);
-                div.innerHTML = `
-            <i class="fa fa-grip-vertical handle"></i>
-            <label class="checkbox-label">
-                <input type="checkbox" checked> ${columnName}
-            </label>
-        `;
-
-                container.appendChild(div);
-            });
-        }
-
-        // Build once after DataTable is initialized
-        $(document).ready(function() {
-            buildColumnsFromTable();
-        });
-
-        // Or rebuild every redraw if needed:
-        $('#customer-balance-table').on('draw.dt', function() {
-            buildColumnsFromTable();
-        });
-    </script>
-
-    <script>
-        $('#customer-balance-table').on('click', '.toggle-bucket', function() {
-            let $row = $(this);
-            let bucket = $row.attr('class').match(/bucket-([^\s]+)/)[1]; // "current"
-            let $icon = $row.find('.icon');
-
-            // toggle
-            $('.bucket-' + bucket).not($row).toggle(); // don’t hide the parent itself
-
-            // swap icon
-            $icon.text($icon.text() === '▶' ? '▼' : '▶');
-        });
-    </script>
 
     <style>
         /* Base styling */
@@ -567,13 +664,13 @@ $(document).on('click', '.group-toggle', function() {
             overflow-x: auto;
         }
 
-        .customer-balance-table {
+        .ledger-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
         }
 
-        .customer-balance-table th {
+        .ledger-table th {
             background: #f9fafb;
             border-bottom: 2px solid #e5e7eb;
             padding: 12px 16px;
@@ -585,13 +682,13 @@ $(document).on('click', '.group-toggle', function() {
             letter-spacing: 0.025em;
         }
 
-        .customer-balance-table td {
+        .ledger-table td {
             padding: 12px 16px;
             border-bottom: 1px solid #f3f4f6;
             color: #262626;
         }
 
-        .customer-balance-table tbody tr:hover {
+        .ledger-table tbody tr:hover {
             background: #f9fafb;
         }
 
@@ -793,6 +890,10 @@ $(document).on('click', '.group-toggle', function() {
             color: #6b7280;
         }
 
+        .cursor-pointer {
+            cursor: pointer; /* hand icon on hover */
+        }
+
         .expand-icon {
             margin-right: 6px;
             font-size: 11px;
@@ -818,10 +919,10 @@ $(document).on('click', '.group-toggle', function() {
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                                                                        flex-direction: column;
-                                                                                                                                                                                                        width: 100%;
-                                                                                                                                                                                                        gap: 16px;
-                                                                                                                                                                                                    } */
+                                                        flex-direction: column;
+                                                        width: 100%;
+                                                        gap: 16px;
+                                                    } */
 
             .filter-item {
                 width: 100%;
@@ -844,11 +945,9 @@ $(document).on('click', '.group-toggle', function() {
                 flex-wrap: wrap;
             }
         }
-
-        .parent-row {
-            cursor: pointer;
-        }
     </style>
+
+    {!! $dataTable->scripts() !!}
 @endsection
 
 @push('script-page')
@@ -859,162 +958,11 @@ $(document).on('click', '.group-toggle', function() {
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-
-    <script>
-        /*$(function() {
-                                                                                    $.extend(true, $.fn.dataTable.defaults, {
-                                                                                        dom: 'Bfrtip',
-                                                                                        buttons: [{
-                                                                                                extend: 'excel',
-                                                                                                text: '<i class="fa fa-file-excel"></i> Excel',
-                                                                                                action: function(e, dt, button, config) {
-                                                                                                    window.location = dt.ajax.url().replace('/ajax', '/excel');
-                                                                                                }
-                                                                                            },
-                                                                                            {
-                                                                                                extend: 'print',
-                                                                                                text: '<i class="fa fa-print"></i> Print',
-                                                                                                title: '{{ $pageTitle ?? 'Report' }}',
-                                                                                                messageTop: `
-                        <div style="text-align:center; font-size:16px; font-weight:bold;">
-                            {{ $pageTitle }}
-                        </div>
-                        <div style="text-align:center;">
-                            {{ config('app.name') }}
-                        </div>
-                        <div style="text-align:center; font-size:12px;">
-                            Prepared at: {{ now()->format('F j, Y g:i A') }}
-                        </div>
-                    `
-                                                                                            }
-                                                                                        ]
-                                                                                    });
-                                                                                });*/
-
-        let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-        function exportDataTable(tableId, pageTitle, format = "excel") {
-            let table = $('#' + tableId).DataTable();
-
-            // Only get visible columns (skip auto-index)
-            let columns = [];
-            $('#' + tableId + ' thead th:visible').each(function() {
-                columns.push($(this).text().trim());
-            });
-
-            // Get visible data rows
-            let data = [];
-            table.rows({
-                search: 'applied'
-            }).every(function() {
-                let rowData = this.data();
-
-                if (typeof rowData === 'object') {
-                    // Only keep values for visible columns
-                    let rowArray = [];
-                    table.columns(':visible').every(function(colIdx) {
-                        let val = rowData[this.dataSrc()] ?? '-';
-                        rowArray.push(val);
-                    });
-                    rowData = rowArray;
-                }
-                data.push(rowData);
-            });
-
-            // Send to universal export route
-            $.ajax({
-                url: '{{ route('export.datatable') }}',
-                method: 'POST',
-                data: {
-                    columns: columns,
-                    data: data,
-                    pageTitle: pageTitle,
-                    format: format,
-                    _token: '{{ csrf_token() }}'
-                },
-                xhrFields: {
-                    responseType: 'blob'
-                },
-                success: function(blob, status, xhr) {
-                    let filename = xhr.getResponseHeader('Content-Disposition')
-                        .split('filename=')[1]
-                        .replace(/"/g, '');
-
-                    if (format === "print") {
-                        let fileURL = URL.createObjectURL(blob);
-                        let printWindow = window.open(fileURL);
-                        printWindow.onload = function() {
-                            printWindow.focus();
-                            printWindow.print();
-                        };
-                    } else {
-                        let link = document.createElement('a');
-                        link.href = window.URL.createObjectURL(blob);
-                        link.download = filename;
-                        link.click();
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Export failed:', xhr.responseText);
-                    alert('Export failed! Check console.');
-                }
-            });
-        }
-
-        /*function exportDataTable(tableId, pageTitle) {
-            // Get table columns dynamically
-            let columns = [];
-            $('#' + tableId + ' thead th').each(function() {
-                columns.push($(this).text().trim());
-            });
-
-            // Get table data
-            let data = [];
-            let table = $('#' + tableId).DataTable();
-            table.rows({
-                search: 'applied'
-            }).every(function() {
-                let rowData = this.data();
-                data.push(rowData);
-            });
-
-            // Send AJAX POST to universal export route
-            $.ajax({
-                url: '{{ route('export.datatable') }}',
-                method: 'POST',
-                data: {
-                    columns: columns,
-                    data: data,
-                    pageTitle: pageTitle,
-                    _token: '{{ csrf_token() }}'
-                },
-                xhrFields: {
-                    responseType: 'blob'
-                },
-                success: function(blob, status, xhr) {
-                    // Create link to download
-                    let filename = xhr.getResponseHeader('Content-Disposition')
-                        .split('filename=')[1]
-                        .replace(/"/g, '');
-                    let link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = filename;
-                    link.click();
-                }
-            });
-        } */
-    </script>
-
-
-
-    {!! $dataTable->scripts() !!}
 
     <script>
         $(document).ready(function() {
@@ -1034,19 +982,6 @@ $(document).on('click', '.group-toggle', function() {
                 reportBasis: true,
                 footerAlignment: 'center'
             };
-
-            $.extend(true, $.fn.dataTable.defaults, {
-                dom: 'Bfrtip',
-                buttons: [{
-                        extend: 'excel',
-                        text: '<i class="fa fa-file-excel"></i> Excel'
-                    },
-                    {
-                        extend: 'print',
-                        text: '<i class="fa fa-print"></i> Print'
-                    }
-                ]
-            });
 
             // Initialize date range picker
             $('#daterange').daterangepicker({
@@ -1122,7 +1057,7 @@ $(document).on('click', '.group-toggle', function() {
             }
 
             // Handle period filter changes
-            $('.filter-period').on('change', function() {
+            $('#filter-period').on('change', function() {
                 updateDateRange($(this).val());
             });
 
@@ -1132,212 +1067,56 @@ $(document).on('click', '.group-toggle', function() {
                 let startDate, endDate;
 
                 switch (period) {
-                    case 'all_dates':
-                        startDate = null;
-                        endDate = null;
-                        break;
-
-                    case 'custom_date':
-                        // Do nothing, let user pick manually
-                        return;
-
                     case 'today':
                         startDate = today.clone();
                         endDate = today.clone();
                         break;
-
-                    case 'yesterday':
-                        startDate = today.clone().subtract(1, 'day');
-                        endDate = today.clone().subtract(1, 'day');
-                        break;
-
                     case 'this_week':
                         startDate = today.clone().startOf('week');
                         endDate = today.clone().endOf('week');
                         break;
-
-                    case 'this_week_to_date':
-                        startDate = today.clone().startOf('week');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_week':
-                        startDate = today.clone().subtract(1, 'week').startOf('week');
-                        endDate = today.clone().subtract(1, 'week').endOf('week');
-                        break;
-
-                    case 'last_week_to_date':
-                        startDate = today.clone().subtract(1, 'week').startOf('week');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_week_to_today':
-                        startDate = today.clone().subtract(1, 'week').startOf('week');
-                        endDate = today.clone();
-                        break;
-
                     case 'this_month':
                         startDate = today.clone().startOf('month');
                         endDate = today.clone().endOf('month');
                         break;
-
                     case 'this_month_to_date':
                         startDate = today.clone().startOf('month');
                         endDate = today.clone();
                         break;
-
-                    case 'last_month':
-                        startDate = today.clone().subtract(1, 'month').startOf('month');
-                        endDate = today.clone().subtract(1, 'month').endOf('month');
-                        break;
-
-                    case 'last_month_to_date':
-                        startDate = today.clone().subtract(1, 'month').startOf('month');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_month_to_today':
-                        startDate = today.clone().subtract(1, 'month').startOf('month');
-                        endDate = today.clone();
-                        break;
-
                     case 'this_quarter':
                         startDate = today.clone().startOf('quarter');
                         endDate = today.clone().endOf('quarter');
                         break;
-
-                    case 'this_quarter_to_date':
-                        startDate = today.clone().startOf('quarter');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_quarter':
-                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
-                        endDate = today.clone().subtract(1, 'quarter').endOf('quarter');
-                        break;
-
-                    case 'last_quarter_to_date':
-                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_quarter_to_today':
-                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
-                        endDate = today.clone();
-                        break;
-
                     case 'this_year':
                         startDate = today.clone().startOf('year');
                         endDate = today.clone().endOf('year');
                         break;
-
-                    case 'this_year_to_date':
-                        startDate = today.clone().startOf('year');
-                        endDate = today.clone();
-                        break;
-
-                    case 'this_year_to_last_month':
-                        startDate = today.clone().startOf('year');
+                    case 'last_month':
+                        startDate = today.clone().subtract(1, 'month').startOf('month');
                         endDate = today.clone().subtract(1, 'month').endOf('month');
                         break;
-
+                    case 'last_quarter':
+                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
+                        endDate = today.clone().subtract(1, 'quarter').endOf('quarter');
+                        break;
                     case 'last_year':
                         startDate = today.clone().subtract(1, 'year').startOf('year');
                         endDate = today.clone().subtract(1, 'year').endOf('year');
                         break;
-
-                    case 'last_year_to_date':
-                        startDate = today.clone().subtract(1, 'year').startOf('year');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_year_to_today':
-                        startDate = today.clone().subtract(1, 'year').startOf('year');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_7_days':
-                        startDate = today.clone().subtract(6, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_30_days':
-                        startDate = today.clone().subtract(29, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_90_days':
-                        startDate = today.clone().subtract(89, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'last_12_months':
-                        startDate = today.clone().subtract(12, 'months').startOf('month');
-                        endDate = today.clone().endOf('month');
-                        break;
-
-                    case 'since_30_days_ago':
-                        startDate = today.clone().subtract(30, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'since_60_days_ago':
-                        startDate = today.clone().subtract(60, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'since_90_days_ago':
-                        startDate = today.clone().subtract(90, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'since_365_days_ago':
-                        startDate = today.clone().subtract(365, 'days');
-                        endDate = today.clone();
-                        break;
-
-                    case 'next_week':
-                        startDate = today.clone().add(1, 'week').startOf('week');
-                        endDate = today.clone().add(1, 'week').endOf('week');
-                        break;
-
-                    case 'next_4_weeks':
-                        startDate = today.clone().add(1, 'week').startOf('week');
-                        endDate = today.clone().add(4, 'week').endOf('week');
-                        break;
-
-                    case 'next_month':
-                        startDate = today.clone().add(1, 'month').startOf('month');
-                        endDate = today.clone().add(1, 'month').endOf('month');
-                        break;
-
-                    case 'next_quarter':
-                        startDate = today.clone().add(1, 'quarter').startOf('quarter');
-                        endDate = today.clone().add(1, 'quarter').endOf('quarter');
-                        break;
-
-                    case 'next_year':
-                        startDate = today.clone().add(1, 'year').startOf('year');
-                        endDate = today.clone().add(1, 'year').endOf('year');
-                        break;
-
                     default:
                         startDate = today.clone().startOf('month');
                         endDate = today.clone();
                 }
 
-                // Update the inputs if not custom_date or all_dates
-                // if (startDate && endDate) {
-                //     $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
-                //     $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
-                // }
                 // Update hidden date fields
                 $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
                 $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
 
                 // Update DateRangePicker to reflect the new dates
-                // $('#daterange').data('daterangepicker').setStartDate(startDate);
-                // $('#daterange').data('daterangepicker').setEndDate(endDate);
+                $('#daterange').data('daterangepicker').setStartDate(startDate);
+                $('#daterange').data('daterangepicker').setEndDate(endDate);
+
+                // Update display
                 updateDateDisplay();
                 refreshData();
             }
@@ -1350,14 +1129,13 @@ $(document).on('click', '.group-toggle', function() {
                 const formattedStart = startDate.format('MMMM D, YYYY');
                 const formattedEnd = endDate.format('MMMM D, YYYY');
 
-                $('#date-range-display').text(' As of  ' + formattedEnd);
+                $('#date-range-display').text(formattedStart + ' - ' + formattedEnd);
             }
 
             // Refresh data function
             function refreshData() {
-                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
-                    window.LaravelDataTables["customer-balance-table"].draw();
-                    // {{-- console.log("HI") --}}
+                if (window.LaravelDataTables && window.LaravelDataTables["ledger-table"]) {
+                    window.LaravelDataTables["ledger-table"].draw();
                 } else {
                     console.log('DataTable not yet initialized');
                     setTimeout(refreshData, 100);
@@ -1374,17 +1152,6 @@ $(document).on('click', '.group-toggle', function() {
             $('#filter-account').on('change', function() {
                 refreshData();
             });
-            $('#filter-end-date').on('change', function() {
-                $('#sidebar-filter-end-date').val($(this).val());
-                updateDateDisplay();
-                refreshData();
-            });
-
-            $('#sidebar-filter-end-date').on('change', function() {
-                $('#filter-end-date').val($(this).val());
-                updateDateDisplay();
-                refreshData();
-            });
 
             // Handle accounting method changes
             $('#accounting-method').on('change', function() {
@@ -1392,12 +1159,14 @@ $(document).on('click', '.group-toggle', function() {
             });
 
             // Setup DataTable ajax parameters
-            $('#customer-balance-table').on('preXhr.dt', function(e, settings, data) {
+            $('#ledger-table').on('preXhr.dt', function(e, settings, data) {
                 data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
+
                 data.account_id = $('#filter-account').val();
                 data.accounting_method = $('#accounting-method').val();
 
+                // Add general options to the request
                 data.reportOptions = window.reportOptions;
             });
 
@@ -1534,7 +1303,7 @@ $(document).on('click', '.group-toggle', function() {
                 console.log('Column order updated:', order);
 
                 // Apply column order if DataTable supports it
-                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
+                if (window.LaravelDataTables && window.LaravelDataTables["ledger-table"]) {
                     // Note: Column reordering requires ColReorder extension
                     console.log('Column order would be applied:', order);
                 }
@@ -1546,10 +1315,9 @@ $(document).on('click', '.group-toggle', function() {
                 const isVisible = $(this).prop('checked');
 
                 if (columnIndex !== undefined && window.LaravelDataTables && window.LaravelDataTables[
-                        "customer-balance-table"]) {
+                        "ledger-table"]) {
                     try {
-                        window.LaravelDataTables["customer-balance-table"].column(columnIndex).visible(
-                            isVisible);
+                        window.LaravelDataTables["ledger-table"].column(columnIndex).visible(isVisible);
                     } catch (error) {
                         console.log('Column visibility change:', columnIndex, isVisible);
                     }
@@ -1578,9 +1346,9 @@ $(document).on('click', '.group-toggle', function() {
             });
 
             // Add expand/collapse functionality for account groups
-            $(document).on('click', '.account-group', function() {
-                const accountId = $(this).data('account-id');
-                $('.account-row[data-parent="' + accountId + '"]').toggle();
+            $(document).on('click', '.journal-group', function() {
+                const journalId = $(this).data('journal-id');
+                $('.journal-row[data-parent="' + journalId + '"]').toggle();
 
                 // Toggle icon
                 const icon = $(this).find('.expand-icon');
@@ -1602,7 +1370,7 @@ $(document).on('click', '.group-toggle', function() {
                     <!DOCTYPE html>
                     <html>
                     <head>
-                        <title>A/R Aging Summary Report - Print</title>
+                        <title>General Ledger - Print</title>
                         <style>
                             body { font-family: Arial, sans-serif; margin: 20px; }
                             .report-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
@@ -1617,11 +1385,11 @@ $(document).on('click', '.group-toggle', function() {
                         </style>
                     </head>
                     <body>
-                        <div class="report-title">A/R Aging Summary Report</div>
+                        <div class="report-title">General Ledger</div>
                         <div class="company-name">${$('.company-name').text()}</div>
                         <div class="date-range">${$('.date-range').text()}</div>
                         <table>
-                            ${$('.customer-balance-table').html()}
+                            ${$('.ledger-table').html()}
                         </table>
                     </body>
                     </html>
@@ -1633,9 +1401,8 @@ $(document).on('click', '.group-toggle', function() {
 
             // Save As functionality
             $('.btn-save').on('click', function() {
-                const reportName = prompt('Enter report name:', 'A/R Aging Summary Report - ' + moment()
-                    .format(
-                        'YYYY-MM-DD'));
+                const reportName = prompt('Enter report name:', 'General Ledger - ' + moment().format(
+                    'YYYY-MM-DD'));
                 if (reportName) {
                     // In a real application, this would save to the server
                     alert('Report "' + reportName + '" would be saved with current settings');
@@ -1643,8 +1410,8 @@ $(document).on('click', '.group-toggle', function() {
                     // Save current settings to localStorage for demo
                     const settings = {
                         name: reportName,
-                        startDate: $('#filter-start-date').val(),
-                        endDate: $('#filter-end-date').val(),
+                        startDate: $('#start-date').val(),
+                        endDate: $('#end-date').val(),
                         account: $('#filter-account').val(),
                         accountingMethod: $('#accounting-method').val(),
                         options: window.reportOptions,
@@ -1675,19 +1442,12 @@ $(document).on('click', '.group-toggle', function() {
                 const option = prompt(
                     'Choose export format:\n1. Excel\n2. PDF\n3. CSV\n\nEnter number (1-3):');
 
-
-                // Get table ID dynamically (assumes closest table in DOM)
-                const tableId = $(this).closest('div').find('table').attr('id');
-                const pageTitle = document.title || 'Report';
-
                 switch (option) {
                     case '1':
-                        //alert('Excel export would be triggered');
-                        $("#ExprotExcel").click();
+                        alert('Excel export would be triggered');
                         break;
                     case '2':
-                        $("#ExprotPDF").click();
-                        //alert('PDF export would be triggered');
+                        alert('PDF export would be triggered');
                         break;
                     case '3':
                         alert('CSV export would be triggered');
@@ -1723,9 +1483,9 @@ $(document).on('click', '.group-toggle', function() {
             }, 100);
 
             // Format numbers in table based on options
-            $(document).on('draw.dt', '#customer-balance-table', function() {
+            $(document).on('draw.dt', '#ledger-table', function() {
                 if (window.reportOptions) {
-                    $('.customer-balance-table tbody tr').each(function() {
+                    $('.ledger-table tbody tr').each(function() {
                         const $row = $(this);
 
                         // Apply number formatting to amount columns
