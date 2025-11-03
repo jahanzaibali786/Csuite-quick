@@ -709,6 +709,7 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('bill/{id}/resent', [BillController::class, 'resent'])->name('bill.resent');
             Route::get('bill/{id}/payment', [BillController::class, 'payment'])->name('bill.payment');
             Route::post('bill/{id}/payment', [BillController::class, 'createPayment'])->name('bill.payment');
+            Route::post('bill/bulk-payment', [BillController::class, 'bulkPayment'])->name('bill.bulk.payment');
             Route::post('bill/{id}/payment/{pid}/destroy', [BillController::class, 'paymentDestroy'])->name('bill.payment.destroy');
             Route::get('bill/items', [BillController::class, 'items'])->name('bill.items');
             Route::resource('bill', BillController::class);
@@ -964,9 +965,12 @@ Route::group(['middleware' => ['verified']], function () {
         ->name("expenses.expenses_by_vendor_summary");
 
 
+    // Abdullah For My Accountant
+    Route::get("/formyaccountant/account-list", [VoucherController::class, 'AccountList'])
+        ->name("formyaccountant.account-list");
+
     // Abdullah Excel Export Route
     Route::post('/export-datatable', [VoucherController::class, 'ExportReport'])->name('export.datatable');
-
 
 
     // cya routes

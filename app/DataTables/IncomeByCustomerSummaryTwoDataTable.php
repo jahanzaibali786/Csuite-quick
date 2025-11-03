@@ -302,7 +302,7 @@ class IncomeByCustomerSummaryTwoDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('product-service-table') // keep existing id so CSS/JS keep working
+            ->setTableId('customer-balance-table') // keep existing id so CSS/JS keep working
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('rt')

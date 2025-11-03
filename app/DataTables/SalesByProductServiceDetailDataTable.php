@@ -268,7 +268,6 @@ class SalesByProductServiceDetailDataTable extends DataTable
             $q->whereDate('i.issue_date', '>=', $startDate);
         }
         if ($endDate) {
-        if ($endDate) {
             $q->whereDate('i.issue_date', '<=', $endDate);
         }
 

@@ -13,7 +13,7 @@
                         onclick="exportDataTable('aging-summary-table', '{{ $pageTitle }}', 'print')"><i
                             class="fa fa-print"></i></button>
                     <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
-                    <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
+                    {{-- <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button> --}}
                     <button class="btn btn-success btn-save">Save As</button>
                 </div>
             </div>
@@ -147,10 +147,10 @@
                             value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
                     </div>
                     <div class="filter-item col-md-2 mt-4">
-                        <button class="btn btn-view-options" id="view-options-btn"
+                        {{-- <button class="btn btn-view-options" id="view-options-btn"
                             style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; ">
                             <i class="fa fa-eye"></i> View options
-                        </button>
+                        </button> --}}
                     </div>
 
                     <!-- Action buttons row -->
