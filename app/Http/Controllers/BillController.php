@@ -38,6 +38,46 @@ use Auth;
 class BillController extends Controller
 {
 
+    // public function index(Request $request)
+    // {
+    //     if (\Auth::user()->can('manage bill')) {
+    //         $user = \Auth::user();
+    //         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+    //         $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+    //         $vender = Vender::where($column, '=', $ownerId)->get()->pluck('name', 'id');
+    //         $vender->prepend('Select Vendor', '');
+
+    //         $status = Bill::$statues;
+
+    //         $query = Bill::where('type', '=', 'Bill')->where($column, '=', $ownerId);
+    //         if (!empty($request->vender)) {
+    //             $query->where('vender_id', '=', $request->vender);
+    //         }
+    //         //            if(!empty($request->bill_date))
+    //         //            {
+    //         //                $date_range = explode('to', $request->bill_date);
+    //         //                $query->whereBetween('bill_date', $date_range);
+    //         //            }
+
+    //         if (count(explode('to', $request->bill_date)) > 1) {
+    //             $date_range = explode(' to ', $request->bill_date);
+    //             $query->whereBetween('bill_date', $date_range);
+    //         } elseif (!empty($request->bill_date)) {
+    //             $date_range = [$request->date, $request->bill_date];
+    //             $query->whereBetween('bill_date', $date_range);
+    //         }
+
+    //         if ($request->status != null) {
+    //             $query->where('status', '=', $request->status);
+    //         }
+    //         $bills = $query->with('category')->get();
+
+    //         return view('bill.index', compact('bills', 'vender', 'status'));
+    //     } else {
+    //         return redirect()->back()->with('error', __('Permission Denied.'));
+    //     }
+    // }
+
     public function index(Request $request)
     {
         if (\Auth::user()->can('manage bill')) {
@@ -53,11 +93,6 @@ class BillController extends Controller
             if (!empty($request->vender)) {
                 $query->where('vender_id', '=', $request->vender);
             }
-            //            if(!empty($request->bill_date))
-            //            {
-            //                $date_range = explode('to', $request->bill_date);
-            //                $query->whereBetween('bill_date', $date_range);
-            //            }
 
             if (count(explode('to', $request->bill_date)) > 1) {
                 $date_range = explode(' to ', $request->bill_date);
@@ -70,13 +105,51 @@ class BillController extends Controller
             if ($request->status != null) {
                 $query->where('status', '=', $request->status);
             }
+
+            // load bills
             $bills = $query->with('category')->get();
 
-            return view('bill.index', compact('bills', 'vender', 'status'));
+            // Ensure amount and open_balance exist as properties for blade; use fallbacks if model fields differ
+            // If your model uses different field names, replace 'amount' / 'open_balance' below.
+            $bills->transform(function ($bill) {
+                // try common fields, fall back to 0
+                if (!isset($bill->amount)) {
+                    // try alternate field names
+                    if (isset($bill->total)) {
+                        $bill->amount = $bill->total;
+                    } elseif (isset($bill->grand_total)) {
+                        $bill->amount = $bill->grand_total;
+                    } else {
+                        $bill->amount = 0;
+                    }
+                }
+
+                if (!isset($bill->open_balance)) {
+                    if (isset($bill->due_amount)) {
+                        $bill->open_balance = $bill->due_amount;
+                    } elseif (isset($bill->balance)) {
+                        $bill->open_balance = $bill->balance;
+                    } else {
+                        // default open_balance to amount (if nothing else)
+                        $bill->open_balance = $bill->amount;
+                    }
+                }
+
+                // Ensure numeric values (float)
+                $bill->amount = (float) $bill->amount;
+                $bill->open_balance = (float) $bill->open_balance;
+
+                return $bill;
+            });
+
+            $accounts = BankAccount::select('*', \DB::raw("CONCAT(bank_name,' ',holder_name) AS name"))->where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+
+            return view('bill.index', compact('bills', 'vender', 'status', 'accounts'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }
     }
+
 
     public function create($vendorId)
     {
@@ -657,8 +730,7 @@ class BillController extends Controller
 
                 // DON'T create JV here - it will be created on approval
                 // $dataret = Utility::jr_exp_entry($data);
-                if(Auth::user()->type == 'company')
-                {
+                if (Auth::user()->type == 'company') {
                     $this->createBillJournalVoucher($bill);
                     $bill->status = 6;
                     $bill->save();
@@ -725,7 +797,7 @@ class BillController extends Controller
                 'amount' => $account->price,
                 'description' => $account->description,
                 'itemTaxPrice' => 0,
-                
+
             ];
         }
 
@@ -2032,6 +2104,235 @@ class BillController extends Controller
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
 
+        }
+    }
+
+    public function createPayment(Request $request, $bill_id)
+    {
+        \DB::beginTransaction();
+        try {
+            if (\Auth::user()->can('create payment bill')) {
+                $validator = \Validator::make(
+                    $request->all(),
+                    [
+                        'date' => 'required',
+                        'amount' => 'required',
+                        'account_id' => 'required',
+
+                    ]
+                );
+                if ($validator->fails()) {
+                    $messages = $validator->getMessageBag();
+
+                    return redirect()->back()->with('error', $messages->first());
+                }
+
+                $billPayment = new BillPayment();
+                $billPayment->bill_id = $bill_id;
+                $billPayment->date = $request->date;
+                $billPayment->amount = $request->amount;
+                $billPayment->account_id = $request->account_id;
+                $billPayment->payment_method = 0;
+                $billPayment->reference = $request->reference;
+                $billPayment->description = $request->description;
+
+                if (!empty($request->add_receipt)) {
+                    //storage limit
+                    $image_size = $request->file('add_receipt')->getSize();
+                    $result = Utility::updateStorageLimit(\Auth::user()->creatorId(), $image_size);
+                    if ($result == 1) {
+                        if ($billPayment->add_receipt) {
+                            $path = storage_path('uploads/payment' . $billPayment->add_receipt);
+                            if (file_exists($path)) {
+                                \File::delete($path);
+                            }
+                        }
+                        $fileName = time() . "_" . $request->add_receipt->getClientOriginalName();
+                        $billPayment->add_receipt = $fileName;
+                        $dir = 'uploads/payment';
+                        $path = Utility::upload_file($request, 'add_receipt', $fileName, $dir, []);
+                        if ($path['flag'] == 0) {
+                            return redirect()->back()->with('error', __($path['msg']));
+                        }
+
+                    }
+
+                }
+                $billPayment->save();
+
+                $bill = Bill::where('id', $bill_id)->first();
+                $due = $bill->getDue();
+                $total = $bill->getTotal();
+
+                if ($bill->status == 0) {
+                    $bill->send_date = date('Y-m-d');
+                    $bill->save();
+                }
+
+                if ($due <= 0) {
+                    $bill->status = 4;
+                    $bill->save();
+                } else {
+                    $bill->status = 3;
+                    $bill->save();
+                }
+                $billPayment->user_id = $bill->vender_id;
+                $billPayment->user_type = 'Vender';
+                $billPayment->type = 'Partial';
+                $billPayment->created_by = \Auth::user()->id;
+                $billPayment->payment_id = $billPayment->id;
+                $billPayment->category = 'Bill';
+                $billPayment->account = $request->account_id;
+                Transaction::addTransaction($billPayment);
+
+                $vender = Vender::where('id', $bill->vender_id)->first();
+
+                $payment = new BillPayment();
+                $payment->name = $vender['name'];
+                $payment->method = '-';
+                $payment->date = \Auth::user()->dateFormat($request->date);
+                $payment->amount = \Auth::user()->priceFormat($request->amount);
+                $payment->bill = 'bill ' . \Auth::user()->billNumberFormat($billPayment->bill_id);
+
+                //            Utility::userBalance('vendor', $bill->vender_id, $request->amount, 'debit');
+                Utility::updateUserBalance('vendor', $bill->vender_id, $request->amount, 'credit');
+
+
+                Utility::bankAccountBalance($request->account_id, $request->amount, 'debit');
+
+                // $billPayments = BillPayment::where('bill_id', $bill->id)->get();
+                // foreach ($billPayments as $billPayment) {
+                //     $accountId = BankAccount::find($billPayment->account_id);
+
+                //     $data = [
+                //         'account_id' => $accountId->chart_account_id,
+                //         'transaction_type' => 'Debit',
+                //         'transaction_amount' => $billPayment->amount,
+                //         'reference' => 'Bill Payment',
+                //         'reference_id' => $bill->id,
+                //         'reference_sub_id' => $billPayment->id,
+                //         'date' => $billPayment->date,
+                //     ];
+                //     Utility::addTransactionLines($data , 'create');
+                // }
+                $bankAccount = BankAccount::find($request->account_id);
+                if ($bankAccount && $bankAccount->chart_account_id != 0 || $bankAccount->chart_account_id != null) {
+                    $data['account_id'] = $bankAccount->chart_account_id;
+                } else {
+                    return redirect()->back()->with('error', __('Please select chart of account in bank account.'));
+                }
+
+                $data['id'] = $billPayment->id;
+                $data['no'] = $bill->bill_id;
+                $data['date'] = $billPayment->date;
+                $data['reference'] = $billPayment->reference;
+                $data['description'] = $billPayment->description;
+                $data['amount'] = $billPayment->amount;
+                $data['prod_id'] = $billPayment->id;
+                // $data['result'] = $result;
+                $data['category'] = 'Bill';
+                $data['owned_by'] = $billPayment->owned_by;
+                $data['created_by'] = \Auth::user()->creatorId();
+                $data['created_at'] = date('Y-m-d', strtotime($billPayment->date)) . ' ' . date('h:i:s');
+
+
+                if (preg_match('/\bcash\b/i', $bankAccount->bank_name) || preg_match('/\bcash\b/i', $bankAccount->holder_name)) {
+                    $dataret = Utility::cpv_entry($data); // Cash Payment Voucher (CPV)
+                } else {
+                    $dataret = Utility::bpv_entry($data); // Bill Payment Voucher (BPV)
+                }
+                $billPayments = BillPayment::find($billPayment->id);
+                $billPayments->voucher_id = $dataret;
+                $billPayments->save();
+
+                // Send Email
+                $setings = Utility::settings();
+                if ($setings['new_bill_payment'] == 1) {
+
+                    $vender = Vender::where('id', $bill->vender_id)->first();
+                    $billPaymentArr = [
+                        'vender_name' => $vender->name,
+                        'vender_email' => $vender->email,
+                        'payment_name' => $payment->name,
+                        'payment_amount' => $payment->amount,
+                        'payment_bill' => $payment->bill,
+                        'payment_date' => $payment->date,
+                        'payment_method' => $payment->method,
+                        'company_name' => $payment->method,
+
+                    ];
+
+
+                    $resp = Utility::sendEmailTemplate('new_bill_payment', [$vender->id => $vender->email], $billPaymentArr);
+                    Utility::makeActivityLog(\Auth::user()->id, 'Bill apyment', $billPayment->id, 'Create Bill apyment', $billPayment->reference);
+                    \DB::commit();
+                    return redirect()->back()->with('success', __('Payment successfully added.') . ((isset($result) && $result != 1) ? '<br> <span class="text-danger">' . $result . '</span>' : '') . (($resp['is_success'] == false && !empty($resp['error'])) ? '<br> <span class="text-danger">' . $resp['error'] . '</span>' : ''));
+
+                }
+                Utility::makeActivityLog(\Auth::user()->id, 'Bill apyment', $billPayment->id, 'Create Bill apyment', $billPayment->reference);
+                \DB::commit();
+                return redirect()->back()->with('success', __('Payment successfully added.') . ((isset($result) && $result != 1) ? '<br> <span class="text-danger">' . $result . '</span>' : ''));
+
+
+            }
+        } catch (\Exception $e) {
+            \DB::rollback();
+            return redirect()->back()->with('error', $e);
+        }
+    }
+
+
+    public function bulkPayment(Request $request)
+    {
+        \DB::beginTransaction();
+        try {
+            if (!\Auth::user()->can('create payment bill')) {
+                return redirect()->back()->with('error', __('Permission denied.'));
+            }
+
+            $validator = \Validator::make(
+                $request->all(),
+                [
+                    'date' => 'required|date',
+                    'account_id' => 'required|integer',
+                    'bill_ids' => 'required|array|min:1',
+                    'bill_ids.*' => 'integer|exists:bills,id',
+                    'payment_amounts' => 'required|array|min:1',
+                    'payment_amounts.*' => 'numeric|min:0',
+                ]
+            );
+
+            if ($validator->fails()) {
+                $messages = $validator->getMessageBag();
+                return redirect()->back()->with('error', $messages->first());
+            }
+
+            $billIds = $request->bill_ids;
+            $amounts = $request->payment_amounts;
+            $account_id = $request->account_id;
+            $date = $request->date;
+
+            foreach ($request->bill_ids as $billId) {
+                $paymentAmount = $request->payment_amounts[$billId] ?? 0;
+                if ($paymentAmount <= 0)
+                    continue;
+
+                $subRequest = new Request([
+                    'date' => $request->date,
+                    'amount' => $paymentAmount,
+                    'account_id' => $request->account_id,
+                ]);
+
+                $this->createPayment($subRequest, $billId);
+            }
+
+
+            \DB::commit();
+            return redirect()->back()->with('success', __('Bulk payments successfully processed.'));
+
+        } catch (\Exception $e) {
+            \DB::rollback();
+            return redirect()->back()->with('error', $e->getMessage());
         }
     }
 

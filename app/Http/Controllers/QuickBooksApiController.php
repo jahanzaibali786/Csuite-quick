@@ -62,11 +62,11 @@ class QuickBooksApiController extends Controller
         return view('privacy-policy');
     }
     public function accessToken()
-    {
         return Session::get('qb_access_token');
     }
 
     public function realmId()
+
     {
         return Session::get('qb_realm_id');
     }
@@ -102,6 +102,7 @@ class QuickBooksApiController extends Controller
 
         return redirect()->route('quickbooks.sync')->with('success', 'Disconnected from QuickBooks.');
     }
+
 
     /**
      * Handle the callback from QuickBooks OAuth.
@@ -145,6 +146,7 @@ class QuickBooksApiController extends Controller
      * Helper to run a QuickBooks query.
      */
     public function runQuery(string $query)
+
     {
         $token = $this->accessToken();
         $realm = $this->realmId();
@@ -185,6 +187,7 @@ class QuickBooksApiController extends Controller
     {
         $data = $this->runQuery("SELECT * FROM Invoice STARTPOSITION 1 MAXRESULTS 50");
         dd($data, collect($data['QueryResponse']['Invoice'])->first());
+
     }
 
     public function bills()
@@ -234,7 +237,8 @@ class QuickBooksApiController extends Controller
 
         // Optional query parameters
         $startDate = $request->input('start_date', '2025-10-01');
-        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+
+        $endDate   = $request->input('end_date', now()->format('Y-m-d'));
         $accountingMethod = $request->input('accounting_method', 'Accrual');
         $url = "{$this->baseUrl}/v3/company/{$realm}/reports/JournalReport"
             . "?start_date={$startDate}&end_date={$endDate}&accounting_method={$accountingMethod}";
@@ -1031,6 +1035,7 @@ class QuickBooksApiController extends Controller
                             $linked[] = $l['LinkedTxn'];
                     }
                 }
+
                 return [
                     'PaymentId' => $payment['Id'] ?? null,
                     'CustomerId' => $payment['CustomerRef']['value'] ?? null,
@@ -1903,8 +1908,6 @@ class QuickBooksApiController extends Controller
     }
 }
 
-
-
     /**
      * 📊 Credit Card Credits with Bill Links - Enhanced version showing bill applications
      */
@@ -2373,6 +2376,7 @@ GRAPHQL;
             'status' => 'success',
             'count' => $invoicePayments->count(),
             'linked_record' => $first
+
         ]);
 
     } catch (\Exception $e) {
@@ -2382,4 +2386,5 @@ GRAPHQL;
         ], 500);
     }
 }
+
 }

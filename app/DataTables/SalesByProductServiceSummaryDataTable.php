@@ -185,7 +185,7 @@ class SalesByProductServiceSummaryDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('sales-by-product-service-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('rt')

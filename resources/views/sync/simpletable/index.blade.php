@@ -16,7 +16,7 @@
                         title="Export">
                         <i class="fa fa-external-link-alt"></i>
                     </button>
-                    <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
+                    {{-- <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button> --}}
                     <button class="btn btn-success btn-save">Save As</button>
                 </div>
             </div>

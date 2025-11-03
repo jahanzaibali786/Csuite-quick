@@ -193,6 +193,7 @@ use App\Http\Controllers\QuickBooksApiController;
 Route::get('/license', [QuickBooksApiController::class, 'license'])->name('license');
 Route::get('/privacy-policy', [QuickBooksApiController::class, 'privacyPolicy'])->name('privacy.policy');
 
+
 // page and api endpoints
 Route::get('/quickbooks/sync', [QuickBooksApiController::class, 'index'])->name('quickbooks.sync');
 Route::get('/quickbooks/connect', [QuickBooksApiController::class, 'connect'])->name('quickbooks.connect');
@@ -219,6 +220,7 @@ Route::post('/quickbooks/deposits', [QuickBooksApiController::class, 'deposits']
 Route::post('/quickbooks/deposits-with-voucher', [QuickBooksApiController::class, 'depositsWithVoucher'])->name('quickbooks.depositsWithVoucher');   
 Route::post('/quickbooks/sales-receipts', [QuickBooksApiController::class, 'getSalesReceipts'])->name('quickbooks.salesReceipts');
 Route::post('/quickbooks/journal-fr-report', [QuickBooksApiController::class, 'journalFRReport'])->name('quickbooks.journalFRReport');
+
 Route::post('/quickbooks/items', [QuickBooksApiController::class, 'items'])->name('quickbooks.items');
 Route::post('/quickbooks/journals', [QuickBooksApiController::class, 'journalEntries'])->name('quickbooks.journals');
 Route::post('/quickbooks/api/invoices', [QuickBooksApiController::class, 'invoices'])->name('quickbooks.api.invoices');
@@ -239,6 +241,7 @@ Route::post('/quickbooks/import/journalReport', [QuickBooksImportController::cla
 Route::post('/quickbooks/api/query', [QuickBooksApiController::class, 'rawQuery'])->name('quickbooks.api.rawQuery'); 
 
 Route::get('/Journalledger', [VoucherController::class, 'Journalledger'])->name('Journalledger.index');
+
 // All Reports Route
 Route::get('/reports', [ReportController::class, 'reports'])->name('allReports');
 
@@ -750,6 +753,7 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('bill/{id}/resent', [BillController::class, 'resent'])->name('bill.resent');
             Route::get('bill/{id}/payment', [BillController::class, 'payment'])->name('bill.payment');
             Route::post('bill/{id}/payment', [BillController::class, 'createPayment'])->name('bill.payment');
+            Route::post('bill/bulk-payment', [BillController::class, 'bulkPayment'])->name('bill.bulk.payment');
             Route::post('bill/{id}/payment/{pid}/destroy', [BillController::class, 'paymentDestroy'])->name('bill.payment.destroy');
             Route::get('bill/items', [BillController::class, 'items'])->name('bill.items');
             Route::resource('bill', BillController::class);
@@ -887,6 +891,10 @@ Route::group(['middleware' => ['verified']], function () {
         }
     );
 
+    Route::get('export/chart-of-account', [ChartOfAccountController::class, 'export'])->name('chart-of-account.export');
+    Route::get('import/chart-of-account/file', [ChartOfAccountController::class, 'importFile'])->name('chart-of-account.file.import');
+    Route::post('import/chart-of-account', [ChartOfAccountController::class, 'import'])->name('chart-of-account.import');
+
     Route::group(
         [
             'middleware' => [
@@ -1001,9 +1009,12 @@ Route::group(['middleware' => ['verified']], function () {
         ->name("expenses.expenses_by_vendor_summary");
 
 
+    // Abdullah For My Accountant
+    Route::get("/formyaccountant/account-list", [VoucherController::class, 'AccountList'])
+        ->name("formyaccountant.account-list");
+
     // Abdullah Excel Export Route
     Route::post('/export-datatable', [VoucherController::class, 'ExportReport'])->name('export.datatable');
-
 
 
     // cya routes

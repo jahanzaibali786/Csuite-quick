@@ -28,7 +28,7 @@ class EmployeesContactList extends DataTable
     public function html()
     {
         return $this->builder()
-            ->setTableId('employees-contact-list-table')
+            ->setTableId('customer-balance-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->orderBy(0, 'asc')

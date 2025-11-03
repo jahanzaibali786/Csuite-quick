@@ -264,13 +264,14 @@ class SalesByProductServiceDetailDataTable extends DataTable
             ->where('i.created_by', $ownerId)
             ->where('i.status', '!=', 0);
 
-        if ($startDate) {
-            $q->whereDate('i.issue_date', '>=', $startDate);
-        }
-        if ($endDate) {
+            if ($startDate) {
+                $q->whereDate('i.issue_date', '>=', $startDate);
+            }
+
             if ($endDate) {
                 $q->whereDate('i.issue_date', '<=', $endDate);
             }
+
 
             if (request()->filled('product_name')) {
                 $q->where('ps.name', 'like', '%' . request('product_name') . '%');

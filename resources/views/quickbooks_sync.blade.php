@@ -1,6 +1,5 @@
 <!doctype html>
 <html>
-
 <head>
     <meta charset="utf-8">
     <title>QuickBooks Sync</title>
@@ -37,6 +36,7 @@
 
     <div style="margin-top:12px;">
         {{-- your existing qb buttons unchanged --}}
+
         <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.items') }}">Get Items</button>
         <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.api.invoices') }}">Get Invoices</button>
         <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.invoicesWithPayments') }}">Get Invoices with Payments</button>
@@ -63,6 +63,7 @@
         <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.getPayrollAdjustments') }}">Get Payroll Adjustment</button>
         <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.getTransfers') }}">Get Transfers</button>
         <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.getAllTransactionsGrouped') }}">Get All Transactions Grouped</button>
+
     </div>
 
     <hr>
@@ -85,28 +86,38 @@
         });
 
         $(document).on('click', '.qb-btn', function (e) {
+
             e.preventDefault();
             const route = $(this).data('route');
 
             $.post(route)
                 .done(function (data, textStatus, jqXHR) {
+
+                    // If server returned JSON (likely an error or data)
                     let contentType = jqXHR.getResponseHeader('Content-Type') || '';
                     if (contentType.includes('application/json')) {
+                        // If server said auth required, open connect_url in new tab
                         if (data && data.needs_auth && data.connect_url) {
                             const w = window.open(data.connect_url, '_blank');
-                            if (!w) alert('Please allow popups or click the Connect button to authenticate.');
+                            if (!w) {
+                                alert('Please allow popups or click the Connect button to authenticate.');
+                            }
                             return;
                         }
+                        // Otherwise pretty-print JSON in new tab
                         const html = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
                         const w2 = window.open('', '_blank');
                         w2.document.write(html);
                         w2.document.title = 'QuickBooks JSON Response';
                     } else {
+
+                        // Likely server dd() HTML — open raw HTML in a new window
                         const w = window.open('', '_blank');
                         w.document.write(data);
                     }
                 })
                 .fail(function (jqXHR) {
+
                     try {
                         const body = JSON.parse(jqXHR.responseText);
                         if (body && body.needs_auth && body.connect_url) {
@@ -115,6 +126,7 @@
                             return;
                         }
                     } catch (e) {}
+
                     const w = window.open('', '_blank');
                     w.document.write(jqXHR.responseText || 'Request failed. Check console for details.');
                 });

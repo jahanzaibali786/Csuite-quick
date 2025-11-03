@@ -434,9 +434,15 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.general-journal.index', $this->data, [
+        // return $dataTable->render('sync.general-journal.index', $this->data, [
+        //     'accounts' => ChartOfAccount::get(),
+        //     'accountId' => $accountId,
+        // ]);
+
+        return $dataTable->render('sync.ledger.index', $this->data, [
             'accounts' => ChartOfAccount::get(),
             'accountId' => $accountId,
+            'pageTitle' => $this->pageTitle
         ]);
     }
 
@@ -913,6 +919,19 @@ class VoucherController extends Controller
     public function vendorsphonelist(\App\DataTables\VendorsPhoneList $dataTable, Request $request)
     {
         $this->pageTitle = 'Vendor Phone List';
+
+        if ($request->ajax()) {
+            return $dataTable->ajax();
+        }
+
+        return $dataTable->render('sync.simpletable.index', [ // ✅ keep same view, or create vendorbalance.index
+            'pageTitle' => $this->pageTitle,
+        ]);
+    }
+
+    public function AccountList(\App\DataTables\AccountListDatatable $dataTable, Request $request)
+    {
+        $this->pageTitle = 'Account List';
 
         if ($request->ajax()) {
             return $dataTable->ajax();
