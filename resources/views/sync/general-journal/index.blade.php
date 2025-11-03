@@ -11,7 +11,7 @@
                     <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
                     <button class="btn btn-icon" title="Print"><i class="fa fa-print"></i></button>
                     <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
-                    <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
+                    {{-- <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button> --}}
                     <button class="btn btn-success btn-save">Save As</button>
                 </div>
             </div>
@@ -41,9 +41,9 @@
                         <label class="filter-label">Date Range</label>
                         <input type="text" id="daterange" class="form-control date-input"
                             value="{{ Carbon\Carbon::now()->startOfMonth()->format('m/d/Y') }} - {{ Carbon\Carbon::now()->format('m/d/Y') }}">
-                        <input type="hidden" id="filter-start-date"
+                        <input type="hidden" id="filter-start-date" name="startDate"
                             value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                        <input type="hidden" id="filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                        <input type="hidden" id="filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}" name="endDate">
                     </div>
 
                     <div class="filter-item col-md-3">
@@ -73,15 +73,15 @@
                 <button class="btn btn-outline" id="columns-btn">
                     <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
                 </button>
-                <button class="btn btn-outline" id="filter-btn">
+                {{-- <button class="btn btn-outline" id="filter-btn">
                     <i class="fa fa-filter"></i> Filter
-                </button>
+                </button> --}}
                 <button class="btn btn-outline" id="general-options-btn">
                     <i class="fa fa-cog"></i> General options
                 </button>
-                <button class="btn btn-view-options" id="view-options-btn">
+                {{-- <button class="btn btn-view-options" id="view-options-btn">
                     <i class="fa fa-eye"></i> View options
-                </button>
+                </button> --}}
             </div>
         </div>
 

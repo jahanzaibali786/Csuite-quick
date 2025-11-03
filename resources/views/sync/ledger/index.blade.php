@@ -4,16 +4,16 @@
     <div class="content-wrapper">
         <!-- Header with actions -->
         <div class="report-header">
-            <h4 class="mb-0">General Ledger</h4>
+            <h4 class="mb-0">{{ $pageTitle }}</h4>
             <div class="header-actions">
                 <span class="last-updated">Last updated 8 minutes ago</span>
                 <div class="actions">
                     <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
                     <button class="btn btn-icon"
-                        onclick="exportDataTable('ledger-table', '{{ 'General Ledger' }}', 'print')"><i
+                        onclick="exportDataTable('ledger-table', '{{ $pageTitle }}', 'print')"><i
                             class="fa fa-print"></i></button>
                     <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
-                    <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button>
+                    {{-- <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button> --}}
                     <button class="btn btn-success btn-save">Save As</button>
                 </div>
             </div>
@@ -30,13 +30,13 @@
                     </div>
                     <div class="modal-body text-center row">
                         <div class="col-md-6">
-                            <button onclick="exportDataTable('ledger-table', '{{ 'General Ledger' }}')"
+                            <button onclick="exportDataTable('ledger-table', '{{ $pageTitle }}')"
                                 class="btn btn-success mx-auto w-75 justify-content-center text-center"
                                 data-action="excel">Export to
                                 Excel</button>
                         </div>
                         <div class="col-md-6">
-                            <button onclick="exportDataTable('ledger-table', '{{ 'General Ledger' }}', 'pdf')"
+                            <button onclick="exportDataTable('ledger-table', '{{ $pageTitle }}', 'pdf')"
                                 class="btn btn-success mx-auto w-75 justify-content-center text-center"
                                 data-action="pdf">Export to
                                 PDF</button>
@@ -201,13 +201,13 @@
                                 </select>
                             </div>
 
-                            <div class="filter-item col-md-2 mt-4">
+                            {{-- <div class="filter-item col-md-2 mt-4">
                                 <button class="btn btn-view-options" id="view-options-btn"
                                     style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;">
                                     <i class="fa fa-eye"></i>
                                     <span>View options</span>
                                 </button>
-                            </div>
+                            </div> --}}
                         </div>
                     </div>
 
@@ -279,7 +279,7 @@
         <!-- Report Content -->
         <div class="report-content">
             <div class="report-title-section">
-                <h2 class="report-title">General Ledger</h2>
+                <h2 class="report-title">{{ $pageTitle }}</h2>
                 {{-- <p class="company-name">{{ config('app.name', 'Craig\'s Design and Landscaping Services') }}</p> --}}
                 <p class="date-range">
                     <span id="date-range-display">
