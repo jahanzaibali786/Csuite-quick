@@ -12,6 +12,12 @@
                 {{ date('Y') }} {{ $setting['footer_text'] ? $setting['footer_text'] : config('app.name', 'CSuite') }}
             </p>
         </div>
+        <div class="py-1" style="margin-right: 50px;">
+            <p class="mb-0 text-muted"> 
+                <a href="{{ route('license') }}">License Agreement</a> |
+                <a href="{{ route('privacy.policy') }}">Privacy Policy</a>
+            </p>
+        </div>
     </div>
 </footer>
 

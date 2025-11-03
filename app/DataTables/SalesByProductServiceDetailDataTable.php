@@ -105,7 +105,7 @@ class SalesByProductServiceDetailDataTable extends DataTable
 
         foreach ($grouped as $productId => $transactions) {
             // Use product_id as stable key
-            $groupKey = 'product-' . (string)$productId;
+            $groupKey = 'product-' . (string) $productId;
 
             // Display name from first transaction (preserve original case/label)
             $displayName = $transactions->first()->product_name ?? 'Unknown';
@@ -124,11 +124,11 @@ class SalesByProductServiceDetailDataTable extends DataTable
 
             // Log group info for debugging
             \Log::info('SalesByProduct grouping', [
-                'product_id'   => $productId,
+                'product_id' => $productId,
                 'product_name' => $displayName,
-                'count'        => $transactions->count(),
-                'ids'          => $transactions->pluck('id')->toArray(),
-                'group_total'  => $groupTotalRaw,
+                'count' => $transactions->count(),
+                'ids' => $transactions->pluck('id')->toArray(),
+                'group_total' => $groupTotalRaw,
             ]);
 
             // --- Push group header first (so header shows above the items) ---
@@ -264,30 +264,33 @@ class SalesByProductServiceDetailDataTable extends DataTable
             ->where('i.created_by', $ownerId)
             ->where('i.status', '!=', 0);
 
-        if ($startDate) {
-            $q->whereDate('i.issue_date', '>=', $startDate);
-        }
-        if ($endDate) {
-            $q->whereDate('i.issue_date', '<=', $endDate);
-        }
+            if ($startDate) {
+                $q->whereDate('i.issue_date', '>=', $startDate);
+            }
 
-        if (request()->filled('product_name')) {
-            $q->where('ps.name', 'like', '%' . request('product_name') . '%');
-        }
+            if ($endDate) {
+                $q->whereDate('i.issue_date', '<=', $endDate);
+            }
 
-        if (request()->filled('customer_name')) {
-            $q->where('c.name', 'like', '%' . request('customer_name') . '%');
-        }
 
-        if (request()->filled('category')) {
-            $q->where('ps.category_id', request('category'));
-        }
+            if (request()->filled('product_name')) {
+                $q->where('ps.name', 'like', '%' . request('product_name') . '%');
+            }
 
-        if (request()->filled('type')) {
-            $q->where('ps.type', request('type'));
-        }
+            if (request()->filled('customer_name')) {
+                $q->where('c.name', 'like', '%' . request('customer_name') . '%');
+            }
 
-        return $q->orderBy('i.issue_date', 'desc');
+            if (request()->filled('category')) {
+                $q->where('ps.category_id', request('category'));
+            }
+
+            if (request()->filled('type')) {
+                $q->where('ps.type', request('type'));
+            }
+
+            return $q->orderBy('i.issue_date', 'desc');
+        }
     }
 
 

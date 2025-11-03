@@ -5337,19 +5337,6 @@ class ReportController extends Controller
                 ->limit(3)->pluck('id'),
         ];
 
-        // Debug: Log request details
-        \Log::info('SalesByCustomerDetail Controller Debug', [
-            'user_id' => $user->id,
-            'user_type' => $user->type,
-            'owner_id' => $ownerId,
-            'column' => $column,
-            'start_date' => $start,
-            'end_date' => $end,
-            'customers_count' => $customers->count(),
-            'request_params' => $request->all(),
-            'debug_info' => $debugInfo
-        ]);
-
         // Pass filters to the DataTable ajax so query() can read request('...')
         $dataTable = $dataTable->with([
             'start_date' => $start,

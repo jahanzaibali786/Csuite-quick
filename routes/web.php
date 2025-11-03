@@ -165,6 +165,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TapController;
 use App\Http\Controllers\AiSqlController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\YodleeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -187,31 +188,39 @@ use Illuminate\Support\Facades\Route;
 
 require __DIR__ . '/auth.php';
 
+use App\Http\Controllers\QuickBooksImportController;
 use App\Http\Controllers\QuickBooksApiController;
+Route::get('/license', [QuickBooksApiController::class, 'license'])->name('license');
+Route::get('/privacy-policy', [QuickBooksApiController::class, 'privacyPolicy'])->name('privacy.policy');
+
 
 // page and api endpoints
 Route::get('/quickbooks/sync', [QuickBooksApiController::class, 'index'])->name('quickbooks.sync');
 Route::get('/quickbooks/connect', [QuickBooksApiController::class, 'connect'])->name('quickbooks.connect');
 Route::get('/quickbooks/callback', [QuickBooksApiController::class, 'callback'])->name('quickbooks.callback');
+Route::get('/quickbooks/disconnect', [QuickBooksApiController::class, 'disconnect'])->name('quickbooks.disconnect');
 
-Route::post('/quickbooks/journal-report', [QuickBooksApiController::class, 'journalReport'])
-    ->name('quickbooks.journalReport');
-Route::post('/quickbooks/bill-payments', [QuickBooksApiController::class, 'billPayments'])
-    ->name('quickbooks.api.billPayments');
-Route::post('/quickbooks/bills-with-payments', [QuickBooksApiController::class, 'billsWithPayments'])
-    ->name('quickbooks.billsWithPayments');
-Route::post('/quickbooks/invoices-with-payments', [QuickBooksApiController::class, 'invoicesWithPayments'])
-    ->name('quickbooks.invoicesWithPayments');
 
-    Route::post('/quickbooks/deposits', [QuickBooksApiController::class, 'deposits'])
-    ->name('quickbooks.deposits');
-    Route::post('/quickbooks/deposits-with-voucher', [QuickBooksApiController::class, 'depositsWithVoucher'])
-    ->name('quickbooks.depositsWithVoucher');   
-    // salesreceipts
-    Route::post('/quickbooks/sales-receipts', [QuickBooksApiController::class, 'getSalesReceipts'])
-    ->name('quickbooks.salesReceipts');
-Route::post('/quickbooks/journal-fr-report', [QuickBooksApiController::class, 'journalFRReport'])
-    ->name('quickbooks.journalFRReport');
+Route::post('/quickbooks/getAllTransactionsGrouped', [QuickBooksApiController::class, 'getAllTransactionsGrouped'])->name('quickbooks.getAllTransactionsGrouped');
+Route::post('/quickbooks/getTransfers', [QuickBooksApiController::class, 'getTransfers'])->name('quickbooks.getTransfers');
+Route::post('/quickbooks/getPayrollAdjustments', [QuickBooksApiController::class, 'getPayrollAdjustments'])->name('quickbooks.getPayrollAdjustments');
+Route::post('/quickbooks/getPayrollRuns', [QuickBooksApiController::class, 'getPayrollRuns'])->name('quickbooks.getPayrollRuns');
+Route::post('/quickbooks/getEstimates', [QuickBooksApiController::class, 'getEstimates'])->name('quickbooks.getEstimates');
+Route::post('/quickbooks/sales-tax-payments', [QuickBooksApiController::class, 'salesTaxPayments'])->name('quickbooks.taxpayments');
+Route::post('/quickbooks/refunds', [QuickBooksApiController::class, 'refunds'])->name('quickbooks.refunds');
+Route::post('/quickbooks/credit-memos', [QuickBooksApiController::class, 'creditMemos'])->name('quickbooks.creditmemos');
+Route::post('/quickbooks/credit-card-credits', [QuickBooksApiController::class, 'creditCardCredits'])->name('quickbooks.creditcardcredits');
+Route::post('/quickbooks/credit-card-credits-with-bills', [QuickBooksApiController::class, 'creditCardCreditsWithBills'])->name('quickbooks.creditcardcreditswithbills');
+Route::post('/quickbooks/expense-with-payments', [QuickBooksApiController::class, 'expensesWithPayments'])->name('quickbooks.expensewithpayments');
+Route::post('/quickbooks/journal-report', [QuickBooksApiController::class, 'journalReport'])->name('quickbooks.journalReport');
+Route::post('/quickbooks/bill-payments', [QuickBooksApiController::class, 'billPayments'])->name('quickbooks.api.billPayments');
+Route::post('/quickbooks/bills-with-payments', [QuickBooksApiController::class, 'billsWithPayments'])->name('quickbooks.billsWithPayments');
+Route::post('/quickbooks/invoices-with-payments', [QuickBooksApiController::class, 'invoicesWithPayments'])->name('quickbooks.invoicesWithPayments');
+Route::post('/quickbooks/deposits', [QuickBooksApiController::class, 'deposits'])->name('quickbooks.deposits');
+Route::post('/quickbooks/deposits-with-voucher', [QuickBooksApiController::class, 'depositsWithVoucher'])->name('quickbooks.depositsWithVoucher');   
+Route::post('/quickbooks/sales-receipts', [QuickBooksApiController::class, 'getSalesReceipts'])->name('quickbooks.salesReceipts');
+Route::post('/quickbooks/journal-fr-report', [QuickBooksApiController::class, 'journalFRReport'])->name('quickbooks.journalFRReport');
+
 Route::post('/quickbooks/items', [QuickBooksApiController::class, 'items'])->name('quickbooks.items');
 Route::post('/quickbooks/journals', [QuickBooksApiController::class, 'journalEntries'])->name('quickbooks.journals');
 Route::post('/quickbooks/api/invoices', [QuickBooksApiController::class, 'invoices'])->name('quickbooks.api.invoices');
@@ -219,7 +228,19 @@ Route::post('/quickbooks/api/bills', [QuickBooksApiController::class, 'bills'])-
 Route::post('/quickbooks/api/customers', [QuickBooksApiController::class, 'customers'])->name('quickbooks.api.customers');
 Route::post('/quickbooks/api/chart-of-accounts', [QuickBooksApiController::class, 'chartOfAccounts'])->name('quickbooks.api.chartOfAccounts');
 Route::post('/quickbooks/api/vendors', [QuickBooksApiController::class, 'vendors'])->name('quickbooks.api.vendors');
+Route::post('/quickbooks/import/invoices', [QuickBooksImportController::class, 'importInvoices'])->name('quickbooks.import.invoices');
+Route::post('/quickbooks/import/items', [QuickBooksImportController::class, 'items'])->name('quickbooks.import.items');
+Route::post('/quickbooks/import/customers', [QuickBooksImportController::class, 'customers'])->name('quickbooks.import.customers');
+Route::post('/quickbooks/import/chart-of-accounts', [QuickBooksImportController::class, 'chartOfAccounts'])->name('quickbooks.import.chartOfAccounts');
+Route::post('/quickbooks/import/vendors', [QuickBooksImportController::class, 'vendors'])->name('quickbooks.import.vendors');
+Route::get('/quickbooks/import/invoices/view', [QuickBooksImportController::class, 'showImportView'])->name('quickbooks.import.view');
+Route::post('/quickbooks/import/bills', [QuickBooksImportController::class, 'importBills'])->name('quickbooks.import.bills');
+Route::post('/quickbooks/import/expenses', [QuickBooksImportController::class, 'importExpenses'])->name('quickbooks.import.expenses');
+Route::post('/quickbooks/import/employees', [QuickBooksImportController::class, 'importEmployees'])->name('quickbooks.import.employees');
+Route::post('/quickbooks/import/journalReport', [QuickBooksImportController::class, 'journalReport'])->name('quickbooks.import.journalReport');
 Route::post('/quickbooks/api/query', [QuickBooksApiController::class, 'rawQuery'])->name('quickbooks.api.rawQuery'); 
+
+Route::get('/Journalledger', [VoucherController::class, 'Journalledger'])->name('Journalledger.index');
 
 // All Reports Route
 Route::get('/reports', [ReportController::class, 'reports'])->name('allReports');
@@ -232,7 +253,7 @@ Route::post('/ai-sql', [AiSqlController::class, 'ask'])->name('ai-sql.ask')->mid
 Route::get('/taskCreationOnDashboard-list', [ProjectTaskController::class, 'taskCreationOnDashboardList'])->name('task-Creation-On-Dashboard-List')->middleware(['auth', 'XSS', 'revalidate']);
 Route::get('/task-Creation-On-Dashboard-create', [ProjectTaskController::class, 'taskCreationOnDashboardCreate'])->name('task-Creation-On-Dashboard-Create')->middleware(['auth', 'XSS', 'revalidate']);
 Route::get('/task-Creation-On-Dashboard-edit', [ProjectTaskController::class, 'taskCreationOnDashboardEdit'])->name('task-Creation-On-Dashboard-Edit')->middleware(['auth', 'XSS', 'revalidate']);
-Route::delete('/tasks/{task}', [ProjectTaskController::class, 'taskCreationOnDashboardDestroy'])->name('task-Creation-On-Dashboard-Delete')->middleware(['auth','XSS','revalidate']);
+Route::delete('/tasks/{task}', [ProjectTaskController::class, 'taskCreationOnDashboardDestroy'])->name('task-Creation-On-Dashboard-Delete')->middleware(['auth', 'XSS', 'revalidate']);
 Route::post('/task-Creation-On-Dashboard-store', [ProjectTaskController::class, 'taskCreationOnDashboardStore'])->name('task-Creation-On-Dashboard-Store')->middleware(['auth', 'XSS', 'revalidate']);
 Route::post('/task-Creation-On-Dashboard-update', [ProjectTaskController::class, 'taskCreationOnDashboardUpdate'])->name('task-Creation-On-Dashboard-Update')->middleware(['auth', 'XSS', 'revalidate']);
 
@@ -248,8 +269,31 @@ Route::post('/plaid/transfer', 'App\Http\Controllers\PlaidController@createTrans
 Route::get('/plaid/relink/token', 'App\Http\Controllers\PlaidController@createRelinkToken')->name('plaid.relink.token');
 Route::post('/plaid/transaction', 'App\Http\Controllers\PlaidController@placeTransaction')->name('plaid.transaction');
 Route::post('/plaid/exchange-public-token', 'App\Http\Controllers\PlaidController@exchangePublicToken')->name('plaid.exchangePublicToken');
+// Route::get('/yodlee/test', function () {
+//     try {
+//         $yodleeService = new \App\Services\YodleeService();
+//         $adminToken = $yodleeService->getAdminToken();
 
-///copy link
+//         return response()->json([
+//             'success' => true,
+//             'message' => 'Yodlee configuration is working!',
+//             'token_preview' => substr($adminToken, 0, 20) . '...',
+//         ]);
+//     } catch (\Exception $e) {
+//         return response()->json([
+//             'success' => false,
+//             'message' => $e->getMessage(),
+//         ], 500);
+//     }
+// });
+Route::get('/yodlee', [YodleeController::class, 'index']);
+Route::get('/yodlee2', [YodleeController::class, 'index2']);
+
+// API routes
+Route::get('/fastlink-token', [YodleeController::class, 'getFastlinkToken']);
+Route::post('/api/yodlee/get-access-token', [YodleeController::class, 'getAccessToken']);
+Route::post('/api/yodlee/get-transactions', [YodleeController::class, 'getTransactions']);
+Route::post('/api/yodlee/get-accounts', [YodleeController::class, 'getAccounts']);    ///copy link
 Route::get('/customer/invoice/{id}/', [InvoiceController::class, 'invoiceLink'])->name('invoice.link.copy');
 Route::get('invoice/recurring-invoices', [InvoiceController::class, 'recurringInvoicesOrPayments'])->name('invoice.recurring-invoices');
 Route::get('/vender/bill/{id}/', [BillController::class, 'invoiceLink'])->name('bill.link.copy');

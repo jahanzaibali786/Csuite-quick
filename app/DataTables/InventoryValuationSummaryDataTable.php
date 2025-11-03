@@ -49,7 +49,6 @@ class InventoryValuationSummaryDataTable extends DataTable
 
         // ---- AS-OF quantity: use only "To" (end_date) ----
         $endDT = request()->get('end_date') ?? request()->get('endDate') ?? date('Y-m-d');
-
         // Movement mapping (edit as your app uses)
         $incoming = [
             'bill',
