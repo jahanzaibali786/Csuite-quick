@@ -101,10 +101,10 @@ class ProposalsByCustomerDataTable extends DataTable
             $status = request('status');
             $query->where('proposals.status', $status);
         }
-
-        if (request()->filled('start_date') && request()->filled('end_date')) {
-            $startDate = request('start_date');
-            $endDate = request('end_date');
+        // dd(request('startDate'), request('endDate'));
+        if (request()->filled('startDate') && request()->filled('endDate')) {
+            $startDate = request('startDate');
+            $endDate = request('endDate');
             $query->whereBetween('proposals.issue_date', [$startDate, $endDate]);
         }
 
