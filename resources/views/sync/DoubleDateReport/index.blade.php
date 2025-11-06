@@ -41,7 +41,8 @@
                                 data-action="pdf">Export to
                                 PDF</button>
                         </div>
-                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to
+                            CSV</button> --}}
                     </div>
                 </div>
             </div>
@@ -49,12 +50,12 @@
 
         <script>
             // Show modal on export button click
-            $('.btn-icon[title="Export"]').on('click', function() {
+            $('.btn-icon[title="Export"]').on('click', function () {
                 $('#exportModal').modal('show');
             });
 
             // Handle export actions
-            $('#exportModal button[data-action]').on('click', function() {
+            $('#exportModal button[data-action]').on('click', function () {
                 // Hide modal after action
                 $('#exportModal').modal('hide');
             });
@@ -142,7 +143,8 @@
                             </div>
                             <div class="filter-item col-md-1">
                                 <label class="filter-label">From</label>
-                                {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                {{-- <input type="text" id="daterange" class="form-control "
+                                    value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
                                 <input type="date" class="form-control" name="start_date" id="filter-start-date"
                                     value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
                             </div>
@@ -166,116 +168,119 @@
                             <!-- Action buttons row -->
                             <div class="d-flex gap-2 justify-content-end align-items-center">
 
-                        <button class="btn btn-outline" id="columns-btn">
-                            <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
-                        </button>
+                                <button class="btn btn-outline" id="columns-btn">
+                                    <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
+                                </button>
 
-                        <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
-                            data-bs-target="#filterSidebar" aria-controls="filterSidebar">
-                            <i class="fa fa-filter"></i> Filter
-                        </button>
+                                <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
+                                    data-bs-target="#filterSidebar" aria-controls="filterSidebar">
+                                    <i class="fa fa-filter"></i> Filter
+                                </button>
 
-                        {{-- Filter Side Bar --}}
-                        <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="filterSidebar"
-                            aria-labelledby="filterSidebarLabel">
-                            <div class="offcanvas-header " style="background: #f9fafb; border-bottom: 1px solid #e6e6e6;">
-                                <h5 class="offcanvas-title" id="filterSidebarLabel">
-                                    Filters
-                                </h5>
-                                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                                    aria-label="Close">
-                                    <i class="fa fa-close"></i>
+                                {{-- Filter Side Bar --}}
+                                <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="filterSidebar"
+                                    aria-labelledby="filterSidebarLabel">
+                                    <div class="offcanvas-header "
+                                        style="background: #f9fafb; border-bottom: 1px solid #e6e6e6;">
+                                        <h5 class="offcanvas-title" id="filterSidebarLabel">
+                                            Filters
+                                        </h5>
+                                        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                            aria-label="Close">
+                                            <i class="fa fa-close"></i>
+                                        </button>
+                                    </div>
+                                    <div class="offcanvas-body">
+                                        <div class="filter-item mb-2">
+                                            <label class="filter-label">Report period</label>
+                                            <select id="sidebar-filter-period" class="form-control filter-period">
+                                                <option value="all_dates">All Dates</option>
+                                                <option value="custom_date">Custom dates</option>
+                                                <option value="today">Today</option>
+                                                <option value="this_week">This week</option>
+                                                <option value="this_week_to_date">This week to date</option>
+                                                <option value="this_month">This month</option>
+                                                <option value="this_month_to_date" selected>This month to date</option>
+                                                <option value="this_quarter">This quarter</option>
+                                                <option value="this_quarter_to_date">This quarter to date</option>
+                                                <option value="this_year">This year</option>
+                                                <option value="this_year_to_date">This year to date</option>
+                                                <option value="this_year_to_last_month">This year to last month</option>
+                                                <option value="yesterday">Yesterday</option>
+                                                <option value="recent">Recent</option>
+                                                <option value="last_week">Last week</option>
+                                                <option value="last_week_to_date">Last week to date</option>
+                                                <option value="last_week_to_today">Last week to today</option>
+                                                <option value="last_month">Last month</option>
+                                                <option value="last_month_to_date">Last month to date</option>
+                                                <option value="last_month_to_today">Last month to today</option>
+                                                <option value="last_quarter">Last quarter</option>
+                                                <option value="last_quarter_to_date">Last quarter to date</option>
+                                                <option value="last_quarter_to_today">Last quarter to today</option>
+                                                <option value="last_year">Last year</option>
+                                                <option value="last_year_to_date">Last year to date</option>
+                                                <option value="last_year_to_today">Last year to today</option>
+                                                <option value="last_7_days">Last 7 days</option>
+                                                <option value="last_30_days">Last 30 days</option>
+                                                <option value="last_90_days">Last 90 days</option>
+                                                <option value="last_12_months">Last 12 months</option>
+                                                <option value="since_30_days_ago">Since 30 days ago</option>
+                                                <option value="since_60_days_ago">Since 60 days ago</option>
+                                                <option value="since_90_days_ago">Since 90 days ago</option>
+                                                <option value="since_365_days_ago">Since 365 days ago</option>
+                                                <option value="next_week">Next week</option>
+                                                <option value="next_4_weeks">Next 4 weeks</option>
+                                                <option value="next_month">Next month</option>
+                                                <option value="next_quarter">Next quarter</option>
+                                                <option value="next_year">Next year</option>
+                                            </select>
+
+                                        </div>
+
+                                        <div class="filter-item mb-2">
+                                            <label class="filter-label">from</label>
+                                            {{-- <input type="text" id="daterange" class="form-control "
+                                                value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                            <input type="date" class="form-control mb-2" name="start_date"
+                                                id="sidebar-filter-start-date"
+                                                value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                                            <label class="filter-label">To</label>
+                                            <input type="date" class="form-control " name="end_date"
+                                                id="sidebar-filter-end-date"
+                                                value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                {{-- JS to sync filters --}}
+                                <script>
+                                    $(document).ready(function () {
+                                        // Sync Report Period
+                                        $('#sidebar-filter-period').on('change', function () {
+                                            $('#header-filter-period').val($(this).val());
+                                        });
+                                        $('#header-filter-period').on('change', function () {
+                                            $('#sidebar-filter-period').val($(this).val());
+                                        });
+                                    });
+                                </script>
+                                {{-- Filter Side Bar --}}
+
+                                <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
+                                    id="ExprotExcel" class="d-none">
+                                    <i class="fa fa-file-excel"></i> Excel
+                                </button>
+
+                                <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')"
+                                    id="ExprotPDF" class="d-none">
+                                    <i class="fa fa-file-excel"></i> Excel
+                                </button>
+
+                                <button class="btn btn-outline" id="general-options-btn">
+                                    <i class="fa fa-cog"></i> General options
                                 </button>
                             </div>
-                            <div class="offcanvas-body">
-                                <div class="filter-item mb-2">
-                                    <label class="filter-label">Report period</label>
-                                    <select id="sidebar-filter-period" class="form-control filter-period">
-                                        <option value="all_dates">All Dates</option>
-                                        <option value="custom_date">Custom dates</option>
-                                        <option value="today">Today</option>
-                                        <option value="this_week">This week</option>
-                                        <option value="this_week_to_date">This week to date</option>
-                                        <option value="this_month">This month</option>
-                                        <option value="this_month_to_date" selected>This month to date</option>
-                                        <option value="this_quarter">This quarter</option>
-                                        <option value="this_quarter_to_date">This quarter to date</option>
-                                        <option value="this_year">This year</option>
-                                        <option value="this_year_to_date">This year to date</option>
-                                        <option value="this_year_to_last_month">This year to last month</option>
-                                        <option value="yesterday">Yesterday</option>
-                                        <option value="recent">Recent</option>
-                                        <option value="last_week">Last week</option>
-                                        <option value="last_week_to_date">Last week to date</option>
-                                        <option value="last_week_to_today">Last week to today</option>
-                                        <option value="last_month">Last month</option>
-                                        <option value="last_month_to_date">Last month to date</option>
-                                        <option value="last_month_to_today">Last month to today</option>
-                                        <option value="last_quarter">Last quarter</option>
-                                        <option value="last_quarter_to_date">Last quarter to date</option>
-                                        <option value="last_quarter_to_today">Last quarter to today</option>
-                                        <option value="last_year">Last year</option>
-                                        <option value="last_year_to_date">Last year to date</option>
-                                        <option value="last_year_to_today">Last year to today</option>
-                                        <option value="last_7_days">Last 7 days</option>
-                                        <option value="last_30_days">Last 30 days</option>
-                                        <option value="last_90_days">Last 90 days</option>
-                                        <option value="last_12_months">Last 12 months</option>
-                                        <option value="since_30_days_ago">Since 30 days ago</option>
-                                        <option value="since_60_days_ago">Since 60 days ago</option>
-                                        <option value="since_90_days_ago">Since 90 days ago</option>
-                                        <option value="since_365_days_ago">Since 365 days ago</option>
-                                        <option value="next_week">Next week</option>
-                                        <option value="next_4_weeks">Next 4 weeks</option>
-                                        <option value="next_month">Next month</option>
-                                        <option value="next_quarter">Next quarter</option>
-                                        <option value="next_year">Next year</option>
-                                    </select>
-
-                                </div>
-
-                                <div class="filter-item mb-2">
-                                    <label class="filter-label">from</label>
-                                    {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
-                                    <input type="date" class="form-control mb-2" name="start_date"
-                                        id="sidebar-filter-start-date"
-                                        value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
-                                    <label class="filter-label">To</label>
-                                    <input type="date" class="form-control " name="end_date"
-                                        id="sidebar-filter-end-date" value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
-                                </div>
-                            </div>
-                        </div>
-
-
-                        {{-- JS to sync filters --}}
-                        <script>
-                            $(document).ready(function() {
-                                // Sync Report Period
-                                $('#sidebar-filter-period').on('change', function() {
-                                    $('#header-filter-period').val($(this).val());
-                                });
-                                $('#header-filter-period').on('change', function() {
-                                    $('#sidebar-filter-period').val($(this).val());
-                                });
-                            });
-                        </script>
-                        {{-- Filter Side Bar --}}
-
-                        <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
-                            id="ExprotExcel" class="d-none">
-                            <i class="fa fa-file-excel"></i> Excel
-                        </button>
-
-                        <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')"
-                            id="ExprotPDF" class="d-none">
-                            <i class="fa fa-file-excel"></i> Excel
-                        </button>
-
-                        <button class="btn btn-outline" id="general-options-btn">
-                            <i class="fa fa-cog"></i> General options
-                        </button>
-                    </div>
                         </div>
                     </div>
                 </div>
@@ -460,7 +465,7 @@
         </div>
     </div>
     <script>
-        $(document).on('click', '.group-toggle', function() {
+        $(document).on('click', '.group-toggle', function () {
             const groupKey = $(this).data('group');
             const icon = $(this).find('i');
             const rows = $('.group-' + groupKey);
@@ -509,25 +514,25 @@
                 div.classList.add('column-item');
                 div.setAttribute('data-column', colIndex);
                 div.innerHTML = `
-                <i class="fa fa-grip-vertical handle"></i>
-                <label class="checkbox-label">
-                    <input type="checkbox" ${isHidden ? '' : 'checked'}> ${columnName}
-                </label>
-            `;
+                    <i class="fa fa-grip-vertical handle"></i>
+                    <label class="checkbox-label">
+                        <input type="checkbox" ${isHidden ? '' : 'checked'}> ${columnName}
+                    </label>
+                `;
 
                 container.appendChild(div);
             });
         }
 
         // Build once after DataTable is initialized
-        $(document).ready(function() {
+        $(document).ready(function () {
             buildColumnsFromTable();
 
             const hideDefaultColumns = () => {
                 if (window.LaravelDataTables && window.LaravelDataTables['customer-balance-table']) {
                     const table = window.LaravelDataTables['customer-balance-table'];
 
-                    $('#customer-balance-table thead th.default-hidden').each(function() {
+                    $('#customer-balance-table thead th.default-hidden').each(function () {
                         const colIndex = table.column(this).index();
                         table.column(colIndex).visible(false);
 
@@ -536,7 +541,7 @@
                     });
 
 
-                    {{-- buildColumnsFromTable(); --}}
+                    { { --buildColumnsFromTable(); --} }
                 } else {
                     setTimeout(hideDefaultColumns, 500); // retry until ready
                     console.warn("DataTable instance not ready yet...");
@@ -547,12 +552,12 @@
         });
 
         // Rebuild on every table redraw
-        $('#customer-balance-table').on('draw.dt', function() {
+        $('#customer-balance-table').on('draw.dt', function () {
             buildColumnsFromTable();
         });
 
         // Delegated event binding for dynamically created checkboxes
-        $(document).on('change', '#sortable-columns input[type="checkbox"]', function() {
+        $(document).on('change', '#sortable-columns input[type="checkbox"]', function () {
             const columnIndex = $(this).closest('.column-item').data('column');
             const isVisible = $(this).prop('checked');
 
@@ -572,7 +577,7 @@
     </script>
 
     <script>
-        $('#customer-balance-table').on('click', '.toggle-bucket', function() {
+        $('#customer-balance-table').on('click', '.toggle-bucket', function () {
             let $row = $(this);
             let bucket = $row.attr('class').match(/bucket-([^\s]+)/)[1]; // "current"
             let $icon = $row.find('.icon');
@@ -584,6 +589,41 @@
             $icon.text($icon.text() === '▶' ? '▼' : '▶');
         });
     </script>
+
+    <script>
+        $(document).on('click', '.toggle-section', handleSectionToggle);
+
+        window.viewState = { viewType: 'detailed' };
+
+        function handleSectionToggle(e) {
+            e.preventDefault();
+            if (window.viewState.viewType === 'compact') return;
+
+            const $this = $(this);
+            const group = $this.data('group');
+            const $chevron = $this.find('.toggle-chevron');
+            const $childRows = $('.group-' + group);
+            const $sectionTotal = $('.section-total-display[data-group="' + group + '"], .section-total-amount[data-group="' + group + '"]');
+
+            if ($chevron.text() === "▼") {
+                // Collapse
+                $childRows.hide();
+                $chevron.text("▶");
+                $sectionTotal.show();
+            } else {
+                // Expand
+                $childRows.show();
+                $chevron.text("▼");
+                $sectionTotal.hide();
+            }
+        }
+
+        // Ensure event rebinding after DataTable redraw
+        $('#customer-balance-table').on('draw.dt', function () {
+            $(document).off('click', '.toggle-section').on('click', '.toggle-section', handleSectionToggle);
+        });
+    </script>
+
 
     <style>
         /* Base styling */
@@ -1051,10 +1091,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             /* .filter-group {
-                                                                                                                                                                    flex-direction: column;
-                                                                                                                                                                    width: 100%;
-                                                                                                                                                                    gap: 16px;
-                                                                                                                                                                } */
+                                                                                                                                                                        flex-direction: column;
+                                                                                                                                                                        width: 100%;
+                                                                                                                                                                        gap: 16px;
+                                                                                                                                                                    } */
 
             .filter-item {
                 width: 100%;
@@ -1104,14 +1144,14 @@
     <script>
         let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        {{-- console.log([window.Header, window.footerAlignment]) --}}
+        { { --console.log([window.Header, window.footerAlignment]) --} }
 
         function exportDataTable(tableId, pageTitle, format = 'excel') {
             let table = $('#' + tableId).DataTable();
 
             // Only get visible columns (skip auto-index)
             let columns = [];
-            $('#' + tableId + ' thead th:visible').each(function() {
+            $('#' + tableId + ' thead th:visible').each(function () {
                 columns.push($(this).text().trim());
             });
 
@@ -1125,13 +1165,13 @@
 
                 table.rows({
                     search: 'applied'
-                }).every(function() {
+                }).every(function () {
                     let rowData = this.data();
 
                     if (typeof rowData === 'object') {
                         // Only keep values for visible columns
                         let rowArray = [];
-                        table.columns(':visible').every(function(colIdx) {
+                        table.columns(':visible').every(function (colIdx) {
                             let val = rowData[this.dataSrc()] ?? '-';
                             rowArray.push(val);
                         });
@@ -1145,9 +1185,9 @@
             }
 
             // Get visible data rows (rendered DOM text, not raw data)
-            $('#' + tableId + ' tbody tr:visible').each(function() {
+            $('#' + tableId + ' tbody tr:visible').each(function () {
                 let rowArray = [];
-                $(this).find('td:visible').each(function() {
+                $(this).find('td:visible').each(function () {
                     rowArray.push($(this).text().trim());
                 });
                 data.push(rowArray);
@@ -1174,7 +1214,7 @@
                 xhrFields: {
                     responseType: 'blob'
                 },
-                success: function(blob, status, xhr) {
+                success: function (blob, status, xhr) {
                     let filename = xhr.getResponseHeader('Content-Disposition')
                         .split('filename=')[1]
                         .replace(/"/g, ''); //"
@@ -1182,7 +1222,7 @@
                     if (format === "print") {
                         let fileURL = URL.createObjectURL(blob);
                         let printWindow = window.open(fileURL);
-                        printWindow.onload = function() {
+                        printWindow.onload = function () {
                             printWindow.focus();
                             printWindow.print();
                         };
@@ -1193,7 +1233,7 @@
                         link.click();
                     }
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     console.error('Export failed:', xhr.responseText);
                     alert('Export failed! Check console.');
                 }
@@ -1202,7 +1242,7 @@
     </script>
 
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             // Global variables
             window.reportOptions = {
                 divideBy1000: false,
@@ -1240,7 +1280,7 @@
                     'This Quarter': [moment().startOf('quarter'), moment().endOf('quarter')],
                     'This Year': [moment().startOf('year'), moment().endOf('year')]
                 }
-            }, function(start, end) {
+            }, function (start, end) {
                 // Update hidden inputs with formatted dates for the server
                 $('#filter-start-date').val(start.format('YYYY-MM-DD'));
                 $('#filter-end-date').val(end.format('YYYY-MM-DD'));
@@ -1253,30 +1293,30 @@
             });
 
             // General Options Modal
-            $('#general-options-btn').on('click', function() {
+            $('#general-options-btn').on('click', function () {
                 $('#general-options-overlay').show();
             });
 
-            $('#close-general-options').on('click', function() {
+            $('#close-general-options').on('click', function () {
                 $('#general-options-overlay').hide();
             });
 
-            $('#general-options-overlay').on('click', function(e) {
+            $('#general-options-overlay').on('click', function (e) {
                 if (e.target === this) {
                     $('#general-options-overlay').hide();
                 }
             });
 
             // Columns Modal
-            $('#columns-btn').on('click', function() {
+            $('#columns-btn').on('click', function () {
                 $('#columns-overlay').show();
             });
 
-            $('#close-columns').on('click', function() {
+            $('#close-columns').on('click', function () {
                 $('#columns-overlay').hide();
             });
 
-            $('#columns-overlay').on('click', function(e) {
+            $('#columns-overlay').on('click', function (e) {
                 if (e.target === this) {
                     $('#columns-overlay').hide();
                 }
@@ -1287,14 +1327,14 @@
                 new Sortable(document.getElementById('sortable-columns'), {
                     animation: 150,
                     handle: '.handle',
-                    onEnd: function() {
+                    onEnd: function () {
                         updateColumnOrder();
                     }
                 });
             }
 
             // Handle period filter changes
-            $('.filter-period').on('change', function() {
+            $('.filter-period').on('change', function () {
                 updateDateRange($(this).val());
             });
 
@@ -1537,46 +1577,46 @@
             }
 
             // Handle date changes
-            $('#filter-start-date, #filter-end-date').on('apply.daterangepicker', function() {
+            $('#filter-start-date, #filter-end-date').on('apply.daterangepicker', function () {
                 updateDateDisplay();
                 refreshData();
             });
 
             // Handle account filter changes
-            $('#filter-account').on('change', function() {
+            $('#filter-account').on('change', function () {
                 refreshData();
             });
-            $('#filter-end-date').on('change', function() {
+            $('#filter-end-date').on('change', function () {
                 $('#sidebar-filter-end-date').val($(this).val());
                 updateDateDisplay();
                 refreshData();
             });
 
-            $('#filter-start-date').on('change', function() {
+            $('#filter-start-date').on('change', function () {
                 $('#sidebar-filter-end-date').val($(this).val());
                 updateDateDisplay();
                 refreshData();
             });
 
-            $('#sidebar-filter-end-date').on('change', function() {
+            $('#sidebar-filter-end-date').on('change', function () {
                 $('#filter-end-date').val($(this).val());
                 updateDateDisplay();
                 refreshData();
             });
 
-            $('#sidebar-filter-start-date').on('change', function() {
+            $('#sidebar-filter-start-date').on('change', function () {
                 $('#filter-start-date').val($(this).val());
                 updateDateDisplay();
                 refreshData();
             });
 
             // Handle accounting method changes
-            $('#accounting-method').on('change', function() {
+            $('#accounting-method').on('change', function () {
                 refreshData();
             });
 
             // Setup DataTable ajax parameters
-            $('#customer-balance-table').on('preXhr.dt', function(e, settings, data) {
+            $('#customer-balance-table').on('preXhr.dt', function (e, settings, data) {
                 data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
                 data.account_id = $('#filter-account').val();
@@ -1699,14 +1739,14 @@
             }
 
             // Apply general options when checkboxes change
-            $('.general-options-modal input, .general-options-modal select').on('change', function() {
+            $('.general-options-modal input, .general-options-modal select').on('change', function () {
                 applyGeneralOptions();
             });
 
             // Column management
             function updateColumnOrder() {
                 const order = [];
-                $('#sortable-columns .column-item').each(function() {
+                $('#sortable-columns .column-item').each(function () {
                     const columnIndex = $(this).data('column');
                     if (columnIndex !== undefined) {
                         order.push(columnIndex);
@@ -1725,12 +1765,12 @@
             }
 
             // Handle column visibility
-            $('.columns-modal input[type="checkbox"]').on('change', function() {
+            $('.columns-modal input[type="checkbox"]').on('change', function () {
                 const columnIndex = $(this).closest('.column-item').data('column');
                 const isVisible = $(this).prop('checked');
 
                 if (columnIndex !== undefined && window.LaravelDataTables && window.LaravelDataTables[
-                        "customer-balance-table"]) {
+                    "customer-balance-table"]) {
                     try {
                         window.LaravelDataTables["customer-balance-table"].column(columnIndex).visible(
                             isVisible);
@@ -1749,7 +1789,7 @@
             }
 
             // Collapsible sections in General Options
-            $('.section-title').on('click', function() {
+            $('.section-title').on('click', function () {
                 const section = $(this).next('.option-group');
                 const icon = $(this).find('.fa-chevron-up, .fa-chevron-down');
 
@@ -1762,7 +1802,7 @@
             });
 
             // Add expand/collapse functionality for account groups
-            $(document).on('click', '.account-group', function() {
+            $(document).on('click', '.account-group', function () {
                 const accountId = $(this).data('account-id');
                 $('.account-row[data-parent="' + accountId + '"]').toggle();
 
@@ -1779,44 +1819,44 @@
             updateDateDisplay();
 
             // Print functionality
-            $('.btn-icon[title="Print"]').on('click', function() {
+            $('.btn-icon[title="Print"]').on('click', function () {
                 // Create print-friendly version
                 const printWindow = window.open('', '_blank');
                 const printContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>A/R Aging Summary Report - Print</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; }
-                            .report-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                            .company-name { text-align: center; font-size: 16px; margin-bottom: 10px; }
-                            .date-range { text-align: center; font-size: 14px; margin-bottom: 20px; }
-                            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                            th { background-color: #f5f5f5; font-weight: bold; }
-                            .text-right { text-align: right; }
-                            .negative-amount { color: red; }
-                            @media print { body { margin: 0; } }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="report-title">A/R Aging Summary Report</div>
-                        <div class="company-name">${$('.company-name').text()}</div>
-                        <div class="date-range">${$('.date-range').text()}</div>
-                        <table>
-                            ${$('.customer-balance-table').html()}
-                        </table>
-                    </body>
-                    </html>
-                `;
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>A/R Aging Summary Report - Print</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; margin: 20px; }
+                                .report-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                                .company-name { text-align: center; font-size: 16px; margin-bottom: 10px; }
+                                .date-range { text-align: center; font-size: 14px; margin-bottom: 20px; }
+                                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                th { background-color: #f5f5f5; font-weight: bold; }
+                                .text-right { text-align: right; }
+                                .negative-amount { color: red; }
+                                @media print { body { margin: 0; } }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="report-title">A/R Aging Summary Report</div>
+                            <div class="company-name">${$('.company-name').text()}</div>
+                            <div class="date-range">${$('.date-range').text()}</div>
+                            <table>
+                                ${$('.customer-balance-table').html()}
+                            </table>
+                        </body>
+                        </html>
+                    `;
                 printWindow.document.write(printContent);
                 printWindow.document.close();
                 printWindow.print();
             });
 
             // Save As functionality
-            $('.btn-save').on('click', function() {
+            $('.btn-save').on('click', function () {
                 const reportName = prompt('Enter report name:', 'A/R Aging Summary Report - ' + moment()
                     .format(
                         'YYYY-MM-DD'));
@@ -1882,17 +1922,17 @@
             }); */
 
             // View options functionality
-            $('#view-options-btn').on('click', function() {
+            $('#view-options-btn').on('click', function () {
                 alert('View options panel would open here with additional display settings');
             });
 
             // Filter button functionality
-            $('#filter-btn').on('click', function() {
+            $('#filter-btn').on('click', function () {
                 alert('Advanced filter panel would open here');
             });
 
             // Refresh button functionality
-            $('.btn-icon[title="Refresh"]').on('click', function() {
+            $('.btn-icon[title="Refresh"]').on('click', function () {
                 $(this).find('i').addClass('fa-spin');
                 refreshData();
                 setTimeout(() => {
@@ -1901,19 +1941,19 @@
             });
 
             // Initialize general options with default values
-            setTimeout(function() {
+            setTimeout(function () {
                 applyGeneralOptions();
                 updateColumnCountBadge();
             }, 100);
 
             // Format numbers in table based on options
-            $(document).on('draw.dt', '#customer-balance-table', function() {
+            $(document).on('draw.dt', '#customer-balance-table', function () {
                 if (window.reportOptions) {
-                    $('.customer-balance-table tbody tr').each(function() {
+                    $('.customer-balance-table tbody tr').each(function () {
                         const $row = $(this);
 
                         // Apply number formatting to amount columns
-                        $row.find('td').each(function(index) {
+                        $row.find('td').each(function (index) {
                             const $cell = $(this);
                             const text = $cell.text().trim();
 
@@ -1960,7 +2000,7 @@
             });
 
             // Keyboard shortcuts
-            $(document).on('keydown', function(e) {
+            $(document).on('keydown', function (e) {
                 // Ctrl/Cmd + P for print
                 if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
                     e.preventDefault();
