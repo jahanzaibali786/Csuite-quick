@@ -127,9 +127,10 @@ class InventoryValuationDetailDataTable extends DataTable
             $query->where('product_services.name', 'LIKE', "%{$productName}%");
         }
 
-        if (request()->filled('start_date') && request()->filled('end_date')) {
-            $startDate = request('start_date');
-            $endDate = request('end_date');
+        // dd(request('startDate'), request('endDate'));
+        if (request()->filled('startDate') && request()->filled('endDate')) {
+            $startDate = request('startDate');
+            $endDate = request('endDate');
             $query->whereBetween('stock_reports.created_at', [$startDate, $endDate]);
         }
 

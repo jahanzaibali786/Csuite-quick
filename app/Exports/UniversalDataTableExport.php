@@ -31,8 +31,17 @@ class UniversalDataTableExport implements FromCollection, WithHeadings, WithStyl
 
             foreach ($row as $key => $value) {
                 if (is_string($value)) {
-                    // Preserve <h4>, <strong>, <b>
-                    $row[$key] = trim(strip_tags($value, '<h4><strong><b>'));
+                    // Decode HTML entities, including &nbsp;
+                    $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+                    // Strip unwanted tags but keep <b>, <strong>, <h4>
+                    $decoded = strip_tags($decoded, '<h4><strong><b>');
+
+                    // Replace non-breaking spaces with normal spaces
+                    $decoded = str_replace("\xC2\xA0", ' ', $decoded);
+                    $decoded = str_replace('&nbsp;', ' ', $decoded);
+
+                    $row[$key] = trim($decoded);
                 }
             }
 

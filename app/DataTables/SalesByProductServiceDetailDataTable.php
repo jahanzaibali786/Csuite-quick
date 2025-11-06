@@ -264,33 +264,32 @@ class SalesByProductServiceDetailDataTable extends DataTable
             ->where('i.created_by', $ownerId)
             ->where('i.status', '!=', 0);
 
-            if ($startDate) {
-                $q->whereDate('i.issue_date', '>=', $startDate);
-            }
-
-            if ($endDate) {
-                $q->whereDate('i.issue_date', '<=', $endDate);
-            }
-
-
-            if (request()->filled('product_name')) {
-                $q->where('ps.name', 'like', '%' . request('product_name') . '%');
-            }
-
-            if (request()->filled('customer_name')) {
-                $q->where('c.name', 'like', '%' . request('customer_name') . '%');
-            }
-
-            if (request()->filled('category')) {
-                $q->where('ps.category_id', request('category'));
-            }
-
-            if (request()->filled('type')) {
-                $q->where('ps.type', request('type'));
-            }
-
-            return $q->orderBy('i.issue_date', 'desc');
+        if ($startDate) {
+            $q->whereDate('i.issue_date', '>=', $startDate);
         }
+
+        if ($endDate) {
+            $q->whereDate('i.issue_date', '<=', $endDate);
+        }
+
+
+        if (request()->filled('product_name')) {
+            $q->where('ps.name', 'like', '%' . request('product_name') . '%');
+        }
+
+        if (request()->filled('customer_name')) {
+            $q->where('c.name', 'like', '%' . request('customer_name') . '%');
+        }
+
+        if (request()->filled('category')) {
+            $q->where('ps.category_id', request('category'));
+        }
+
+        if (request()->filled('type')) {
+            $q->where('ps.type', request('type'));
+        }
+
+        return $q->orderBy('i.issue_date', 'desc');
     }
 
 

@@ -190,6 +190,7 @@ require __DIR__ . '/auth.php';
 
 use App\Http\Controllers\QuickBooksImportController;
 use App\Http\Controllers\QuickBooksApiController;
+
 Route::get('/license', [QuickBooksApiController::class, 'license'])->name('license');
 Route::get('/privacy-policy', [QuickBooksApiController::class, 'privacyPolicy'])->name('privacy.policy');
 

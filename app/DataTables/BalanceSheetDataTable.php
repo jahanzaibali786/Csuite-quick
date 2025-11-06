@@ -73,7 +73,7 @@ class BalanceSheetDataTable extends DataTable
 
                     return $indent . '
                         <div class="toggle-section" data-section="' . $row->id . '">
-                            <i class="toggle-chevron">▶</i>
+                            <i class="toggle-chevron">▼</i>
                             <strong class="section-header">' . e($row->name) . '</strong>
                             <span class="section-total-amount" data-group="' . $row->id . '"> - ' . $sectionTotal . '</span>
                         </div>';
