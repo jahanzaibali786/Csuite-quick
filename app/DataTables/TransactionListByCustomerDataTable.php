@@ -255,9 +255,9 @@ class TransactionListByCustomerDataTable extends DataTable
         if (request()->filled('transaction_type') && request('transaction_type') !== '') {
             $query->where('transaction_lines.reference', request('transaction_type'));
         }
-
-        if (request()->filled('start_date') && request()->filled('end_date')) {
-            $query->whereBetween('transaction_lines.date', [request('start_date'), request('end_date')]);
+        
+        if (request()->filled('startDate') && request()->filled('endDate')) {
+            $query->whereBetween('transaction_lines.date', [request('startDate'), request('endDate')]);
         }
 
         // ordering so grouped results are consistent
