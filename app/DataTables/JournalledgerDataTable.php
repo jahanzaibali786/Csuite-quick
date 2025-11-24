@@ -15,6 +15,7 @@ class JournalLedgerDataTable extends DataTable
 
     public function __construct()
     {
+        ini_set('memory_limit', '512M');
         $this->companyId = \Auth::user()->type === 'company'
             ? \Auth::user()->creatorId()
             : \Auth::user()->ownedId();

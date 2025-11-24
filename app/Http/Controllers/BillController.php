@@ -107,7 +107,7 @@ class BillController extends Controller
             }
 
             // load bills
-            $bills = $query->with('category')->get();
+            $bills = $query->with('category')->paginate(10)->appends($request->all());
 
             // Ensure amount and open_balance exist as properties for blade; use fallbacks if model fields differ
             // If your model uses different field names, replace 'amount' / 'open_balance' below.
@@ -2384,7 +2384,40 @@ class BillController extends Controller
             return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
+    public function billpayments(Request $request)
+    {
+        // dd($request->all());
+        if (\Auth::user()->can('create payment bill')) {
+            $user = \Auth::user();
+            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
 
+            $vender = Vender::where($column, '=', $ownerId)->get()->pluck('name', 'id');
+            $vender->prepend('Select Vendor', '');
+
+            $account = BankAccount::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('holder_name', 'id');
+            $account->prepend('Select Account', '');
+
+            $category = ProductServiceCategory::where($column, '=', $ownerId)->where('type', '=', 'expense')->get()->pluck('name', 'id');
+            $category->prepend('Select Category', '');
+            $query = BillPayment::with('bankAccount');
+            if (!empty($request->date)) {
+                $date_range = explode(' - ', $request->date);
+                $query->whereBetween('date', $date_range);
+            }
+            if (!empty($request->vender)) {
+                $query->where('vender_id', '=', $request->vender);
+            }
+            //category
+            if (!empty($request->category)) {
+                $query->where('category_id', '=', $request->category);
+            }
+            $billpayments = $query->get();
+            return view('bill.payments', compact('billpayments','vender', 'account', 'category'));
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
     public function venderBill(Request $request)
     {
         if (\Auth::user()->can('manage vender bill')) {

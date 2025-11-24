@@ -58,6 +58,7 @@ $profile = asset(Storage::url('uploads/avatar/'));
                                     <th>{{ __('Contact') }}</th>
                                     <th>{{ __('Email') }}</th>
                                     <th>{{ __('Balance') }}</th>
+                                    <th>{{ __('Qb Bal') }}</th>
                                     <th>{{ __('Action') }}</th>
                                 </tr>
                             </thead>
@@ -78,6 +79,7 @@ $profile = asset(Storage::url('uploads/avatar/'));
                                         <td>{{ $Vender['contact'] }}</td>
                                         <td>{{ $Vender['email'] }}</td>
                                         <td>{{ \Auth::user()->priceFormat($Vender['balance']) }}</td>
+                                        <td>{{ \Auth::user()->priceFormat($Vender['qb_balance']) }}</td>
                                         <td class="Action">
                                             <span>
                                                     @if ($Vender['is_active'] == 0)

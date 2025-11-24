@@ -1,0 +1,24 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "dev-abdullah",
+    "dev-hakeem",
+    "dev-jz",
+    "dev-noman",
+    "main"
+  ],
+  "parent": {
+    "dev-abdullah": "main",
+    "dev-hakeem": "main",
+    "dev-jz": "main",
+    "dev-noman": "main",
+    "main": null
+  },
+  "order": [
+    "main",
+    "dev-abdullah",
+    "dev-hakeem",
+    "dev-jz",
+    "dev-noman"
+  ]
+}
