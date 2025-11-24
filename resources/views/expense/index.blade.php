@@ -101,10 +101,12 @@
                         <table class="table datatable">
                             <thead>
                             <tr>
-                                <th> {{__('Expense')}}</th>
-                                <th> {{__('Category')}}</th>
-                                <th> {{__('Date')}}</th>
-                                <th>{{__('Status')}}</th>
+                                <th class="text-center"> {{__('Expense')}}</th>
+                                <th class="text-center"> {{__('Vendor')}}</th>
+                                <th class="text-center">{{ __('Paid Amount') }}</th>
+                                <th class="text-center">{{ __('Due Amount') }}</th>
+                                <th class="text-center"> {{__('Date')}}</th>
+                                <th class="text-center">{{__('Status')}}</th>
                                 @if(Gate::check('edit bill') || Gate::check('delete bill') || Gate::check('show bill'))
                                     <th width="10%"> {{__('Action')}}</th>
                                 @endif
@@ -112,14 +114,24 @@
                             </thead>
                             <tbody>
                             @foreach ($expenses as $expense)
+                                @php
+                                        // compute amounts using model methods
+                                        $expenseTotal = (float) $expense->getTotal();
+                                        $expenseDue = (float) $expense->getDue();
+                                        $expensePaid = $expenseTotal - $expenseDue - $expense->billTotalDebitNote();
+                                @endphp
 
                                 <tr>
                                     <td class="Id">
                                         <a href="{{ route('expense.show',\Crypt::encrypt($expense->id)) }}" class="btn btn-outline-primary">{{ AUth::user()->expenseNumberFormat($expense->bill_id) }}</a>
                                     </td>
-                                    <td>{{ !empty($expense->category)?$expense->category->name:'-'}}</td>
-                                    <td>{{ Auth::user()->dateFormat($expense->bill_date) }}</td>
-                                    <td>
+                                    <td class="text-center align-middle">
+                                            {{ optional($expense->vender)->name ?? '-' }}
+                                        </td>
+                                    <td class="text-center align-middle">{{ \Auth::user()->priceFormat($expensePaid) }}</td>
+                                    <td class="text-center align-middle">{{ \Auth::user()->priceFormat($expenseDue) }}</td>
+                                    <td class="text-center align-middle">{{ Auth::user()->dateFormat($expense->bill_date) }}</td>
+                                    <td class="text-center align-middle">
                                         {{-- //colorful --}}
                                         @if($expense->status == 0)
                                             <span class="status_badge badge bg-secondary p-2 px-3 rounded">{{ __(\App\Models\Invoice::$statues[$expense->status]) }}</span>
@@ -140,7 +152,7 @@
                                         @endif
                                     </td>
                                     @if(Gate::check('edit bill') || Gate::check('delete bill') || Gate::check('show bill'))
-                                        <td class="Action">
+                                        <td class="Action text-center align-middle" >
                                             <span>
                                                 {{-- // request for approaval --}}
                                                 @if($expense->status == 0 || $expense->status == 7)

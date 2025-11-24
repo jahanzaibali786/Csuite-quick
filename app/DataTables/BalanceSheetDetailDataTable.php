@@ -9,6 +9,7 @@ use Yajra\DataTables\Services\DataTable;
 
 class BalanceSheetDetailDataTable extends DataTable
 {
+    protected $startDate;
     protected $asOfDate;
     protected $companyId;
     protected $owner;
@@ -16,6 +17,10 @@ class BalanceSheetDetailDataTable extends DataTable
 
     public function __construct()
     {
+        parent::__construct();
+        $this->startDate = request('startDate')
+            ? Carbon::parse(request('startDate'))->startOfDay()
+            : Carbon::now()->startOfMonth();
         $this->asOfDate = request('endDate')
             ? Carbon::parse(request('endDate'))->endOfDay()
             : Carbon::now()->endOfDay();
@@ -64,18 +69,18 @@ class BalanceSheetDetailDataTable extends DataTable
                 if ($row->is_type_total ?? false) {
                     return '<strong>Total ' . e($row->account_name) . '</strong>';
                 }
-                return '';
+                return $indent . e($row->date);
             })
-            ->addColumn('date', fn($row) => $row->date ?? '')
             ->addColumn('transaction_type', fn($row) => $row->transaction_type ?? '')
             ->addColumn('num', fn($row) => $row->num ?? '')
+            ->addColumn('name', fn($row) => $row->transaction_type_code ?? '')
             ->addColumn('memo', fn($row) => $row->memo ?? '')
             ->addColumn('split', fn($row) => $row->split_account ?? '')
             ->addColumn('debit', fn($row) => ($row->debit ?? null) ? number_format($row->debit, 2) : '&nbsp;')
             ->addColumn('credit', fn($row) => ($row->credit ?? null) ? number_format($row->credit, 2) : '&nbsp;')
             ->addColumn('amount', fn($row) => isset($row->amount) ? number_format($row->amount, 2) : '&nbsp;')
             ->addColumn('balance', fn($row) => isset($row->balance) ? number_format($row->balance, 2) : '&nbsp;')
-            ->addColumn('DT_RowClass', function($row) {
+            ->addColumn('DT_RowClass', function ($row) {
                 $classes = [];
                 if ($row->is_type_header ?? false) $classes[] = 'type-header-row';
                 if ($row->is_subtype_header ?? false) {
@@ -117,7 +122,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 }
                 return implode(' ', $classes);
             })
-            ->addColumn('DT_RowData', function($row) {
+            ->addColumn('DT_RowData', function ($row) {
                 $data = [];
                 if ($row->is_transaction ?? false) {
                     $data['transaction-id'] = $row->transaction_id ?? 0;
@@ -135,10 +140,13 @@ class BalanceSheetDetailDataTable extends DataTable
 
     public function query()
     {
+        // time out 0 
+        set_time_limit(0);
+
         // ---- CASH BASIS filter logic ----
         $voucherIds = [];
         $excludeAccounts = [];
-        // dd($this->accountingMethod);
+        
         if ($this->accountingMethod === 'cash') {
             $invoicePaymentVouchers = DB::table('invoice_payments')
                 ->where('date', '<=', $this->asOfDate)
@@ -151,7 +159,7 @@ class BalanceSheetDetailDataTable extends DataTable
                 ->whereNotNull('voucher_id')
                 ->pluck('voucher_id')
                 ->toArray();
-            // dd($invoicePaymentVouchers, $billPaymentVouchers);
+            
             $voucherIds = array_merge($invoicePaymentVouchers, $billPaymentVouchers);
 
             if (!empty($voucherIds)) {
@@ -164,29 +172,30 @@ class BalanceSheetDetailDataTable extends DataTable
             }
         }
 
-        $entries = DB::table('journal_items')
-            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
-            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+        $entries = DB::table('chart_of_accounts')
             ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
             ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.type', '=', 'chart_of_account_types.id')
-            ->where("journal_entries.{$this->owner}", $this->companyId)
-            ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate)))
-            ->whereIn('chart_of_account_types.name', ['Assets', 'Liabilities', 'Equity'])
-            ->when($this->accountingMethod === 'cash' && !empty($voucherIds), function($q) use ($voucherIds, $excludeAccounts) {
-                $q->whereIn('journal_entries.id', $voucherIds);
-                if (!empty($excludeAccounts)) {
-                    $q->whereNotIn('chart_of_accounts.id', $excludeAccounts);
-                }
+            ->leftJoin('journal_items', function ($join) {
+                $join->on('chart_of_accounts.id', '=', 'journal_items.account')
+                    ->leftJoin('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+                    ->whereBetween('journal_items.created_at', [
+                        date('Y-m-d 00:00:00', strtotime($this->startDate)),
+                        date('Y-m-d 23:59:59', strtotime($this->asOfDate)),
+                    ]);
+                    //  ->orWhereNull('journal_items.id');
             })
+            ->where("chart_of_accounts.{$this->owner}", $this->companyId)
+            ->whereIn('chart_of_account_types.name', ['Assets', 'Equity', 'Liabilities'])
             ->select([
                 'journal_entries.id as journal_id',
                 'journal_entries.date',
-                'journal_entries.voucher_type as transaction_type',
+                'journal_items.name as transaction_type',
+                'journal_items.type as transaction_type_code',
                 'journal_entries.reference as num',
-                'journal_entries.description as memo',
-                'journal_items.debit',
-                'journal_items.credit',
-                DB::raw('0 as amount'),
+                'journal_items.description as memo',
+                DB::raw('COALESCE(journal_items.debit, 0) as debit'),
+                DB::raw('COALESCE(journal_items.credit, 0) as credit'),
+                DB::raw('COALESCE(journal_items.debit, 0) - COALESCE(journal_items.credit, 0) as amount'),
                 'chart_of_accounts.id as account_id',
                 'chart_of_accounts.name as account_name',
                 'chart_of_accounts.code as account_code',
@@ -195,20 +204,28 @@ class BalanceSheetDetailDataTable extends DataTable
                 'chart_of_account_sub_types.name as subtype_name',
                 'chart_of_account_types.name as type_name',
             ])
-
+            ->orderBy('chart_of_account_types.name')
             ->orderBy('chart_of_account_sub_types.name')
             ->orderBy('chart_of_accounts.parent')
             ->orderBy('chart_of_accounts.name')
             ->orderBy('journal_entries.date')
             ->get();
 
-        // Grouping + formatting remains same
-        $groupedByType = $entries->groupBy('type_name');
+        // Grouping + formatting
+        // $groupedByType = $entries->groupBy('type_name');
+        $order = ['Assets', 'Liabilities', 'Equity'];
+
+        $groupedByType = $entries->groupBy('type_name')
+            ->sortBy(function ($group, $key) use ($order) {
+                return array_search($key, $order);
+            });
         $report = collect();
+        $totalAssets = 0;
         $totalLiabilities = 0;
         $totalEquity = 0;
-
+        
         foreach ($groupedByType as $typeName => $typeEntries) {
+
             $report->push((object)[
                 'is_type_header' => true,
                 'account_name' => $typeName,
@@ -216,9 +233,13 @@ class BalanceSheetDetailDataTable extends DataTable
             ]);
 
             $groupedBySubType = $typeEntries->groupBy('subtype_name');
+
+            $typeTotal = 0; // Reset type total before looping subtypes
+            
             foreach ($groupedBySubType as $subTypeName => $subEntries) {
                 $subtypeId = 'subtype_' . str_replace(' ', '_', strtolower($subTypeName ?: 'uncategorized'));
                 $hasAccounts = $subEntries->groupBy('account_id')->count() > 0;
+
                 $report->push((object)[
                     'is_subtype_header' => true,
                     'account_name' => $subTypeName ?: 'Uncategorized',
@@ -227,15 +248,14 @@ class BalanceSheetDetailDataTable extends DataTable
                     'level' => 1,
                 ]);
 
-                $report = $this->processAccounts($subEntries, $report, null, 2, $subtypeId);
+                // Process individual accounts and collect their balances
+                $accountBalances = [];
+                $report = $this->processAccounts($subEntries, $report, null, 2, $subtypeId, $accountBalances);
 
-                $subTypeTotal = $subEntries->sum(function ($l) use ($subEntries) {
-                    $accountType = $subEntries->first()->type_name;
-                    return in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
-                        ? (($l->debit ?? 0) - ($l->credit ?? 0))
-                        : (($l->credit ?? 0) - ($l->debit ?? 0));
-                });
+                // --- Calculate subtotal for this subtype from account balances ---
+                $subTypeTotal = array_sum($accountBalances);
 
+                // Push subtype total
                 $report->push((object)[
                     'is_subtype_total' => true,
                     'account_name' => $subTypeName ?: 'Uncategorized',
@@ -243,15 +263,35 @@ class BalanceSheetDetailDataTable extends DataTable
                     'balance' => $subTypeTotal,
                     'level' => 1,
                 ]);
+
+                $typeTotal += $subTypeTotal; // Add to type total
             }
 
-            $typeTotal = $typeEntries->sum(function ($l) use ($typeEntries) {
-                $accountType = $typeEntries->first()->type_name;
-                return in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
-                    ? (($l->debit ?? 0) - ($l->credit ?? 0))
-                    : (($l->credit ?? 0) - ($l->debit ?? 0));
-            });
+            // --- Add Profit & Loss for Equity ---
+            if ($typeName == 'Equity') {
+                $netProfit = $this->calculateNetProfit();
+                $netPreviousProfit = $this->calculatePerviousNetProfit();
+                
+                // Retained Earnings
+                $report->push((object)[
+                    'is_subtype_total' => true,
+                    'account_name' => "Retained Earnings",
+                    'balance' => $netPreviousProfit,
+                    'level' => 1,
+                ]);
 
+                // Net Income
+                $report->push((object)[
+                    'is_subtype_total' => true,
+                    'account_name' => "Net Income",
+                    'balance' => $netProfit,
+                    'level' => 1,
+                ]);
+
+                $typeTotal += $netProfit + $netPreviousProfit; // Add to Equity total
+            }
+
+            // --- Push type total ---
             $report->push((object)[
                 'is_type_total' => true,
                 'account_name' => $typeName,
@@ -259,162 +299,210 @@ class BalanceSheetDetailDataTable extends DataTable
                 'level' => 0,
             ]);
 
+            // Save totals for final summary
+            if ($typeName === 'Assets') $totalAssets = $typeTotal;
             if ($typeName === 'Liabilities') $totalLiabilities = $typeTotal;
-            if ($typeName === 'Equity') {
-                $totalEquity = $typeTotal;
-
-                // === Profit/Loss Section ===
-                $plEntries = DB::table('journal_items')
-                    ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
-                    ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
-                    ->leftJoin('chart_of_account_sub_types', 'chart_of_accounts.sub_type', '=', 'chart_of_account_sub_types.id')
-                    ->leftJoin('chart_of_account_types', 'chart_of_account_sub_types.type', '=', 'chart_of_account_types.id')
-                    ->where("journal_entries.{$this->owner}", $this->companyId)
-                    ->where('journal_items.created_at', '<=', date('Y-m-d 23:59:59', strtotime($this->asOfDate))) // Convert to date format for MySQL compatibility
-                    // ->where('journal_entries.status', 'draft')
-                    ->whereIn('chart_of_account_types.name', ['Income', 'Expenses', 'Costs of Goods Sold'])
-                    ->select([
-                        'journal_entries.id as journal_id',
-                        'journal_entries.date',
-                        'journal_entries.voucher_type as transaction_type',
-                        'journal_entries.reference as num',
-                        'journal_entries.description as memo',
-                        'journal_items.debit',
-                        'journal_items.credit',
-                        DB::raw('0 as amount'),
-                        'chart_of_accounts.id as account_id',
-                        'chart_of_accounts.name as account_name',
-                        'chart_of_accounts.code as account_code',
-                        'chart_of_accounts.parent as parent_id',
-                        'chart_of_account_sub_types.id as subtype_db_id',
-                        'chart_of_account_sub_types.name as subtype_name',
-                        'chart_of_account_types.name as type_name',
-                    ])
-                    ->orderBy('chart_of_account_types.name')
-                    ->orderBy('chart_of_account_sub_types.name')
-                    ->orderBy('chart_of_accounts.parent')
-                    ->orderBy('chart_of_accounts.name')
-                    ->orderBy('journal_entries.date')
-                    ->get();
-
-                $netProfit = $plEntries->sum(function ($l) {
-                    if ($l->type_name === 'Income') {
-                        return ($l->credit ?? 0) - ($l->debit ?? 0);
-                    } elseif ($l->type_name === 'Expenses' || $l->type_name === 'Costs of Goods Sold') {
-                        return -1 * (($l->debit ?? 0) - ($l->credit ?? 0));
-                    }
-                    return 0;
-                });
-
-                // === Show Accumulated Profit/Loss Section ===
-                $plSubtypeId = 'subtype_accumulated_profit_loss';
-                $report->push((object)[
-                    'is_subtype_header' => true,
-                    'account_name' => "Accumulated (Loss) / Profit",
-                    'subtype_id' => $plSubtypeId,
-                    'has_children' => $plEntries->count() > 0,
-                    'level' => 1,
-                ]);
-
-                $report = $this->processAccounts($plEntries, $report, null, 2, $plSubtypeId);
-
-                $report->push((object)[
-                    'is_subtype_total' => true,
-                    'account_name' => "Accumulated (Loss) / Profit",
-                    'parent_subtype_id' => $plSubtypeId,
-                    'balance' => $netProfit,
-                    'level' => 1,
-                ]);
-
-                $totalEquity += $netProfit;
-
-                // spacing
-                $report->push((object)[
-                    'account_name' => '',
-                    'balance' => null,
-                ]);
-
-                // === FINAL LIABILITIES & EQUITY TOTAL ===
-                $report->push((object)[
-                    'is_type_total' => true,
-                    'account_name' => " Liabilities & Equity ",
-                    'balance' => $totalLiabilities + $totalEquity,
-                    'level' => 0,
-                ]);
-
-            }
+            if ($typeName === 'Equity') $totalEquity = $typeTotal;
         }
+
+        // --- Push final Liabilities & Equity total ---
+        $report->push((object)[
+            'is_type_total' => true,
+            'account_name' => "Total Liabilities & Equity",
+            'balance' => $totalLiabilities + $totalEquity,
+            'level' => 0,
+        ]);
 
         return $report;
     }
 
-    protected function processAccounts($accounts, $report, $parentId = null, $level = 0, $subtypeId = null)
+    private function calculateNetProfit()
     {
-        $grouped = $accounts->where('parent_id', $parentId)->groupBy('account_id');
-        foreach ($grouped as $accountId => $lines) {
-            $balance = 0;
-            $hasTransactions = $lines->count() > 0;
-            $hasChildAccounts = $accounts->where('parent_id', $accountId)->count() > 0;
-            $hasChildren = $hasTransactions || $hasChildAccounts;
-
-            $report->push((object)[
-                'is_account_header' => true,
-                'account_name' => $lines->first()->account_name,
-                'account_code' => $lines->first()->account_code,
-                'account_id' => $accountId,
-                'parent_subtype_id' => $subtypeId,
-                'has_children' => $hasChildren,
-                'level' => $level,
-            ]);
-
-            foreach ($lines as $line) {
-                $accountType = $lines->first()->type_name;
-                $amount = in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
-                    ? (($line->debit ?? 0) - ($line->credit ?? 0))
-                    : (($line->credit ?? 0) - ($line->debit ?? 0));
-                $balance += $amount;
-
-                $splitAccounts = DB::table('journal_items')
-                    ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
-                    ->where('journal_items.journal', $line->journal_id)
-                    ->where('journal_items.account', '!=', $line->account_id)
-                    ->pluck('chart_of_accounts.name')
-                    ->implode(', ');
-
-                $report->push((object)[
-                    'is_transaction' => true,
-                    'parent_account_id' => $accountId,
-                    'parent_subtype_id' => $subtypeId,
-                    'transaction_id' => $line->journal_id,
-                    'date' => $line->date,
-                    'transaction_type' => $line->transaction_type,
-                    'num' => $line->num,
-                    'memo' => $line->memo,
-                    'split_account' => $splitAccounts,
-                    'debit' => (float) ($line->debit ?? 0),
-                    'credit' => (float) ($line->credit ?? 0),
-                    'amount' => (float) $amount,
-                    'balance' => $balance,
-                    'level' => $level + 1,
-                ]);
-            }
-
-            $report->push((object)[
-                'is_account_total' => true,
-                'account_name' => $lines->first()->account_name,
-                'parent_account_id' => $accountId,
-                'parent_subtype_id' => $subtypeId,
-                'balance' => $balance,
-                'level' => $level,
-            ]);
-
-            $childAccounts = $accounts->where('parent_id', $accountId);
-            if ($childAccounts->count() > 0) {
-                $report = $this->processAccounts($accounts, $report, $accountId, $level + 1, $subtypeId);
-            }
-        }
-        return $report;
+        $income = DB::table('journal_items')
+            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+            ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->whereBetween('journal_entries.date', [$this->startDate, $this->asOfDate])
+            ->where('chart_of_account_types.name', 'Income')
+            ->selectRaw('COALESCE(SUM(journal_items.credit - journal_items.debit), 0) as total')
+            ->value('total');
+            
+        $expensesAndCogs = DB::table('journal_items')
+            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+            ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->whereBetween('journal_entries.date', [$this->startDate, $this->asOfDate])
+            ->whereIn('chart_of_account_types.name', ['Expenses', 'Costs of Goods Sold'])
+            ->selectRaw('COALESCE(SUM(journal_items.debit - journal_items.credit), 0) as total')
+            ->value('total');
+            
+        return $income - $expensesAndCogs;
     }
+    
+    private function calculatePerviousNetProfit()
+    {
+        $income = DB::table('journal_items')
+            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+            ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->where('journal_entries.date', '<', $this->startDate)
+            ->where('chart_of_account_types.name', 'Income')
+            ->selectRaw('COALESCE(SUM(journal_items.credit - journal_items.debit), 0) as total')
+            ->value('total');
+            
+        $expensesAndCogs = DB::table('journal_items')
+            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+            ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->where('journal_entries.date', '<', $this->startDate)
+            ->whereIn('chart_of_account_types.name', ['Expenses', 'Costs of Goods Sold'])
+            ->selectRaw('COALESCE(SUM(journal_items.debit - journal_items.credit), 0) as total')
+            ->value('total');
+            
+        return $income - $expensesAndCogs;
+    }
+
+    protected function processAccounts($accounts, $report, $parentId = null, $level = 0, $subtypeId = null, &$accountBalances = [])
+{
+    // Get all direct child accounts under this parent
+    // $childAccounts = $accounts->where('parent_id', $parentId)->unique('account_id');
+    $childAccounts = $accounts->where('parent', $parentId)->unique('account_id');
+
+    foreach ($childAccounts as $account) {
+        $accountId   = $account->account_id;
+        $accountName = $account->account_name;
+        $accountCode = $account->account_code;
+        $accountType = $account->type_name;
+
+        // Transactions for this account
+        $lines = $accounts->where('account_id', $accountId);
+
+        // Check if it has child accounts
+        $hasChildAccounts = $accounts->where('parent', $accountId)->count() > 0;
+        $hasTransactions  = $lines->count() > 0;
+        $hasChildren      = $hasChildAccounts || $hasTransactions;
+
+        // -----------------------------
+        // 🔹 ACCOUNT HEADER
+        // -----------------------------
+        $report->push((object)[
+            'is_account_header'  => true,
+            'account_name'       => $accountName,
+            'account_code'       => $accountCode,
+            'account_id'         => $accountId,
+            'parent_subtype_id'  => $subtypeId,
+            'has_children'       => $hasChildren,
+            'level'              => $level,
+        ]);
+
+        // -----------------------------
+        // 🔹 OPENING BALANCE
+        // -----------------------------
+        $opening = DB::table('journal_items')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->where('journal_items.account', $accountId)
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->where('journal_entries.date', '<', date('Y-m-d', strtotime($this->startDate)))
+            ->selectRaw('
+                SUM(journal_items.debit) as total_debit,
+                SUM(journal_items.credit) as total_credit
+            ')
+            ->first();
+
+        $openingBalance = in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
+            ? (($opening->total_debit ?? 0) - ($opening->total_credit ?? 0))
+            : (($opening->total_credit ?? 0) - ($opening->total_debit ?? 0));
+
+        $balance = $openingBalance;
+
+        // Always show opening balance row
+        $report->push((object)[
+            'is_transaction'       => true,
+            'parent_account_id'    => $accountId,
+            'parent_subtype_id'    => $subtypeId,
+            'transaction_id'       => null,
+            'date'                 => null,
+            'transaction_type'     => 'Opening Balance',
+            'num'                  => '',
+            'memo'                 => '',
+            'split_account'        => '',
+            'debit'                => null,
+            'credit'               => null,
+            'amount'               => null,
+            'balance'              => $openingBalance,
+            'level'                => $level + 1,
+        ]);
+
+        // -----------------------------
+        // 🔹 TRANSACTIONS
+        // -----------------------------
+        foreach ($lines as $line) {
+            $amount = in_array($accountType, ['Assets', 'Expenses', 'Costs of Goods Sold'])
+                ? (($line->debit ?? 0) - ($line->credit ?? 0))
+                : (($line->credit ?? 0) - ($line->debit ?? 0));
+
+            $balance += $amount;
+
+            $splitAccounts = DB::table('journal_items')
+                ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+                ->where('journal_items.journal', $line->journal_id)
+                ->where('journal_items.account', '!=', $line->account_id)
+                ->pluck('chart_of_accounts.name')
+                ->implode(', ');
+
+            $report->push((object)[
+                'is_transaction'        => true,
+                'parent_account_id'     => $accountId,
+                'parent_subtype_id'     => $subtypeId,
+                'transaction_id'        => $line->journal_id,
+                'date'                  => $line->date,
+                'transaction_type'      => $line->transaction_type,
+                'transaction_type_code' => $line->transaction_type_code,
+                'num'                   => $line->num,
+                'memo'                  => $line->memo,
+                'split_account'         => $splitAccounts,
+                'debit'                 => (float) ($line->debit ?? 0),
+                'credit'                => (float) ($line->credit ?? 0),
+                'amount'                => (float) $amount,
+                'balance'               => $balance,
+                'level'                 => $level + 1,
+            ]);
+        }
+
+        // -----------------------------
+        // 🔹 RECURSIVE CHILDREN
+        // -----------------------------
+        $report = $this->processAccounts($accounts, $report, $accountId, $level + 1, $subtypeId, $accountBalances);
+
+        // -----------------------------
+        // 🔹 ADD CHILD BALANCES TO TOTAL
+        // -----------------------------
+        $childIds      = $accounts->where('parent_id', $accountId)->pluck('account_id')->toArray();
+        $childBalances = collect($accountBalances)->only($childIds)->sum();
+        $balance      += $childBalances;
+
+        $accountBalances[$accountId] = $balance;
+
+        // -----------------------------
+        // 🔹 ACCOUNT TOTAL
+        // -----------------------------
+        $report->push((object)[
+            'is_account_total'     => true,
+            'account_name'         => $accountName,
+            'parent_account_id'    => $accountId,
+            'parent_subtype_id'    => $subtypeId,
+            'balance'              => $balance,
+            'level'                => $level,
+        ]);
+    }
+
+    return $report;
+}
+
 
     public function html()
     {
@@ -445,10 +533,10 @@ class BalanceSheetDetailDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            Column::make('account')->title('Account'),
-            Column::make('date')->title('Date'),
+            Column::make('account')->title('Transaction Date'),
             Column::make('transaction_type')->title('Type'),
             Column::make('num')->title('Num'),
+            Column::make('name')->title('Name'),
             Column::make('memo')->title('Memo/Description'),
             Column::make('split')->title('Split Account'),
             Column::make('debit')->title('Debit')->addClass('text-right'),

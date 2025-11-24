@@ -10,6 +10,7 @@ use Yajra\DataTables\Services\DataTable;
 
 class BalanceSheetDataTable extends DataTable
 {
+    protected $startDate;
     protected $asOfDate;
     protected $companyId;
     protected $owner;
@@ -17,6 +18,11 @@ class BalanceSheetDataTable extends DataTable
 
     public function __construct()
     {
+        parent::__construct();
+
+        $this->startDate = request('startDate')
+            ? Carbon::parse(request('startDate'))->startOfDay()
+            : Carbon::now()->startOfYear();
         $this->asOfDate = request('endDate')
             ? Carbon::parse(request('endDate'))->endOfDay()->format('Y-m-d')
             : Carbon::now()->endOfDay()->format('Y-m-d');
@@ -69,13 +75,13 @@ class BalanceSheetDataTable extends DataTable
 
                 // Section header with toggle functionality
                 if ($row->is_section_header) {
-                    $sectionTotal = isset($row->section_total) ? number_format(abs($row->section_total), 2) : '0.00';
+                    $sectionTotal = isset($row->section_total) ? number_format($row->section_total, 2) : '0.00';
 
                     return $indent . '
                         <div class="toggle-section" data-section="' . $row->id . '">
                             <i class="toggle-chevron">▼</i>
                             <strong class="section-header">' . e($row->name) . '</strong>
-                            <span class="section-total-amount" data-group="' . $row->id . '"> - ' . $sectionTotal . '</span>
+                            <span class="section-total-amount" data-group="' . $row->id . '"> :  ' . $sectionTotal . '</span>
                         </div>';
                 }
 
@@ -104,17 +110,17 @@ class BalanceSheetDataTable extends DataTable
                 }
 
                 if ($row->is_total) {
-                    $amount = isset($row->net) ? abs($row->net) : 0;
+                    $amount = isset($row->net) ? $row->net : 0;
                     return '<strong class="total-amount">' . number_format($amount, 2) . '</strong>';
                 }
 
                 if ($row->is_subtotal) {
-                    $amount = isset($row->net) ? abs($row->net) : 0;
+                    $amount = isset($row->net) ? $row->net : 0;
                     return '<strong class="subtotal-amount">' . number_format($amount, 2) . '</strong>';
                 }
 
                 if ($row->is_child && isset($row->amount) && $row->amount != 0) {
-                    return '<span class="amount-cell">' . number_format(abs($row->amount), 2) . '</span>';
+                    return '<span class="amount-cell">' . number_format($row->amount, 2) . '</span>';
                 }
 
 
@@ -367,7 +373,66 @@ class BalanceSheetDataTable extends DataTable
                 'has_children' => false,
             ];
         });
+        
+        // ---------- Net Profit/Loss ----------
+        $netProfit = $this->calculateNetProfit();
+        $netpreviousProfit = $this->calculatePerviousNetProfit();
+
+        
+        // 🔍 Check for Owner's Equity or Owners Equity
+        $ownerEquity = $equityAccounts->first(function ($acc) {
+            return in_array(
+                strtolower(str_replace("’", "'", $acc->name)), // normalize fancy apostrophe
+                ["owner's equity", 'owners equity']
+            );
+        });
+
+        if ($ownerEquity) {
+            // ✅ If found, add net profit/loss into Owner's Equity account
+            $ownerEquity->amount += $netpreviousProfit;
+            $ownerEquity->net += $netpreviousProfit;
+        } else {
+            // ⚙️ If not found, append a new "Retained Earnings" row
+            $equityAccounts->push($emptyRow('Retained Earnings', 0, $netpreviousProfit, [
+                'id' => 'Retained Earnings',
+                'parent_id' => 'equity-section',
+                'amount' => $netpreviousProfit,
+                'net' => $netpreviousProfit,
+                'is_child' => true,
+                'is_section_header' => false,
+                'is_total' => false,
+                'is_subtotal' => false,
+                'has_children' => false,
+            ]));
+
+        }
+        // // --- Add accumulated profit/loss row ---
+        // $equityAccounts->push($emptyRow('Retained Earnings', 0, $netpreviousProfit, [
+        //     'id' => 'Retained Earnings',
+        //     'parent_id' => 'equity-section',
+        //     'amount' => $netpreviousProfit,
+        //     'net' => $netpreviousProfit,
+        //     'is_child' => true,
+        //     'is_section_header' => false,
+        //     'is_total' => false,
+        //     'is_subtotal' => false,
+        //     'has_children' => false,
+        // ]));
+
+        $equityAccounts->push($emptyRow('Net Income', 0, $netProfit, [
+            'id' => 'net-income',
+            'parent_id' => 'equity-section',
+            'amount' => $netProfit,
+            'net' => $netProfit,
+            'is_child' => true,
+            'is_section_header' => false,
+            'is_total' => false,
+            'is_subtotal' => false,
+            'has_children' => false,
+        ]));
+
         $totalEquity = $equityAccounts->sum(fn($acc) => $acc->amount);
+        // $totalEquity += $netProfit + $netpreviousProfit;
 
         // Add Equity section header
         $report->push($emptyRow('EQUITY', 0, 0, [
@@ -387,22 +452,11 @@ class BalanceSheetDataTable extends DataTable
             'is_subtotal' => true
         ]));
 
-        // ---------- Net Profit/Loss ----------
-        $netProfit = $this->calculateNetProfit();
-
-
-        // --- Add accumulated profit/loss row ---
-        $report->push($emptyRow('Accumulated (Loss) / Profit', 0, $netProfit, [
-            'id' => 'net-profit',
-            'class' => 'net-profit',
-            'is_total' => true, // This is a total row, but not a subtotal row
-        ]));
-
         // Empty row for spacing
         $report->push($emptyRow(''));
 
         // ---------- Final Total ----------
-        $grandTotal = $totalLiabilities + $totalEquity + $netProfit;
+        $grandTotal = $totalLiabilities + $totalEquity;
         $report->push($emptyRow('TOTAL LIABILITIES & EQUITY', 0, $grandTotal, [
             'id' => 'grand-total',
             'is_total' => true
@@ -414,22 +468,32 @@ class BalanceSheetDataTable extends DataTable
     {
         if ($this->accountingMethod !== 'cash') {
             // ---- Accrual ----
-            return DB::table('journal_items')
-                ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
-                ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
-                ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
-                ->where("journal_entries.{$this->owner}", $this->companyId)
-                ->where('journal_entries.date', '<=', $this->asOfDate)
-                ->whereIn('chart_of_account_types.name', ['Income', 'Expenses', 'Costs of Goods Sold'])
-                ->selectRaw('SUM(journal_items.credit - journal_items.debit) as net_profit')
-                ->value('net_profit') ?? 0;
+               $income = DB::table('journal_items')
+                    ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+                    ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+                    ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+                    ->where("journal_entries.{$this->owner}", $this->companyId)
+                    ->whereBetween('journal_entries.date', [$this->startDate, $this->asOfDate])
+                    ->where('chart_of_account_types.name', 'Income')
+                    ->selectRaw('COALESCE(SUM(journal_items.credit - journal_items.debit), 0) as total')
+                    ->value('total'); 
+                $expensesAndCogs = DB::table('journal_items')
+                    ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+                    ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+                    ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+                    ->where("journal_entries.{$this->owner}", $this->companyId)
+                    ->whereBetween('journal_entries.date', [$this->startDate, $this->asOfDate])
+                    ->whereIn('chart_of_account_types.name', ['Expenses', 'Costs of Goods Sold'])
+                    ->selectRaw('COALESCE(SUM(journal_items.debit - journal_items.credit), 0) as total')
+                    ->value('total');
+                return $income - $expensesAndCogs;
         }
 
         // ---- Cash-basis ----
         // 1. Get total payments grouped by invoice (up to cutoff date)
         $invoicePayments = DB::table('invoice_payments')
             ->select('invoice_id', DB::raw('SUM(amount) as paid_amount'))
-            ->where('date', '<=', $this->asOfDate)
+            ->whereBetween('date', [$this->startDate, $this->asOfDate])
             ->groupBy('invoice_id');
 
         // 2. Join those payments to the original invoice JEs to get revenue lines
@@ -447,7 +511,7 @@ class BalanceSheetDataTable extends DataTable
         // 3. Do the same for bills/expenses
         $billPayments = DB::table('bill_payments')
             ->select('bill_id', DB::raw('SUM(amount) as paid_amount'))
-            ->where('date', '<=', $this->asOfDate)
+            ->whereBetween('date', [$this->startDate, $this->asOfDate])
             ->groupBy('bill_id');
 
         $billExpenses = DB::table('journal_items')
@@ -465,8 +529,71 @@ class BalanceSheetDataTable extends DataTable
 
         return $invoiceIncome - $billExpenses;
     }
+    private function calculatePerviousNetProfit()
+    {
+        if ($this->accountingMethod !== 'cash') {
+            // ---- Accrual ----
+            $income = DB::table('journal_items')
+                ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+                ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+                ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+                ->where("journal_entries.{$this->owner}", $this->companyId)
+                ->where('journal_entries.date', '<', $this->startDate)
+                ->where('chart_of_account_types.name', 'Income')
+                ->selectRaw('COALESCE(SUM(journal_items.credit - journal_items.debit), 0) as total')
+                ->value('total');
+            $expensesAndCogs = DB::table('journal_items')
+                ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+                ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+                ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+                ->where("journal_entries.{$this->owner}", $this->companyId)
+                ->where('journal_entries.date', '<', $this->startDate)
+                ->whereIn('chart_of_account_types.name', ['Expenses', 'Costs of Goods Sold'])
+                ->selectRaw('COALESCE(SUM(journal_items.debit - journal_items.credit), 0) as total')
+                ->value('total');
+            return $income - $expensesAndCogs;
+        }
 
+        // ---- Cash-basis ----
+        // 1. Get total payments grouped by invoice (up to cutoff date)
+        $invoicePayments = DB::table('invoice_payments')
+            ->select('invoice_id', DB::raw('SUM(amount) as paid_amount'))
+            ->where('date', '<', $this->startDate)
+            ->groupBy('invoice_id');
 
+        // 2. Join those payments to the original invoice JEs to get revenue lines
+        $invoiceIncome = DB::table('journal_items')
+            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+            ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->joinSub($invoicePayments, 'ip', function ($join) {
+                $join->on('journal_entries.reference_id', '=', 'ip.invoice_id');
+            })
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->whereIn('chart_of_account_types.name', ['Income'])
+            ->selectRaw('SUM( LEAST(ip.paid_amount, journal_items.credit - journal_items.debit) ) as income')
+            ->value('income') ?? 0;
+        // 3. Do the same for bills/expenses
+        $billPayments = DB::table('bill_payments')
+            ->select('bill_id', DB::raw('SUM(amount) as paid_amount'))
+            ->where('date', '<', $this->startDate)
+            ->groupBy('bill_id');
+
+        $billExpenses = DB::table('journal_items')
+            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+            ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->joinSub($billPayments, 'bp', function ($join) {
+                $join->on('journal_entries.reference_id', '=', 'bp.bill_id');
+            })
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->whereIn('journal_entries.voucher_type', ['Bill', 'Expense'])
+            ->whereIn('chart_of_account_types.name', ['Expenses', 'Costs of Goods Sold'])
+            ->selectRaw('SUM( LEAST(bp.paid_amount, journal_items.debit - journal_items.credit) ) as expense')
+            ->value('expense') ?? 0;
+
+        return $invoiceIncome - $billExpenses;
+    }
 
     public function html()
     {
