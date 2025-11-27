@@ -327,6 +327,13 @@ class TrialBalanceDataTable extends DataTable
         $report = collect();
         $accountTypes = ['Assets', 'Liabilities', 'Equity', 'Income', 'Expenses'];
 
+        $netResult = $this->calculateNetProfit($startDate);
+        $netIncome = $netResult['net_profit'];
+        $debit = $netResult['debit'];
+        $credit = $netResult['credit'];
+        $netDebit = $netResult['total_debit'];
+        $netCredit = $netResult['total_credit'];
+        // dd($netResult,$debit,$credit,$netIncome,$totalDebit,$totalCredit);
         foreach ($accountTypes as $type) {
             $group = $accounts->where('account_type', $type);
 
@@ -364,6 +371,81 @@ class TrialBalanceDataTable extends DataTable
                 $report->push($accountRow);
             }
 
+            // 🧾 Step 3: Add Profit/Loss under Owner’s Equity
+            if ($type === 'Equity') {
+                // Find if Owner’s Equity account exists
+                $ownerEquity = $group->first(function ($acc) {
+                    return stripos($acc->name, 'owner') !== false && stripos($acc->name, 'equity') !== false;
+                });
+
+                if ($ownerEquity) {
+                // Add current Owner’s Equity balances
+                $totalDebit  = $ownerEquity->debit + $netDebit;
+                $totalCredit = $ownerEquity->credit + $netCredit;
+
+                // ⚖️ Calculate net balance
+                if ($totalCredit > $totalDebit) {
+                    $ownerEquity->debit = 0;
+                    $ownerEquity->credit = $totalCredit - $totalDebit;
+                } elseif ($totalDebit > $totalCredit) {
+                    $ownerEquity->debit = $totalDebit - $totalCredit;
+                    $ownerEquity->credit = 0;
+                } else {
+                    $ownerEquity->debit = $ownerEquity->credit = 0;
+                }
+
+                // Update Owner’s Equity row in report
+                $report = $report->map(function ($row) use ($ownerEquity) {
+                    if (isset($row->id) && $row->id === 'acc-' . $ownerEquity->id) {
+                        $row->debit = $ownerEquity->debit;
+                        $row->credit = $ownerEquity->credit;
+                    }
+                    return $row;
+                });
+
+            } else {
+                // If no Owner’s Equity, create one with net balance
+                $newEquityId = 'acc-owner-equity-temp';
+
+                if ($netCredit > $netDebit) {
+                    $ownerDebit = 0;
+                    $ownerCredit = $netCredit - $netDebit;
+                } elseif ($netDebit > $netCredit) {
+                    $ownerDebit = $netDebit - $netCredit;
+                    $ownerCredit = 0;
+                } else {
+                    $ownerDebit = $ownerCredit = 0;
+                }
+
+                // Add Owner’s Equity
+                $report->push((object) [
+                    'id' => 'acc-' . $acc->id,
+                    'parent_id' => 'type-' . strtolower($type),
+                    'name' => 'Retained Earnings',
+                    'account_type' => $acc->account_type,
+                    'subtype' => $acc->subtype,
+                    'debit' => $ownerDebit,
+                    'credit' => $ownerCredit,
+                    'has_children' => false
+                ]);
+                 $newEquity = (object) [
+                    'id' => 'acc-owner-equity-temp',
+                    'parent_id' => 'type-' . strtolower($type),
+                    'name' => 'Owner’s Equity',
+                    'account_type' => 'Equity',
+                    'subtype' => null,
+                    'debit' => $ownerDebit,
+                    'credit' => $ownerCredit,
+                    'has_children' => false
+                ];
+
+                $group->push($newEquity);
+                $accounts->push($newEquity);
+
+               
+            }
+            }
+
             // Add subtotal row
             $subtotalRow = (object) [
                 'id' => 'sub-' . strtolower($type),
@@ -378,24 +460,28 @@ class TrialBalanceDataTable extends DataTable
             $report->push($subtotalRow);
         }
 
+        
+
         // Add accumulated profit/loss row
-        $netProfit = $this->calculateNetProfit($startDate, $cashAccountIds);
+        // $netProfit = $this->calculateNetProfit($startDate, $cashAccountIds);
 
-        $accumulatedRow = (object) [
-            'id' => 'net-income',
-            'parent_id' => null,
-            'name' => 'Accumulated Profit / (Loss)',
-            'account_type' => 'Equity',
-            'debit' => $netProfit < 0 ? abs($netProfit) : 0,
-            'credit' => $netProfit > 0 ? $netProfit : 0,
-            'is_net_income' => true,
-            'has_children' => false
-        ];
-        $report->push($accumulatedRow);
+        // $accumulatedRow = (object) [
+        //     'id' => 'net-income',
+        //     'parent_id' => null,
+        //     'name' => 'Accumulated Profit / (Loss)',
+        //     'account_type' => 'Equity',
+        //     'debit' => $netProfit < 0 ? abs($netProfit) : 0,
+        //     'credit' => $netProfit > 0 ? $netProfit : 0,
+        //     'is_net_income' => true,
+        //     'has_children' => false
+        // ];
+        // $report->push($accumulatedRow);
 
-        // Add grand total row
-        $totalDebit = $accounts->sum('debit') + $accumulatedRow->debit;
-        $totalCredit = $accounts->sum('credit') + $accumulatedRow->credit;
+        // // Add grand total row
+        // $totalDebit = $accounts->sum('debit') + $accumulatedRow->debit;
+        // $totalCredit = $accounts->sum('credit') + $accumulatedRow->credit;
+        $totalDebit = $accounts->sum('debit');
+        $totalCredit = $accounts->sum('credit');
 
         $grandTotalRow = (object) [
             'id' => 'grand-total',
@@ -413,30 +499,89 @@ class TrialBalanceDataTable extends DataTable
 
     private function calculateNetProfit($startDate, $cashAccountIds = [])
     {
-        $qb = DB::table('journal_items')
+        // $qb = DB::table('journal_items')
+        //     ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+        //     ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+        //     ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+        //     ->where("journal_entries.{$this->owner}", $this->companyId)
+        //     ->where('journal_entries.date', '<=', $startDate)
+        //     ->whereIn('chart_of_account_types.name', ['Income', 'Expenses']);
+
+        // // When cash method is selected, include only journal entries that contain a cash account line
+        // if ($this->accountingMethod === 'cash') {
+        //     if (count($cashAccountIds)) {
+        //         $qb->whereIn('journal_entries.id', function ($sub) use ($cashAccountIds) {
+        //             $sub->select('journal')->from('journal_items')->whereIn('account', $cashAccountIds);
+        //         });
+        //     } else {
+        //         // No cash accounts found: force zero result
+        //         $qb->whereRaw('1 = 0');
+        //     }
+        // }
+
+        // $net = $qb->selectRaw('SUM(journal_items.credit - journal_items.debit) as net_profit')
+        //     ->value('net_profit');
+
+        // return $net ?? 0;
+
+        // 🧾 Get totals for INCOME
+        $income = DB::table('journal_items')
             ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
             ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
             ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
             ->where("journal_entries.{$this->owner}", $this->companyId)
-            ->where('journal_entries.date', '<=', $startDate)
-            ->whereIn('chart_of_account_types.name', ['Income', 'Expenses']);
+            ->where('journal_entries.date', '<', $startDate)
+            ->where('chart_of_account_types.name', 'Income')
+            ->selectRaw('
+                COALESCE(SUM(journal_items.debit), 0) as total_debit,
+                COALESCE(SUM(journal_items.credit), 0) as total_credit
+            ')
+            ->first();
 
-        // When cash method is selected, include only journal entries that contain a cash account line
-        if ($this->accountingMethod === 'cash') {
-            if (count($cashAccountIds)) {
-                $qb->whereIn('journal_entries.id', function ($sub) use ($cashAccountIds) {
-                    $sub->select('journal')->from('journal_items')->whereIn('account', $cashAccountIds);
-                });
-            } else {
-                // No cash accounts found: force zero result
-                $qb->whereRaw('1 = 0');
-            }
+        // 🧾 Get totals for EXPENSES + COGS
+        $expensesAndCogs = DB::table('journal_items')
+            ->join('chart_of_accounts', 'journal_items.account', '=', 'chart_of_accounts.id')
+            ->join('chart_of_account_types', 'chart_of_accounts.type', '=', 'chart_of_account_types.id')
+            ->join('journal_entries', 'journal_items.journal', '=', 'journal_entries.id')
+            ->where("journal_entries.{$this->owner}", $this->companyId)
+            ->where('journal_entries.date', '<', $startDate)
+            ->whereIn('chart_of_account_types.name', ['Expenses', 'Costs of Goods Sold'])
+            ->selectRaw('
+                COALESCE(SUM(journal_items.debit), 0) as total_debit,
+                COALESCE(SUM(journal_items.credit), 0) as total_credit
+            ')
+            ->first();
+
+        // 🧮 Combine both totals
+        $totalDebit  = $income->total_debit  + $expensesAndCogs->total_debit;
+        $totalCredit = $income->total_credit + $expensesAndCogs->total_credit;
+
+        // ⚖️ Determine profit or loss (difference on the higher side)
+        if ($totalCredit > $totalDebit) {
+            // Profit → show difference on credit side
+            $netProfit = $totalCredit - $totalDebit;
+            $debit = 0;
+            $credit = $netProfit;
+        } elseif ($totalDebit > $totalCredit) {
+            // Loss → show difference on debit side
+            $netProfit = $totalDebit - $totalCredit;
+            $debit = $netProfit;
+            $credit = 0;
+        } else {
+            $netProfit = 0;
+            $debit = $credit = 0;
         }
 
-        $net = $qb->selectRaw('SUM(journal_items.credit - journal_items.debit) as net_profit')
-            ->value('net_profit');
-
-        return $net ?? 0;
+        // 📦 Return structured result
+        return [
+            'net_profit' => $netProfit,
+            'debit'      => $debit,
+            'credit'     => $credit,
+            'total_debit'  => $totalDebit,
+            'total_credit' => $totalCredit,
+            'income'     => $income,
+            'expenses'   => $expensesAndCogs,
+        ];
     }
 
     public function html()

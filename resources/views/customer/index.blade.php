@@ -231,6 +231,7 @@
                                     <th> {{ __('Contact') }}</th>
                                     <th> {{ __('Email') }}</th>
                                     <th> {{ __('Balance') }}</th>
+                                    <th> {{ __('Qb Balance') }}</th>
                                     <th>{{ __('Action') }}</th>
                                 </tr>
                             </thead>
@@ -255,6 +256,7 @@
                                         <td>{{ $customer['contact'] }}</td>
                                         <td>{{ $customer['email'] }}</td>
                                         <td>{{ \Auth::user()->priceFormat($customer['balance']) }}</td>
+                                        <td>{{ \Auth::user()->priceFormat($customer['qb_balance']) }}</td>
                                         <td class="Action">
                                             <span>
                                                 @if ($customer['is_active'] == 0)

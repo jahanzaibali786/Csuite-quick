@@ -1,881 +1,293 @@
 @extends('layouts.admin')
+
 @section('content')
-    <style>
-        .section-row {
-            background-color: #f2f2f2 !important;
-            font-weight: bold;
-        }
-
-        .balance-sheet-detail-table {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .balance-sheet-detail-table thead th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .balance-sheet-detail-table tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .text-right {
-            text-align: right !important;
-        }
-
-        .section-header {
-            font-weight: 700;
-            font-size: 1.1em;
-            color: #495057;
-            text-transform: uppercase;
-        }
-
-        .section-total-amount {
-            font-size: 1em;
-            font-style: italic;
-            display: none;
-        }
-
-        .toggle-section {
-            user-select: none;
-            cursor: pointer;
-        }
-
-        .toggle-section:hover {
-            color: #007bff;
-        }
-
-        .toggle-chevron {
-            transition: transform 0.2s ease;
-            color: #007bff;
-            font-size: 12px;
-            margin-right: 8px;
-            cursor: pointer;
-        }
-
-        .child-row {
-            display: none;
-        }
-
-        .child-row td:first-child {
-            padding-left: 30px !important;
-        }
-
-        .amount-cell {
-            text-align: right;
-            display: block;
-        }
-
-        .subtotal-row .total-amount {
-            border-top: 1px solid #000;
-            font-weight: bold;
-        }
-
-        .total-row .total-amount {
-            border-top: 2px solid #000;
-            border-bottom: 2px double #000;
-            font-weight: bold;
-        }
-
-        .section-header-row {
-            background-color: #f8f9fa !important;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .section-header-row:hover {
-            background-color: #e9ecef !important;
-        }
-
-        .subtotal-row {
-            background-color: #f8f9fa;
-            font-weight: bold;
-            display: none;
-        }
-
-        .total-row {
-            background-color: #e9ecef;
-            font-weight: bold;
-            border-top: 2px solid #dee2e6;
-        }
-
-        .subtotal-label,
-        .total-label {
-            font-weight: bold;
-        }
-
-        /* Expanded state */
-        .section-expanded .child-row {
-            display: table-row !important;
-        }
-
-        .section-expanded .subtotal-row {
-            display: table-row !important;
-        }
-
-        .section-expanded .section-total-amount {
-            display: none !important;
-        }
-
-        /* Compact view */
-        .compact-view .child-row {
-            display: none !important;
-        }
-
-        .compact-view .subtotal-row {
-            display: none !important;
-        }
-
-        .compact-view .section-total-amount {
-            display: inline-block !important;
-        }
-
-        /* Filter Controls */
-        .filter-controls {
-            background: white;
-            padding: 20px 24px;
-            border-bottom: 1px solid #e6e6e6;
-        }
-
-        .filter-item {
-            display: flex;
-            flex-direction: column;
-            min-width: 140px;
-        }
-
-        .filter-label {
-            font-size: 12px;
-            color: #6b7280;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-
-        .form-control {
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 8px 12px;
-            font-size: 13px;
-            background: white;
-            color: #262626;
-            height: 36px;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: #0969da;
-            box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.1);
-        }
-
-        .view-options {
-            display: flex;
-            align-items: center;
-            position: relative;
-        }
-
-        .btn-view-options {
-            background: transparent;
-            color: #6b7280;
-            border: 1px solid #d1d5db;
-            padding: 8px 12px;
-            font-size: 13px;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        .btn-view-options:hover {
-            background: #f9fafb;
-            border-color: #9ca3af;
-        }
-
-        /* View Options Dropdown */
-        .view-options-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            display: none;
-            min-width: 200px;
-        }
-
-        .view-options-dropdown.show {
-            display: block;
-        }
-
-        .view-option-item {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f3f4f6;
-            font-size: 13px;
-        }
-
-        .view-option-item:last-child {
-            border-bottom: none;
-        }
-
-        .view-option-item:hover {
-            background: #f9fafb;
-        }
-
-        .view-option-item.divider {
-            border-top: 1px solid #e5e7eb;
-            margin-top: 4px;
-            padding-top: 8px;
-        }
-
-        .view-option-item .checkmark {
-            margin-right: 8px;
-            color: #10b981;
-            width: 16px;
-            visibility: hidden;
-        }
-
-        .view-option-item.active .checkmark {
-            visibility: visible;
-        }
-
-        /* Action buttons row */
-        .action-buttons-row {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-
-        .btn-outline {
-            background: white;
-            border: 1px solid #d1d5db;
-            color: #374151;
-            padding: 8px 12px;
-            font-size: 13px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        .btn-outline:hover {
-            background: #f9fafb;
-            border-color: #9ca3af;
-        }
-
-        /* Side Modal Styles */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10000;
-            overflow-y: auto;
-        }
-
-        .modal-overlay.show {
-            display: block;
-        }
-
-        .general-options-modal,
-        .filter-modal {
-            position: fixed;
-            top: 0;
-            right: -400px;
-            bottom: 0;
-            width: 400px;
-            background: white;
-            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
-            overflow-y: auto;
-            transition: right 0.3s ease-in-out;
-        }
-
-        .modal-overlay.show .general-options-modal,
-        .modal-overlay.show .filter-modal {
-            right: 0;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 24px;
-            border-bottom: 1px solid #e6e6e6;
-            background: #f9fafb;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        .modal-header h5 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-            color: #262626;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            color: #6b7280;
-            cursor: pointer;
-            padding: 4px 8px;
-            line-height: 1;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-
-        .btn-close:hover {
-            color: #262626;
-            background: #e5e7eb;
-        }
-
-        .modal-content {
-            padding: 24px;
-            height: calc(100% - 80px);
-            overflow-y: auto;
-        }
-
-        .modal-subtitle {
-            color: #6b7280;
-            font-size: 13px;
-            margin: 0 0 24px;
-        }
-
-        /* Option Sections */
-        .option-section {
-            margin-bottom: 24px;
-        }
-
-        .section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #262626;
-            margin: 0 0 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-        }
-
-        .option-group {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: #374151;
-            cursor: pointer;
-            margin: 0;
-        }
-
-        .checkbox-label input[type="checkbox"] {
-            margin: 0;
-            width: 16px;
-            height: 16px;
-        }
-
-        .negative-format-group {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .negative-format-group select {
-            width: 120px;
-            flex-shrink: 0;
-        }
-
-        .alignment-group {
-            margin-top: 12px;
-        }
-
-        .alignment-label {
-            display: block;
-            font-size: 12px;
-            color: #6b7280;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-
-        .report-title-section {
-            text-align: center;
-            padding: 32px 24px 24px;
-            border-bottom: 1px solid #e6e6e6;
-        }
-
-        .report-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #262626;
-            margin: 0 0 8px;
-        }
-
-        .company-name {
-            font-size: 16px;
-            color: #6b7280;
-            margin: 0 0 12px;
-        }
-
-        .date-range {
-            font-size: 14px;
-            color: #374151;
-            margin: 0;
-        }
-
-        /* Filter modal specific styles */
-        .filter-section {
-            margin-bottom: 24px;
-        }
-
-        .filter-section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #262626;
-            margin: 0 0 16px;
-        }
-
-        .date-filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .date-filter-item {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .date-filter-label {
-            font-size: 12px;
-            color: #6b7280;
-            font-weight: 500;
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            border-color: #28a745;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            border: none;
-        }
-
-        .btn-success:hover {
-            background-color: #218838;
-            border-color: #1e7e34;
-        }
-
-        .w-100 {
-            width: 100%;
-        }
-
-        /* Date picker styling */
-        .input-group {
-            position: relative;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: stretch;
-        }
-
-        .input-group-append {
-            margin-left: -1px;
-        }
-
-        .input-group-text {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            margin-bottom: 0;
-            font-size: 13px;
-            font-weight: 400;
-            line-height: 1.5;
-            color: #495057;
-            text-align: center;
-            white-space: nowrap;
-            background-color: #e9ecef;
-            border: 1px solid #ced4da;
-            border-radius: 0 4px 4px 0;
-            cursor: pointer;
-        }
-
-        .input-group-text:hover {
-            background-color: #dee2e6;
-        }
-
-        #asOfDatePicker {
-            cursor: pointer;
-            background-color: white;
-        }
-
-        #asOfDatePicker[readonly] {
-            background-color: white;
-        }
-
-        .daterangepicker {
-            z-index: 3000 !important;
-        }
-
-        .datepicker {
-            z-index: 3000 !important;
-        }
-
-        input[type="date"] {
-            position: relative;
-            padding: 8px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            font-size: 13px;
-            background: white;
-            color: #262626;
-            height: 36px;
-        }
-
-        input[type="date"]:focus {
-            outline: none;
-            border-color: #0969da;
-            box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.1);
-        }
-
-        /* Enhanced hierarchical table styles */
-        #balance-sheet-detail-table td {
-            padding: 6px 8px;
-            vertical-align: middle;
-        }
-
-        #balance-sheet-detail-table .text-right {
-            text-align: right;
-        }
-
-        #balance-sheet-detail-table strong {
-            font-weight: bold;
-        }
-
-        .balance-sheet-detail-table thead th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            font-weight: 600;
-            color: #495057;
-            font-size: 14px;
-        }
-
-        .balance-sheet-detail-table tbody tr.type-header-row {
-            background-color: #e9ecef;
-            font-weight: bold;
-        }
-
-        .balance-sheet-detail-table tbody tr.subtype-header-row {
-            background-color: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-            font-weight: 600;
-        }
-
-        .balance-sheet-detail-table tbody tr.subtype-header-row:hover {
-            background-color: #f1f3f4;
-        }
-
-        .balance-sheet-detail-table tbody tr.account-header-row {
-            background-color: #ffffff;
-            border-left: 3px solid #007bff;
-            font-weight: 500;
-        }
-
-        .balance-sheet-detail-table tbody tr.account-header-row:hover {
-            background-color: #f8f9fa;
-        }
-
-        .balance-sheet-detail-table tbody tr.account-header-row.collapsed {
-            display: none !important;
-        }
-
-        .balance-sheet-detail-table tbody tr.transaction-row {
-            background-color: #f9f9f9;
-            font-size: 12px;
-            color: #666;
-            border-left: 3px solid #28a745;
-        }
-
-        .balance-sheet-detail-table tbody tr.transaction-row:hover {
-            background-color: #f0f0f0;
-        }
-
-        .balance-sheet-detail-table tbody tr.transaction-row.collapsed {
-            display: none !important;
-        }
-
-        .balance-sheet-detail-table tbody tr.account-total-row {
-            background-color: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-            border-left: 3px solid #007bff;
-            font-weight: 600;
-        }
-
-        .balance-sheet-detail-table tbody tr.account-total-row.collapsed {
-            display: none !important;
-        }
-
-        .balance-sheet-detail-table tbody tr.subtype-total-row {
-            background-color: #e9ecef;
-            border-top: 2px solid #dee2e6;
-            font-weight: 700;
-        }
-
-        .balance-sheet-detail-table tbody tr.subtype-total-row.collapsed {
-            display: none !important;
-        }
-
-        .balance-sheet-detail-table tbody tr.type-total-row {
-            border-top: 2px solid #000;
-            border-bottom: 2px solid #000;
-            font-weight: 700;
-        }
-
-        .chevron-icon {
-            transition: transform 0.2s ease;
-            cursor: pointer;
-            color: #007bff;
-            font-size: 12px;
-        }
-
-        .chevron-icon:hover {
-            color: #0056b3;
-            transform: scale(1.1);
-        }
-
-        .collapsed-balance {
-            font-style: italic;
-            font-size: 11px;
-            color: #6c757d !important;
-            margin-left: 10px;
-        }
-
-        .balance-sheet-detail-table tbody tr td:first-child {
-            padding-left: 12px;
-        }
-
-        .amount-cell {
-            text-align: right;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-        }
-
-        .transaction-debit {
-            color: #dc3545;
-            font-weight: 500;
-        }
-
-        .transaction-credit {
-            color: #28a745;
-            font-weight: 500;
-        }
-
-        .balance-sheet-detail-table tbody tr:hover {
-            background-color: rgba(0, 123, 255, 0.1);
-        }
-
-        .balance-sheet-detail-table tbody tr td:empty {
-            border: none;
-            padding: 4px;
-        }
-
-        .balance-sheet-detail-table tbody tr td {
-            border-top: 1px solid #f1f1f1;
-        }
-
-        .balance-sheet-detail-table tbody tr:first-child td {
-            border-top: none;
-        }
-
-        .balance-sheet-detail-table tbody tr {
-            transition: all 0.3s ease;
-        }
-
-        @media print {
-            .balance-sheet-detail-table {
-                font-size: 10px;
-            }
-
-            .chevron-icon {
-                display: none;
-            }
-
-            .collapsed-balance {
-                display: none;
-            }
-
-            .balance-sheet-detail-table tbody tr.collapsed {
-                display: table-row !important;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .chevron-icon {
-                font-size: 14px;
-            }
-
-            .collapsed-balance {
-                display: block;
-                margin-top: 4px;
-                margin-left: 0;
-            }
-
-            .balance-sheet-detail-table {
-                font-size: 12px;
-            }
-
-            .general-options-modal,
-            .filter-modal {
-                width: 100%;
-                right: -100%;
-            }
-
-            .modal-overlay.show .general-options-modal,
-            .modal-overlay.show .filter-modal {
-                right: 0;
-            }
-
-            .modal-content {
-                padding: 16px;
-            }
-
-            .modal-header {
-                padding: 16px;
-            }
-        }
-
-        .balance-sheet-detail-table.loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-    </style>
-
-    <!-- Filter Controls -->
-    <div class="filter-controls">
-        <div class="filter-row">
-            <div class="filter-group row mb-2">
-                <div class="filter-item col-md-2">
-                    <label class="filter-label">As of date</label>
-                    <div class="input-group">
-                        <input type="text" id="asOfDatePicker" class="form-control date-input"
-                            value="{{ \Carbon\Carbon::now()->format('M d, Y') }}" readonly>
+    <div class="content-wrapper">
+        <!-- Header with actions -->
+        <div class="report-header">
+            <h4 class="mb-0">{{ $pageTitle }}</h4>
+            <div class="header-actions">
+                <span class="last-updated">Last updated 8 minutes ago</span>
+                <div class="actions">
+                    <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
+                    <button class="btn btn-icon"
+                        onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'print')"><i
+                            class="fa fa-print"></i></button>
+                    <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
+                    {{-- <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button> 
+                    <button class="btn btn-success btn-save">Save As</button>  --}}
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Bootstrap Modal -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content p-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Choose Export Format</h5> <button type="button" class="btn-close"
+                            data-bs-dismiss="modal"></button>
                     </div>
-                    <input type="hidden" id="asOfDate" name="asOfDate"
-                        value="{{ \Carbon\Carbon::now()->format('Y-m-d') }}">
+                    <div class="modal-body text-center row">
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="excel">Export to
+                                Excel</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="pdf">Export to
+                                PDF</button>
+                        </div>
+                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                    </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="filter-item col-md-2">
-                    <label class="filter-label">Accounting method</label>
-                    <select id="accounting-method" class="form-control">
-                        <option value="accrual" selected>Accrual</option>
-                        <option value="cash">Cash</option>
-                    </select>
-                </div>
+        <script>
+            // Show modal on export button click
+            $('.btn-icon[title="Export"]').on('click', function() {
+                $('#exportModal').modal('show');
+            });
 
-                <div class="filter-item col-md-3 pt-4">
-                    <div class="view-options">
-                        <button class="btn btn-view-options" id="view-options-btn" type="button">
-                            <i class="fa fa-eye"></i> &nbsp; View options
-                        </button>
-                        <div class="view-options-dropdown" id="view-options-dropdown">
-                            <div class="view-option-item" data-value="normal">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>Normal view
+            // Handle export actions
+            $('#exportModal button[data-action]').on('click', function() {
+                // Hide modal after action
+                $('#exportModal').modal('hide');
+            });
+        </script>
+
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+            <div class="filter-row">
+                <div class="filter-group d-flex">
+
+                    {{-- filter row --}}
+                    <div class="col-md-7">
+                        <div class="row">
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">Report period</label>
+                                <select id="header-filter-period" class="form-control filter-period">
+                                    <option value="all_dates">All Dates</option>
+                                    <option value="custom_date">Custom dates</option>
+                                    <option value="today">Today</option>
+                                    <option value="this_week">This week</option>
+                                    <option value="this_week_to_date">This week to date</option>
+                                    <option value="this_month">This month</option>
+                                    <option value="this_month_to_date" selected>This month to date</option>
+                                    <option value="this_quarter">This quarter</option>
+                                    <option value="this_quarter_to_date">This quarter to date</option>
+                                    <option value="this_year">This year</option>
+                                    <option value="this_year_to_date">This year to date</option>
+                                    <option value="this_year_to_last_month">This year to last month</option>
+                                    <option value="yesterday">Yesterday</option>
+                                    <option value="recent">Recent</option>
+                                    <option value="last_week">Last week</option>
+                                    <option value="last_week_to_date">Last week to date</option>
+                                    <option value="last_week_to_today">Last week to today</option>
+                                    <option value="last_month">Last month</option>
+                                    <option value="last_month_to_date">Last month to date</option>
+                                    <option value="last_month_to_today">Last month to today</option>
+                                    <option value="last_quarter">Last quarter</option>
+                                    <option value="last_quarter_to_date">Last quarter to date</option>
+                                    <option value="last_quarter_to_today">Last quarter to today</option>
+                                    <option value="last_year">Last year</option>
+                                    <option value="last_year_to_date">Last year to date</option>
+                                    <option value="last_year_to_today">Last year to today</option>
+                                    <option value="last_7_days">Last 7 days</option>
+                                    <option value="last_30_days">Last 30 days</option>
+                                    <option value="last_90_days">Last 90 days</option>
+                                    <option value="last_12_months">Last 12 months</option>
+                                    <option value="since_30_days_ago">Since 30 days ago</option>
+                                    <option value="since_60_days_ago">Since 60 days ago</option>
+                                    <option value="since_90_days_ago">Since 90 days ago</option>
+                                    <option value="since_365_days_ago">Since 365 days ago</option>
+                                    <option value="next_week">Next week</option>
+                                    <option value="next_4_weeks">Next 4 weeks</option>
+                                    <option value="next_month">Next month</option>
+                                    <option value="next_quarter">Next quarter</option>
+                                    <option value="next_year">Next year</option>
+                                </select>
+
                             </div>
-                            <div class="view-option-item" data-value="compact">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>Compact view
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">From</label>
+                                {{-- <input type="text" id="daterange" class="form-control "
+                                    value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                <input type="date" class="form-control" name="start_date" id="filter-start-date"
+                                    value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
                             </div>
-                            <div class="view-option-item divider" data-value="expand">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>Expand all
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">To</label>
+                                {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                <input type="date" class="form-control " name="end_date" id="filter-end-date"
+                                    value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
                             </div>
-                            <div class="view-option-item" data-value="collapse">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>Collapse all
+                            @if (isset($accounting_method) && $accounting_method)
+                                <div class="filter-item col-md-2">
+                                    <label class="filter-label">Accounting method</label>
+                                    <select id="accounting-method" class="form-control">
+                                        <option value="accrual" selected>Accrual</option>
+                                        <option value="cash">Cash</option>
+                                    </select>
+                                </div>
+                            @endif
+                            {{-- <div class="filter-item col-md-2 mt-4">
+                                <button class="btn btn-view-options" id="view-options-btn"
+                                    style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;">
+                                    <i class="fa fa-eye"></i>
+                                    <span>View options</span>
+                                </button>
+                            </div> --}}
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="row mt-4">
+                            <!-- Action buttons row -->
+                            <div class="d-flex gap-2 justify-content-end align-items-center">
+
+
+                                <button class="btn btn-outline" id="columns-btn">
+                                    <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
+                                </button>
+
+                                <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
+                                    data-bs-target="#filterSidebar" aria-controls="filterSidebar">
+                                    <i class="fa fa-filter"></i> Filter
+                                </button>
+
+                                {{-- Filter Side Bar --}}
+                                <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1"
+                                    id="filterSidebar" aria-labelledby="filterSidebarLabel">
+                                    <div class="offcanvas-header "
+                                        style="background: #f9fafb; border-bottom: 1px solid #e6e6e6;">
+                                        <h5 class="offcanvas-title" id="filterSidebarLabel">
+                                            Filters
+                                        </h5>
+                                        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                            aria-label="Close">
+                                            <i class="fa fa-close"></i>
+                                        </button>
+                                    </div>
+                                    <div class="offcanvas-body">
+                                        <div class="filter-item mb-2">
+                                            <label class="filter-label">Report period</label>
+                                            <select id="sidebar-filter-period" class="form-control filter-period">
+                                                <option value="all_dates">All Dates</option>
+                                                <option value="custom_date">Custom dates</option>
+                                                <option value="today">Today</option>
+                                                <option value="this_week">This week</option>
+                                                <option value="this_week_to_date">This week to date</option>
+                                                <option value="this_month">This month</option>
+                                                <option value="this_month_to_date" selected>This month to date</option>
+                                                <option value="this_quarter">This quarter</option>
+                                                <option value="this_quarter_to_date">This quarter to date</option>
+                                                <option value="this_year">This year</option>
+                                                <option value="this_year_to_date">This year to date</option>
+                                                <option value="this_year_to_last_month">This year to last month</option>
+                                                <option value="yesterday">Yesterday</option>
+                                                <option value="recent">Recent</option>
+                                                <option value="last_week">Last week</option>
+                                                <option value="last_week_to_date">Last week to date</option>
+                                                <option value="last_week_to_today">Last week to today</option>
+                                                <option value="last_month">Last month</option>
+                                                <option value="last_month_to_date">Last month to date</option>
+                                                <option value="last_month_to_today">Last month to today</option>
+                                                <option value="last_quarter">Last quarter</option>
+                                                <option value="last_quarter_to_date">Last quarter to date</option>
+                                                <option value="last_quarter_to_today">Last quarter to today</option>
+                                                <option value="last_year">Last year</option>
+                                                <option value="last_year_to_date">Last year to date</option>
+                                                <option value="last_year_to_today">Last year to today</option>
+                                                <option value="last_7_days">Last 7 days</option>
+                                                <option value="last_30_days">Last 30 days</option>
+                                                <option value="last_90_days">Last 90 days</option>
+                                                <option value="last_12_months">Last 12 months</option>
+                                                <option value="since_30_days_ago">Since 30 days ago</option>
+                                                <option value="since_60_days_ago">Since 60 days ago</option>
+                                                <option value="since_90_days_ago">Since 90 days ago</option>
+                                                <option value="since_365_days_ago">Since 365 days ago</option>
+                                                <option value="next_week">Next week</option>
+                                                <option value="next_4_weeks">Next 4 weeks</option>
+                                                <option value="next_month">Next month</option>
+                                                <option value="next_quarter">Next quarter</option>
+                                                <option value="next_year">Next year</option>
+                                            </select>
+
+                                        </div>
+
+                                        <div class="filter-item mb-2">
+                                             <label class="filter-label">from</label>
+                                            {{-- <input type="text" id="daterange" class="form-control "
+                                                value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                            <input type="date" class="form-control mb-2" name="start_date"
+                                                id="sidebar-filter-start-date"
+                                                value="{{ Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                                            <label class="filter-label">To </label>
+                                            {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                           
+                                            <input type="date" class="form-control " name="end_date"
+                                                id="sidebar-filter-end-date"
+                                                value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                {{-- JS to sync filters --}}
+                                <script>
+                                    $(document).ready(function() {
+                                        // Sync Report Period
+                                        $('#sidebar-filter-period').on('change', function() {
+                                            $('#header-filter-period').val($(this).val());
+                                        });
+                                        $('#header-filter-period').on('change', function() {
+                                            $('#sidebar-filter-period').val($(this).val());
+                                        });
+                                    });
+                                </script>
+                                {{-- Filter Side Bar --}}
+
+                                <button class="btn btn-outline" id="general-options-btn">
+                                    <i class="fa fa-cog"></i> General options
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="filter-item col-md-3 pt-4">
-                    <button class="btn btn-outline" id="general-options-btn" type="button">
-                        <i class="fa fa-cog"></i> General options
-                    </button>
-                </div>
-                <div class="filter-item col-md-2 pt-4">
-                    <button class="btn btn-outline" id="filter-btn" type="button">
-                        <i class="fa fa-filter"></i> Filter
-                    </button>
-                </div>
+
             </div>
         </div>
-    </div>
-    
-    <div class="content-wrapper" id="report-content">
-        <div class="d-flex flex-column w-tables rounded mt-3 bg-white">
-            <div class="report-title-section p-2">
-                <h2 class="report-title">Balance Sheet Details</h2>
+
+        <!-- Report Content -->
+        <div class="report-content">
+            <div class="report-title-section">
+                <h2 class="report-title">{{ $pageTitle }}</h2>
+                {{-- <p class="company-name">{{ config('app.name', 'Craig\'s Design and Landscaping Services') }}</p> --}}
                 <p class="date-range">
-                    <span class="text-lightest f-12 ml-2" id="as-of-date-display"></span>
+                    <span id="date-range-display">
+                        {{ Carbon\Carbon::now()->startOfMonth()->format('F j, Y') }} -
+                        {{ Carbon\Carbon::now()->format('F j, Y') }}
+                    </span>
                 </p>
             </div>
-            <div class="table-responsive p-2">
-                {!! $dataTable->table(['class' => 'table table-hover border-0 w-100 balance-sheet-detail-table']) !!}
-            </div>
-        </div>
-    </div>
 
-    <!-- Filter Modal -->
-    <div class="modal-overlay" id="filter-overlay">
-        <div class="filter-modal">
-            <div class="modal-header">
-                <h5>Filter Options <i class="fa fa-filter" title="Configure filters"></i></h5>
-                <button type="button" class="btn-close" id="close-filter">&times;</button>
-            </div>
-            <div class="modal-content">
-                <p class="modal-subtitle">Configure as-of date and accounting method for your balance sheet.</p>
+            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')" id="ExprotExcel"
+                class="d-none">
+                <i class="fa fa-file-excel"></i> Excel
+            </button>
 
-                <!-- Date section -->
-                <div class="filter-section">
-                    <h6 class="filter-section-title">Balance Sheet Date</h6>
-                    <div class="date-filter-group">
-                        <div class="date-filter-item">
-                            <label class="date-filter-label">As of Date</label>
-                            <input type="text" id="modal-as-of-date" class="form-control date-input"
-                                value="{{ Carbon\Carbon::now()->format('M d, Y') }}">
-                        </div>
+            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')" id="ExprotPDF"
+                class="d-none">
+                <i class="fa fa-file-excel"></i> Excel
+            </button>
 
-                        <div class="date-filter-item">
-                            <label class="date-filter-label">Accounting Method</label>
-                            <select id="modal-accounting-method" class="form-control">
-                                <option value="accrual" selected>Accrual</option>
-                                <option value="cash">Cash</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Apply button -->
-                <div class="filter-section">
-                    <button class="btn btn-success w-100" id="apply-filters">
-                        Apply Filters
-                    </button>
-                </div>
+            <div class="table-container p-2">
+                {!! $dataTable->table(['class' => 'table customer-balance-table', 'id' => 'customer-balance-table']) !!}
             </div>
         </div>
     </div>
@@ -973,895 +385,1770 @@
             </div>
         </div>
     </div>
+
+    <!-- Columns Modal -->
+    <div class="modal-overlay" id="columns-overlay">
+        <div class="columns-modal">
+            <div class="modal-header">
+                <h5>Columns <i class="fa fa-info-circle"></i></h5>
+                <button type="button" class="btn-close" id="close-columns">&times;</button>
+            </div>
+            <div class="modal-content">
+                <p class="modal-subtitle">Drag columns to reorder the columns</p>
+
+                <div class="columns-list" id="sortable-columns">
+                    <div class="column-item" data-column="0">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> Customer Name
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="1">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> Current
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="2">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> 1-15 DAYS
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="3">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> 16-30 DAYS
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="4">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> 31-45 DAYS
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="5">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> > 45 DAYS
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="6">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> Total
+                        </label>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="additional-columns">
+                    {{-- // additional columns will be added here --}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function buildColumnsFromTable() {
+            const headers = document.querySelectorAll('#customer-balance-table thead th');
+            const container = document.querySelector('#sortable-columns');
+            const table = window.LaravelDataTables?.['customer-balance-table'];
+
+            // Clear the old list
+            container.innerHTML = '';
+
+            headers.forEach((th) => {
+                const columnName = th.innerText.trim().toUpperCase();
+                const isHidden = th.classList.contains('default-hidden');
+
+                // Skip BUCKET column
+                if (columnName === 'BUCKET') {
+                    return;
+                }
+
+                // Determine DataTables column index safely
+                let colIndex = null;
+                if (table) {
+                    try {
+                        colIndex = table.column(th).index();
+                    } catch (e) {
+                        colIndex = $(th).index(); // fallback
+                    }
+                } else {
+                    colIndex = $(th).index();
+                }
+
+                // Build draggable/checkbox item
+                const div = document.createElement('div');
+                div.classList.add('column-item');
+                div.setAttribute('data-column', colIndex);
+                div.innerHTML = `
+                <i class="fa fa-grip-vertical handle"></i>
+                <label class="checkbox-label">
+                    <input type="checkbox" ${isHidden ? '' : 'checked'}> ${columnName}
+                </label>
+            `;
+
+                container.appendChild(div);
+            });
+        }
+
+        // Build once after DataTable is initialized
+        $(document).ready(function() {
+            buildColumnsFromTable();
+
+            const hideDefaultColumns = () => {
+                if (window.LaravelDataTables && window.LaravelDataTables['customer-balance-table']) {
+                    const table = window.LaravelDataTables['customer-balance-table'];
+
+                    $('#customer-balance-table thead th.default-hidden').each(function() {
+                        const colIndex = table.column(this).index();
+                        table.column(colIndex).visible(false);
+
+                        $(`.column-item[data-column="${colIndex}"] input[type="checkbox"]`).prop(
+                            'checked', false);
+                    });
+
+
+                    {{-- buildColumnsFromTable(); --}}
+                } else {
+                    setTimeout(hideDefaultColumns, 500); // retry until ready
+                    console.warn("DataTable instance not ready yet...");
+                }
+            };
+
+            hideDefaultColumns();
+        });
+
+        // Rebuild on every table redraw
+        $('#customer-balance-table').on('draw.dt', function() {
+            buildColumnsFromTable();
+        });
+
+        // Delegated event binding for dynamically created checkboxes
+        $(document).on('change', '#sortable-columns input[type="checkbox"]', function() {
+            const columnIndex = $(this).closest('.column-item').data('column');
+            const isVisible = $(this).prop('checked');
+
+            if (columnIndex !== undefined && window.LaravelDataTables?.['customer-balance-table']) {
+                try {
+                    window.LaravelDataTables['customer-balance-table'].column(columnIndex).visible(isVisible);
+                } catch (error) {
+                    console.error('Column visibility change failed:', columnIndex, isVisible, error);
+                }
+            }
+
+            // Update column count badge if function exists
+            if (typeof updateColumnCountBadge === 'function') {
+                updateColumnCountBadge();
+            }
+        });
+    </script>
+
+
+    <script>
+        $('#customer-balance-table').on('click', '.toggle-bucket', function() {
+            let $row = $(this);
+            let bucket = $row.attr('class').match(/bucket-([^\s]+)/)[1]; // "current"
+            let $icon = $row.find('.icon');
+
+            // toggle
+            $('.bucket-' + bucket).not($row).toggle(); // don’t hide the parent itself
+
+            // swap icon
+            $icon.text($icon.text() === '▶' ? '▼' : '▶');
+        });
+    </script>
+
+    <script>
+        $(document).on('click', '.toggle-section', handleSectionToggle);
+
+        window.viewState = {};
+        window.viewState.viewType = 'detailed'; // default view
+
+        function handleSectionToggle(e) {
+            e.preventDefault();
+
+            if (window.viewState.viewType === 'compact') {
+                return;
+            }
+
+            const $this = $(this);
+            // fallback: use data-group from .toggle-section if row-id missing
+            let group = $this.closest('tr').data('row-id');
+            if (!group) {
+                group = $this.data('group'); // <-- fix for this report
+            }
+
+            const $row = $this.closest('tr');
+            const $chevron = $this.find('.toggle-chevron');
+            // fallback: support both .section-total-amount and .section-total-display
+            const $sectionTotal = $row.find(
+                '.section-total-amount[data-group="' + group + '"], .section-total-display[data-group="' + group + '"]'
+            );
+            const $childRows = $('.group-' + group);
+
+            if ($chevron.length === 0) return;
+
+            if ($chevron.text() === "▼") {
+                // Collapse
+                $childRows.hide();
+                $chevron.text("▶");
+                $sectionTotal.show();
+            } else {
+                // Expand
+                $childRows.show();
+                $chevron.text("▼");
+                $sectionTotal.hide();
+            }
+        }
+
+
+        function toggleSection($headerRow) {
+            if (window.viewState.viewType === 'compact') {
+                return; // Don't allow toggle in compact view
+            }
+
+            const sectionId = $headerRow.attr('data-row-id');
+            if (!sectionId) return;
+
+            if ($headerRow.hasClass('section-expanded')) {
+                // Collapse section
+                collapseSection(sectionId);
+            } else {
+                // Expand section
+                expandSection(sectionId);
+            }
+        }
+
+        const expandCollapseInit = function() {
+            if (!window.LaravelDataTables || !window.LaravelDataTables['customer-balance-table']) {
+                setTimeout(expandCollapseInit, 500);
+                return;
+            }
+
+            // Attach handler once DataTable is initialized
+            window.LaravelDataTables['customer-balance-table']
+                .on('draw.dt', function() {
+                    console.log("Table redrawn, checking for toggle sections...");
+                    console.log($('.toggle-section'));
+                    $('.toggle-section').each(function() {
+                        {{-- console.log($(this)); --}}
+                        $(this).click();
+                    })
+                    // do your expand/collapse binding here
+                    {{-- $('.toggle-section').off('click').on('click', function() {
+                        console.log("Clicked section:", $(this).data('section'));
+                    }); --}}
+                });
+        };
+
+        $(document).ready(expandCollapseInit);
+
+
+        const collapseFunction3 = function(e) {
+            e.preventDefault();
+
+            // Find the icon inside the clicked row
+            const $row = $(this);
+            const $icon = $row.find('.chevron-icon');
+
+            const parentType = $icon.data('parent-type');
+            const parentId = $icon.data('parent-id');
+
+            if (!parentType || !parentId) return;
+
+            // Build selector for children rows
+            const childSelector = `.child-of-${parentType}-${parentId}`;
+            const $children = $(childSelector);
+
+            if ($children.length === 0) return;
+
+            // Toggle collapse/expand
+            if ($icon.text().trim() === "▼") {
+                // Collapse
+                $children.hide();
+                $icon.text("▶");
+            } else {
+                // Expand
+                $children.show();
+                $icon.text("▼");
+            }
+        }
+
+        // Attach once for chevron-icon style tables
+        $(document).on('click', '.subtype-header-row', collapseFunction3);
+
+        $(document).on('click', '.account-header-row', collapseFunction3);
+
+        $(document).on('click', '.chevron-icon', collapseFunction3)
+
+        $(document).on('click', '.section-header-row', collapseFunction3)
+    </script>
+
+    <style>
+        /* Base styling */
+        * {
+            box-sizing: border-box;
+        }
+
+
+        .account-header-row,
+        subtype-header-row {
+            cursor: pointer;
+        }
+
+        .toggle-section {
+            cursor: pointer;
+        }
+
+        .content-wrapper {
+            background-color: #f5f6fa;
+            min-height: 100vh;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 14px;
+            color: #262626;
+        }
+
+        /* Header */
+        .report-header {
+            background: white;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e6e6e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .report-header h4 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #262626;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .last-updated {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-icon {
+            background: transparent;
+            color: #6b7280;
+            padding: 8px;
+            width: 32px;
+            height: 32px;
+            justify-content: center;
+        }
+
+        .btn-icon:hover {
+            background: #f3f4f6;
+            color: #262626;
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: white;
+            font-weight: 500;
+        }
+
+        .btn-success:hover {
+            background: #16a34a;
+        }
+
+        .btn-save {
+            padding: 8px 16px;
+        }
+
+        /* Filter Controls */
+        .filter-controls {
+            background: white;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            min-width: 140px;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
+            background: white;
+            color: #262626;
+            height: 36px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #0969da;
+            box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.1);
+        }
+
+        .date-input {
+            position: relative;
+        }
+
+        .view-options {
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-view-options {
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        .btn-view-options:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        /* Action buttons row */
+        .action-buttons-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        .btn-outline:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .badge {
+            background: #e5e7eb;
+            color: #374151;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 4px;
+        }
+
+        /* Report Content */
+        .report-content {
+            background: white;
+            margin: 24px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .report-title-section {
+            text-align: center;
+            padding: 32px 24px 24px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+
+        .report-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #262626;
+            margin: 0 0 8px;
+        }
+
+        .company-name {
+            font-size: 16px;
+            color: #6b7280;
+            margin: 0 0 12px;
+        }
+
+        .date-range {
+            font-size: 14px;
+            color: #374151;
+            margin: 0;
+        }
+
+        /* Table Container */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .customer-balance-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .customer-balance-table th {
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .customer-balance-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #262626;
+        }
+
+        .customer-balance-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            overflow-y: auto;
+        }
+
+        .general-options-modal,
+        .columns-modal {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 360px;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e6e6e6;
+            background: #f9fafb;
+        }
+
+        .modal-header h5 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #262626;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+
+        .btn-close:hover {
+            color: #262626;
+        }
+
+        .modal-content {
+            padding: 24px;
+        }
+
+        .modal-subtitle {
+            color: #6b7280;
+            font-size: 13px;
+            margin: 0 0 24px;
+        }
+
+        /* Option Sections */
+        .option-section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #262626;
+            margin: 0 0 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #374151;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin: 0;
+            width: 16px;
+            height: 16px;
+        }
+
+        .negative-format-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .negative-format-group select {
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .alignment-group {
+            margin-top: 12px;
+        }
+
+        .alignment-label {
+            display: block;
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        /* Columns Modal Specific */
+        .columns-list {
+            margin-bottom: 20px;
+        }
+
+        .column-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: move;
+        }
+
+        .handle {
+            color: #9ca3af;
+            margin-right: 12px;
+            cursor: grab;
+        }
+
+        .handle:active {
+            cursor: grabbing;
+        }
+
+        .additional-columns {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .additional-columns .column-item {
+            padding-left: 28px;
+            cursor: default;
+        }
+
+        /* Enhanced form controls */
+        select.form-control {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 12px;
+            padding-right: 32px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        /* Table enhancements */
+        .text-right {
+            text-align: right !important;
+        }
+
+        .negative-amount {
+            color: #dc2626;
+        }
+
+        .account-group {
+            background-color: #f8fafc;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .account-row {
+            font-weight: normal;
+        }
+
+        .opening-balance {
+            font-style: italic;
+            color: #6b7280;
+        }
+
+        .expand-icon {
+            margin-right: 6px;
+            font-size: 11px;
+        }
+
+        /* QuickBooks specific styling */
+        .fa-info-circle {
+            color: #0969da;
+            font-size: 12px;
+        }
+
+        .fa-chevron-up {
+            font-size: 10px;
+            color: #6b7280;
+        }
+
+        .option-section hr {
+            border: none;
+            border-top: 1px solid #e6e6e6;
+            margin: 20px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            /* .filter-group {
+                                                                                                                                                                                                                                                                        flex-direction: column;
+                                                                                                                                                                                                                                                                        width: 100%;
+                                                                                                                                                                                                                                                                        gap: 16px;
+                                                                                                                                                                                                                                                                    } */
+
+            .filter-item {
+                width: 100%;
+                min-width: auto;
+            }
+
+            .general-options-modal,
+            .columns-modal {
+                width: 100%;
+                left: 0;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-end;
+            }
+
+            .actions {
+                flex-wrap: wrap;
+            }
+        }
+
+        .parent-row {
+            cursor: pointer;
+        }
+
+        i {
+            font-style: normal;
+        }
+        .summary-total{
+            font-weight: bold;
+        }
+    </style>
+
+    {!! $dataTable->scripts() !!}
 @endsection
 
 @push('script-page')
-    @include('sections.datatable_js')
+    <!-- Include jQuery and required libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <script>
-        (function($, moment) {
-            "use strict";
+$(document).on('click', '.group-toggle', function() {
+    const key = $(this).data('group');
+    const icon = $(this).find('i.fas');
+    const rows = $('.group-' + key);
 
-            // Core Variables and State Management
-            window.balanceSheetState = {
-                balanceSheetTable: null,
-                expandedSections: new Set(),
-                viewState: {
-                    viewType: 'normal',
-                    expandState: 'expand'
-                },
-                reportOptions: {
-                    divideBy1000: false,
-                    hideZeroAmounts: false,
-                    roundWholeNumbers: false,
-                    negativeFormat: '-100',
-                    showInRed: false,
-                    companyLogo: false,
-                    reportPeriod: true,
-                    companyName: true,
-                    headerAlignment: 'center',
-                    datePrepared: true,
-                    timePrepared: true,
-                    reportBasis: true,
-                    footerAlignment: 'center'
-                },
-                filterState: {
-                    asOfDate: $('#asOfDate').val() || moment().format('YYYY-MM-DD'),
-                    accountingMethod: $('#accounting-method').val() || 'accrual',
-                    viewOption: 'normal'
-                }
-            };
+    if (rows.is(':visible')) {
+        rows.hide();
+        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+    } else {
+        rows.show();
+        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+    }
+});
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-            window.balanceSheetConstants = {
-                TABLE_SELECTOR: '#balance-sheet-detail-table',
-                DT_NAME: "balance-sheet-detail-table",
-                getDt: () => window.LaravelDataTables && window.LaravelDataTables[window.balanceSheetConstants.DT_NAME]
-            };
+    <script>
+        let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        function exportDataTable(tableId, pageTitle, format = "excel") {
+            let table = $('#' + tableId).DataTable();
 
-            // Debounce utility
-            if (!window.debounce) {
-                window.debounce = function(fn, wait) {
-                    let t;
-                    return function() {
-                        const args = arguments;
-                        clearTimeout(t);
-                        t = setTimeout(() => fn.apply(this, args), wait);
-                    };
-                };
+            // Only get visible columns (skip auto-index)
+            let columns = [];
+            $('#' + tableId + ' thead th:visible').each(function() {
+                columns.push($(this).text().trim());
+            });
+
+            // Get visible data rows
+            let data = [];
+
+            const getRealtimeTableData = () => {
+
+                let data = [];
+
+
+                table.rows({
+                    search: 'applied'
+                }).every(function() {
+                    let rowData = this.data();
+
+                    if (typeof rowData === 'object') {
+                        // Only keep values for visible columns
+                        let rowArray = [];
+                        table.columns(':visible').every(function(colIdx) {
+                            let val = rowData[this.dataSrc()] ?? '-';
+                            rowArray.push(val);
+                        });
+                        rowData = rowArray;
+                    }
+                    data.push(rowData);
+                });
+
+                return data
+
             }
 
-            // Modal Manager - FIXED
-            window.ModalManager = {
-                initialize: function() {
-                    // General Options Modal
-                    $('#general-options-btn').on('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('General options button clicked');
-                        $('#general-options-overlay').addClass('show');
-                    });
+            // Get visible data rows (rendered DOM text, not raw data)
+            $('#' + tableId + ' tbody tr:visible').each(function() {
+                let rowArray = [];
+                $(this).find('td:visible').each(function() {
+                    let cellContent;
 
-                    $('#close-general-options').on('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        $('#general-options-overlay').removeClass('show');
-                    });
-
-                    // Filter Modal
-                    $('#filter-btn').on('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('Filter button clicked');
-                        ModalManager.syncFilterModalValues();
-                        $('#filter-overlay').addClass('show');
-                    });
-
-                    $('#close-filter').on('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        $('#filter-overlay').removeClass('show');
-                    });
-
-                    // Apply filters
-                    $('#apply-filters').on('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        ModalManager.applyFiltersFromModal();
-                        $('#filter-overlay').removeClass('show');
-                    });
-
-                    // Close modals when clicking overlay
-                    $('#general-options-overlay, #filter-overlay').on('click', function(e) {
-                        if (e.target === this) {
-                            $(this).removeClass('show');
-                        }
-                    });
-
-                    // General options change handler
-                    $('.general-options-modal input, .general-options-modal select').on('change', function() {
-                        window.ReportFormatter.applyGeneralOptions();
-                    });
-
-                    // ESC key to close modals
-                    $(document).on('keydown', function(e) {
-                        if (e.key === 'Escape') {
-                            $('.modal-overlay').removeClass('show');
-                        }
-                    });
-                },
-
-                syncFilterModalValues: function() {
-                    const state = window.balanceSheetState.filterState;
-                    $('#modal-as-of-date').val(moment(state.asOfDate).format('MMM D, YYYY'));
-                    $('#modal-accounting-method').val(state.accountingMethod);
-                },
-
-                applyFiltersFromModal: function() {
-                    const modalDate = $('#modal-as-of-date').val();
-                    const modalMethod = $('#modal-accounting-method').val();
-                    
-                    if (modalDate && moment(modalDate, 'MMM D, YYYY').isValid()) {
-                        const newDate = moment(modalDate, 'MMM D, YYYY').format('YYYY-MM-DD');
-                        window.balanceSheetState.filterState.asOfDate = newDate;
-                        $('#asOfDate').val(newDate);
-                        $('#asOfDatePicker').val(modalDate);
-                    }
-                    
-                    window.balanceSheetState.filterState.accountingMethod = modalMethod;
-                    $('#accounting-method').val(modalMethod);
-                    
-                    window.FilterManager.updateAsOfDisplay();
-                    window.TableManager.safeDraw();
-                }
-            };
-
-            // Filter Manager
-            window.FilterManager = {
-                initialize: function() {
-                    FilterManager.initializeDatePicker();
-                    FilterManager.setupEventHandlers();
-                    FilterManager.updateAsOfDisplay();
-                },
-
-                initializeDatePicker: function() {
-                    const state = window.balanceSheetState.filterState;
-
-                    // Try daterangepicker first
-                    if ($.fn.daterangepicker) {
-                        $('#asOfDatePicker').daterangepicker({
-                            singleDatePicker: true,
-                            showDropdowns: true,
-                            startDate: state.asOfDate ? moment(state.asOfDate) : moment(),
-                            locale: {
-                                format: 'MMM D, YYYY'
-                            }
-                        });
-
-                        $('#asOfDatePicker').on('apply.daterangepicker', function(ev, picker) {
-                            const newDate = picker.startDate.format('YYYY-MM-DD');
-                            state.asOfDate = newDate;
-                            $('#asOfDate').val(newDate);
-                            FilterManager.updateAsOfDisplay();
-                            window.TableManager.safeDraw();
-                        });
-                    }
-                    // Fallback to Bootstrap datepicker
-                    else if ($.fn.datepicker) {
-                        $('#asOfDatePicker').datepicker({
-                            format: 'M d, yyyy',
-                            autoclose: true,
-                            todayHighlight: true
-                        }).on('changeDate', function(e) {
-                            const newDate = moment(e.date).format('YYYY-MM-DD');
-                            state.asOfDate = newDate;
-                            $('#asOfDate').val(newDate);
-                            FilterManager.updateAsOfDisplay();
-                            window.TableManager.safeDraw();
-                        });
-                    }
-                    // HTML5 date input fallback
-                    else {
-                        $('#asOfDatePicker').attr('type', 'date').val(state.asOfDate);
-                        $('#asOfDatePicker').on('change', function() {
-                            const newDate = $(this).val();
-                            if (newDate && moment(newDate).isValid()) {
-                                state.asOfDate = newDate;
-                                $('#asOfDate').val(newDate);
-                                FilterManager.updateAsOfDisplay();
-                                window.TableManager.safeDraw();
-                            }
-                        });
-                    }
-
-                    // Ensure hidden field has correct value
-                    if ($('#asOfDate').length) {
-                        $('#asOfDate').val(state.asOfDate || moment().format('YYYY-MM-DD'));
-                    }
-                },
-
-                setupEventHandlers: function() {
-                    const $table = $(window.balanceSheetConstants.TABLE_SELECTOR);
-                    const state = window.balanceSheetState.filterState;
-
-                    $table.on('preXhr.dt', function(e, settings, data) {
-                        data.asOfDate = state.asOfDate || moment().format('YYYY-MM-DD');
-                        data.accountingMethod = state.accountingMethod || $('#accounting-method').val() || 'accrual';
-                        data.accounting_method = state.accountingMethod || $('#accounting-method').val() || 'accrual';
-                        data.viewOption = state.viewOption || 'normal';
-                    });
-
-                    $('#accounting-method').on('change', function() {
-                        state.accountingMethod = $(this).val();
-                        window.TableManager.safeDraw();
-                    });
-                },
-
-                updateAsOfDisplay: function() {
-                    const asOfDate = window.balanceSheetState.filterState.asOfDate;
-                    const display = asOfDate ? moment(asOfDate).format('MMM DD, YYYY') : moment().format('MMM DD, YYYY');
-                    $('#as-of-date-display').text('as of ' + display);
-                }
-            };
-
-            // View State Manager - FIXED
-            window.ViewStateManager = {
-                initializeViewOptions: function() {
-                    $('#view-options-btn').on('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        $('#view-options-dropdown').toggleClass('show');
-                    });
-
-                    $(document).on('click', '.view-option-item', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        const value = $(this).data('value');
-
-                        if (value === 'compact' || value === 'normal') {
-                            ViewStateManager.setViewType(value);
-                        } else if (value === 'expand' || value === 'collapse') {
-                            ViewStateManager.setExpandState(value);
-                        }
-
-                        ViewStateManager.applyGlobalViewState();
-                        ViewStateManager.updateViewCheckmarks();
-                        $('#view-options-dropdown').removeClass('show');
-
-                        // Only refresh table for view type changes
-                        if (value === 'compact' || value === 'normal') {
-                            window.TableManager.safeDraw();
-                        }
-                    });
-
-                    // Close dropdown when clicking outside
-                    $(document).on('click', function(e) {
-                        if (!$(e.target).closest('.view-options').length) {
-                            $('#view-options-dropdown').removeClass('show');
-                        }
-                    });
-
-                    ViewStateManager.setExpandState('expand');
-                    ViewStateManager.applyGlobalViewState();
-                    ViewStateManager.updateViewCheckmarks();
-                },
-
-                updateViewCheckmarks: function() {
-                    $('.view-option-item').removeClass('active');
-                    $('.view-option-item[data-value="' + window.balanceSheetState.viewState.viewType + '"]').addClass('active');
-                    $('.view-option-item[data-value="' + window.balanceSheetState.viewState.expandState + '"]').addClass('active');
-                },
-
-                setViewType: function(type) {
-                    if (type === 'compact') {
-                        window.balanceSheetState.viewState.viewType = 'compact';
-                        window.balanceSheetState.viewState.expandState = 'collapse';
-                    } else if (type === 'normal') {
-                        window.balanceSheetState.viewState.viewType = 'normal';
-                    }
-                },
-
-                setExpandState: function(state) {
-                    if (state === 'collapse') {
-                        window.balanceSheetState.viewState.expandState = 'collapse';
-                        if (window.balanceSheetState.viewState.viewType !== 'compact') {
-                            window.balanceSheetState.viewState.viewType = 'normal';
-                        }
-                    } else if (state === 'expand') {
-                        window.balanceSheetState.viewState.expandState = 'expand';
-                        window.balanceSheetState.viewState.viewType = 'normal';
-                    }
-                },
-
-                applyGlobalViewState: function() {
-                    const $reportContent = $('#report-content');
-                    $reportContent.removeClass('compact-view');
-
-                    if (window.balanceSheetState.viewState.viewType === 'compact') {
-                        $reportContent.addClass('compact-view');
-                        ViewStateManager.collapseAllSections();
-                        window.balanceSheetState.expandedSections.clear();
+                    if ($(this).find('h4').length > 0 || $(this).find('strong').length > 0) {
+                        // If <h4> exists, keep HTML (preserve h4)
+                        cellContent = $(this).html()
+                            .replace(/[\n\r]+/g, ' ')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
                     } else {
-                        if (window.balanceSheetState.viewState.expandState === 'expand' && !ViewStateManager._isTableRedraw) {
-                            ViewStateManager.expandAllSections();
-                        } else if (window.balanceSheetState.viewState.expandState === 'collapse' && !ViewStateManager._isTableRedraw) {
-                            ViewStateManager.collapseAllSections();
-                        }
+                        // Otherwise, use plain text
+                        cellContent = $(this).text()
+                            .replace(/[\n\r]+/g, ' ')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
                     }
 
-                    ViewStateManager._isTableRedraw = false;
+                    rowArray.push(cellContent);
+                });
+
+                data.push(rowArray);
+            });
+
+
+
+            // Send to universal export route
+            $.ajax({
+                url: '{{ route('export.datatable') }}',
+                method: 'POST',
+                data: {
+                    columns: columns,
+                    data: data,
+                    pageTitle: pageTitle,
+                    ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
+                        .textContent : "",
+                    HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
+                        .footerAlignment
+                    ],
+                    singleBold: pageTitle === "Balance Sheet - Standard" ? false : true,
+                    format: format,
+                    _token: '{{ csrf_token() }}'
                 },
-
-                _isTableRedraw: false,
-
-                expandAllSections: function() {
-                    $('.chevron-icon[data-parent-type="subtype"]').each(function() {
-                        const parentId = $(this).data('parent-id');
-                        if (parentId === undefined) return;
-                        const key = 'subtype:' + parentId;
-                        window.HierarchyManager.expandHierarchy('subtype', parentId);
-                        window.balanceSheetState.expandedSections.add(key);
-                        $(this).removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                    });
-
-                    $('.chevron-icon[data-parent-type="account"]').each(function() {
-                        const parentId = $(this).data('parent-id');
-                        if (parentId === undefined) return;
-                        const key = 'account:' + parentId;
-                        window.HierarchyManager.expandHierarchy('account', parentId);
-                        window.balanceSheetState.expandedSections.add(key);
-                        $(this).removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                    });
-
-                    $('.section-header-row').each(function() {
-                        $(this).addClass('section-expanded').find('.toggle-chevron')
-                            .removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                        $(this).find('.section-total-amount').hide();
-                    });
+                xhrFields: {
+                    responseType: 'blob'
                 },
+                success: function(blob, status, xhr) {
+                    let filename = xhr.getResponseHeader('Content-Disposition')
+                        .split('filename=')[1]
+                        .replace(/"/g, '');
 
-                collapseAllSections: function() {
-                    $('.chevron-icon[data-parent-type="account"]').each(function() {
-                        const parentId = $(this).data('parent-id');
-                        if (parentId === undefined) return;
-                        const key = 'account:' + parentId;
-                        window.HierarchyManager.collapseHierarchy('account', parentId);
-                        window.balanceSheetState.expandedSections.delete(key);
-                        $(this).removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                    });
-
-                    $('.chevron-icon[data-parent-type="subtype"]').each(function() {
-                        const parentId = $(this).data('parent-id');
-                        if (parentId === undefined) return;
-                        const key = 'subtype:' + parentId;
-                        window.HierarchyManager.collapseHierarchy('subtype', parentId);
-                        window.balanceSheetState.expandedSections.delete(key);
-                        $(this).removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                    });
-
-                    $('.section-header-row').each(function() {
-                        $(this).removeClass('section-expanded').find('.toggle-chevron')
-                            .removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                        $(this).find('.section-total-amount').show();
-                    });
+                    if (format === "print") {
+                        let fileURL = URL.createObjectURL(blob);
+                        let printWindow = window.open(fileURL);
+                        printWindow.onload = function() {
+                            printWindow.focus();
+                            printWindow.print();
+                        };
+                    } else {
+                        let link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(blob);
+                        link.download = filename;
+                        link.click();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Export failed:', xhr.responseText);
+                    alert('Export failed! Check console.');
                 }
+            });
+        }
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            // Global variables
+            window.reportOptions = {
+                divideBy1000: false,
+                hideZeroAmounts: false,
+                roundWholeNumbers: false,
+                negativeFormat: '-100',
+                showInRed: false,
+                companyLogo: false,
+                reportPeriod: true,
+                companyName: true,
+                headerAlignment: 'center',
+                datePrepared: true,
+                timePrepared: true,
+                reportBasis: true,
+                footerAlignment: 'center'
             };
 
-            // Hierarchy Manager
-            window.HierarchyManager = {
-                collapseHierarchy: function(parentType, parentId) {
-                    if (!parentType || parentId === undefined) return;
-
-                    if (parentType === 'subtype') {
-                        $('.child-of-subtype-' + parentId).hide().addClass('collapsed');
-                        $('.chevron-icon[data-parent-type="account"]').each(function() {
-                            const $c = $(this);
-                            const pid = $c.data('parent-id');
-                            if ($('.child-of-account-' + pid).length) {
-                                $c.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                            }
-                        });
-                    } else if (parentType === 'account') {
-                        $('.child-of-account-' + parentId).hide().addClass('collapsed');
-                        $('.chevron-icon[data-parent-type="account"][data-parent-id="' + parentId + '"]')
-                            .removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                    }
+            // Initialize date range picker
+            $('#daterange').daterangepicker({
+                startDate: moment($('#filter-start-date').val()),
+                endDate: moment($('#filter-end-date').val()),
+                opens: 'left',
+                autoApply: true,
+                locale: {
+                    format: 'MM/DD/YYYY'
                 },
+                ranges: {
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1,
+                        'month').endOf('month')],
+                    'This Quarter': [moment().startOf('quarter'), moment().endOf('quarter')],
+                    'This Year': [moment().startOf('year'), moment().endOf('year')]
+                }
+            }, function(start, end) {
+                // Update hidden inputs with formatted dates for the server
+                $('#filter-start-date').val(start.format('YYYY-MM-DD'));
+                $('#filter-end-date').val(end.format('YYYY-MM-DD'));
 
-                expandHierarchy: function(parentType, parentId) {
-                    if (!parentType || parentId === undefined) return;
+                // Update display
+                updateDateDisplay();
 
-                    if (parentType === 'subtype') {
-                        $('.child-of-subtype-' + parentId).each(function() {
-                            const $el = $(this);
-                            if ($el.hasClass('account-header-row') || $el.hasClass('subtype-total-row')) {
-                                $el.show().removeClass('collapsed');
-                            } else {
-                                const classes = ($el.attr('class') || '').split(/\s+/);
-                                const accountClass = classes.find(c => c.indexOf('child-of-account-') === 0);
-                                if (accountClass) {
-                                    const accountId = accountClass.replace('child-of-account-', '');
-                                    const $accChevron = $('.chevron-icon[data-parent-type="account"][data-parent-id="' + accountId + '"]');
-                                    if ($accChevron.length && $accChevron.hasClass('fa-chevron-down')) {
-                                        $el.show().removeClass('collapsed');
-                                    }
-                                } else {
-                                    $el.show().removeClass('collapsed');
-                                }
-                            }
-                        });
-                        $('.chevron-icon[data-parent-type="subtype"][data-parent-id="' + parentId + '"]')
-                            .removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                    } else if (parentType === 'account') {
-                        $('.child-of-account-' + parentId).show().removeClass('collapsed');
-                        $('.chevron-icon[data-parent-type="account"][data-parent-id="' + parentId + '"]')
-                            .removeClass('fa-chevron-right').addClass('fa-chevron-down');
+                // Auto refresh data
+                refreshData();
+            });
+
+            // General Options Modal
+            $('#general-options-btn').on('click', function() {
+                $('#general-options-overlay').show();
+            });
+
+            $('#close-general-options').on('click', function() {
+                $('#general-options-overlay').hide();
+            });
+
+            $('#general-options-overlay').on('click', function(e) {
+                if (e.target === this) {
+                    $('#general-options-overlay').hide();
+                }
+            });
+
+            // Columns Modal
+            $('#columns-btn').on('click', function() {
+                $('#columns-overlay').show();
+            });
+
+            $('#close-columns').on('click', function() {
+                $('#columns-overlay').hide();
+            });
+
+            $('#columns-overlay').on('click', function(e) {
+                if (e.target === this) {
+                    $('#columns-overlay').hide();
+                }
+            });
+
+            // Initialize Sortable for column reordering
+            if (document.getElementById('sortable-columns')) {
+                new Sortable(document.getElementById('sortable-columns'), {
+                    animation: 150,
+                    handle: '.handle',
+                    onEnd: function() {
+                        updateColumnOrder();
                     }
-                },
+                });
+            }
 
-                reapplyPersistedState: function() {
-                    if (window.balanceSheetState.viewState.viewType === 'compact') {
+            // Handle period filter changes
+            $('.filter-period').on('change', function() {
+                updateDateRange($(this).val());
+            });
+
+            // Update date range based on period selection
+            function updateDateRange(period) {
+                const today = moment();
+                let startDate, endDate;
+
+                switch (period) {
+                    case 'all_dates':
+                        startDate = null;
+                        endDate = null;
+                        break;
+
+                    case 'custom_date':
+                        // Do nothing, let user pick manually
                         return;
+
+                    case 'today':
+                        startDate = today.clone();
+                        endDate = today.clone();
+                        break;
+
+                    case 'yesterday':
+                        startDate = today.clone().subtract(1, 'day');
+                        endDate = today.clone().subtract(1, 'day');
+                        break;
+
+                    case 'this_week':
+                        startDate = today.clone().startOf('week');
+                        endDate = today.clone().endOf('week');
+                        break;
+
+                    case 'this_week_to_date':
+                        startDate = today.clone().startOf('week');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_week':
+                        startDate = today.clone().subtract(1, 'week').startOf('week');
+                        endDate = today.clone().subtract(1, 'week').endOf('week');
+                        break;
+
+                    case 'last_week_to_date':
+                        startDate = today.clone().subtract(1, 'week').startOf('week');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_week_to_today':
+                        startDate = today.clone().subtract(1, 'week').startOf('week');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_month':
+                        startDate = today.clone().startOf('month');
+                        endDate = today.clone().endOf('month');
+                        break;
+
+                    case 'this_month_to_date':
+                        startDate = today.clone().startOf('month');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_month':
+                        startDate = today.clone().subtract(1, 'month').startOf('month');
+                        endDate = today.clone().subtract(1, 'month').endOf('month');
+                        break;
+
+                    case 'last_month_to_date':
+                        startDate = today.clone().subtract(1, 'month').startOf('month');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_month_to_today':
+                        startDate = today.clone().subtract(1, 'month').startOf('month');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_quarter':
+                        startDate = today.clone().startOf('quarter');
+                        endDate = today.clone().endOf('quarter');
+                        break;
+
+                    case 'this_quarter_to_date':
+                        startDate = today.clone().startOf('quarter');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_quarter':
+                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
+                        endDate = today.clone().subtract(1, 'quarter').endOf('quarter');
+                        break;
+
+                    case 'last_quarter_to_date':
+                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_quarter_to_today':
+                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_year':
+                        startDate = today.clone().startOf('year');
+                        endDate = today.clone().endOf('year');
+                        break;
+
+                    case 'this_year_to_date':
+                        startDate = today.clone().startOf('year');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_year_to_last_month':
+                        startDate = today.clone().startOf('year');
+                        endDate = today.clone().subtract(1, 'month').endOf('month');
+                        break;
+
+                    case 'last_year':
+                        startDate = today.clone().subtract(1, 'year').startOf('year');
+                        endDate = today.clone().subtract(1, 'year').endOf('year');
+                        break;
+
+                    case 'last_year_to_date':
+                        startDate = today.clone().subtract(1, 'year').startOf('year');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_year_to_today':
+                        startDate = today.clone().subtract(1, 'year').startOf('year');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_7_days':
+                        startDate = today.clone().subtract(6, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_30_days':
+                        startDate = today.clone().subtract(29, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_90_days':
+                        startDate = today.clone().subtract(89, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_12_months':
+                        startDate = today.clone().subtract(12, 'months').startOf('month');
+                        endDate = today.clone().endOf('month');
+                        break;
+
+                    case 'since_30_days_ago':
+                        startDate = today.clone().subtract(30, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'since_60_days_ago':
+                        startDate = today.clone().subtract(60, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'since_90_days_ago':
+                        startDate = today.clone().subtract(90, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'since_365_days_ago':
+                        startDate = today.clone().subtract(365, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'next_week':
+                        startDate = today.clone().add(1, 'week').startOf('week');
+                        endDate = today.clone().add(1, 'week').endOf('week');
+                        break;
+
+                    case 'next_4_weeks':
+                        startDate = today.clone().add(1, 'week').startOf('week');
+                        endDate = today.clone().add(4, 'week').endOf('week');
+                        break;
+
+                    case 'next_month':
+                        startDate = today.clone().add(1, 'month').startOf('month');
+                        endDate = today.clone().add(1, 'month').endOf('month');
+                        break;
+
+                    case 'next_quarter':
+                        startDate = today.clone().add(1, 'quarter').startOf('quarter');
+                        endDate = today.clone().add(1, 'quarter').endOf('quarter');
+                        break;
+
+                    case 'next_year':
+                        startDate = today.clone().add(1, 'year').startOf('year');
+                        endDate = today.clone().add(1, 'year').endOf('year');
+                        break;
+
+                    default:
+                        startDate = today.clone().startOf('month');
+                        endDate = today.clone();
+                }
+
+                // Update the inputs if not custom_date or all_dates
+                // if (startDate && endDate) {
+                //     $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
+                //     $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
+                // }
+                // Update hidden date fields
+                $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
+                $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
+
+                // Update DateRangePicker to reflect the new dates
+                // $('#daterange').data('daterangepicker').setStartDate(startDate);
+                // $('#daterange').data('daterangepicker').setEndDate(endDate);
+                updateDateDisplay();
+                refreshData();
+            }
+
+            const $last = $('.last-updated');
+            let lastUpdatedAt = Date.now();
+            let tickerId = null;
+
+            function formatRelative(ts) {
+                const s = Math.floor((Date.now() - ts) / 1000);
+                if (s < 5) return 'just now';
+                if (s < 60) return `${s} seconds ago`;
+                const m = Math.floor(s / 60);
+                if (m < 60) return m === 1 ? '1 minute ago' : `${m} minutes ago`;
+                const h = Math.floor(m / 60);
+                if (h < 24) return h === 1 ? '1 hour ago' : `${h} hours ago`;
+                const d = Math.floor(h / 24);
+                return d === 1 ? '1 day ago' : `${d} days ago`;
+            }
+
+            function updateLabel() {
+                $last.text(`Last updated ${formatRelative(lastUpdatedAt)}`);
+            }
+
+            function markNow() {
+                lastUpdatedAt = Date.now();
+                updateLabel();
+                if (tickerId) clearInterval(tickerId);
+                tickerId = setInterval(updateLabel, 30 * 1000);
+            }
+            markNow();
+
+            // Update date display
+            function updateDateDisplay() {
+                const startDate = moment($('#filter-start-date').val());
+                const endDate = moment($('#filter-end-date').val());
+
+                const formattedStart = startDate.format('MMMM D, YYYY');
+                const formattedEnd = endDate.format('MMMM D, YYYY');
+
+                $('#date-range-display').text(' As of  ' + formattedEnd);
+            }
+
+            // Refresh data function
+            function refreshData() {
+                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
+                    window.LaravelDataTables["customer-balance-table"].draw();
+                } else {
+                    console.log('DataTable not yet initialized');
+                    setTimeout(refreshData, 100);
+                }
+            }
+
+            // Handle date changes
+            $('#filter-start-date, #filter-end-date').on('apply.daterangepicker', function() {
+                updateDateDisplay();
+                refreshData();
+            });
+
+            // Handle account filter changes
+            $('#filter-account').on('change', function() {
+                refreshData();
+            });
+            $('#filter-end-date').on('change', function() {
+                $('#sidebar-filter-end-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+            $('#filter-start-date').on('change', function() {
+                $('#sidebar-filter-start-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+
+            $('#sidebar-filter-end-date').on('change', function() {
+                $('#filter-end-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+            $('#sidebar-filter-start-date').on('change', function() {
+                $('#filter-start-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+
+            // Handle accounting method changes
+            $('#accounting-method').on('change', function() {
+                refreshData();
+            });
+
+            // Setup DataTable ajax parameters
+            $('#customer-balance-table').on('preXhr.dt', function(e, settings, data) {
+                data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
+                data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
+                data.account_id = $('#filter-account').val();
+                data.accounting_method = $('#accounting-method').val();
+                data.reportOptions = window.reportOptions;
+            });
+
+            // General Options functionality
+            function applyGeneralOptions() {
+                // Update global options object
+                window.reportOptions.divideBy1000 = $('#divide-by-1000').prop('checked');
+                window.reportOptions.hideZeroAmounts = $('#hide-zero-amounts').prop('checked');
+                window.reportOptions.roundWholeNumbers = $('#round-whole-numbers').prop('checked');
+                window.reportOptions.negativeFormat = $('#negative-format').val();
+                window.reportOptions.showInRed = $('#show-in-red').prop('checked');
+                window.reportOptions.companyLogo = $('#company-logo').prop('checked');
+                window.reportOptions.reportPeriod = $('#report-period').prop('checked');
+                window.reportOptions.companyName = $('#company-name').prop('checked');
+                window.reportOptions.headerAlignment = $('#header-alignment').val();
+                window.reportOptions.datePrepared = $('#date-prepared').prop('checked');
+                window.reportOptions.timePrepared = $('#time-prepared').prop('checked');
+                window.reportOptions.reportBasis = $('#report-basis').prop('checked');
+                window.reportOptions.footerAlignment = $('#footer-alignment').val();
+
+                // Apply number formatting
+                applyNumberFormatting(window.reportOptions);
+
+                // Apply header/footer settings
+                applyHeaderFooterSettings(window.reportOptions);
+
+                // Refresh the table with new settings
+                refreshData();
+            }
+
+            function applyNumberFormatting(options) {
+                // Remove any existing custom styles
+                $('#custom-number-format').remove();
+
+                // Create custom style tag
+                let customCSS = '<style id="custom-number-format">';
+
+                if (options.showInRed) {
+                    customCSS += '.negative-amount { color: #dc2626 !important; }';
+                }
+
+                if (options.hideZeroAmounts) {
+                    customCSS += '.zero-amount { display: none !important; }';
+                }
+
+                customCSS += '</style>';
+                $('head').append(customCSS);
+            }
+
+            function applyHeaderFooterSettings(options) {
+                // Update header alignment
+                $('.report-title-section').css('text-align', options.headerAlignment);
+
+                // Show/hide header elements
+                if (!options.companyName) {
+                    $('.company-name').hide();
+                } else {
+                    $('.company-name').show();
+                }
+
+                if (!options.reportPeriod) {
+                    $('.date-range').hide();
+                } else {
+                    $('.date-range').show();
+                }
+
+                // Add footer if it doesn't exist
+                if ($('.report-footer').length === 0) {
+                    const currentDate = new Date();
+                    const dateStr = currentDate.toLocaleDateString();
+                    const timeStr = currentDate.toLocaleTimeString();
+                    const basisStr = $('#accounting-method').val() === 'accrual' ? 'Accrual Basis' : 'Cash Basis';
+
+                    let footerHTML =
+                        '<div class="report-footer" style="padding: 20px; border-top: 1px solid #e6e6e6; text-align: ' +
+                        options.footerAlignment + '; font-size: 12px; color: #6b7280;">';
+
+                    if (options.datePrepared) {
+                        footerHTML += '<div>Date Prepared: ' + dateStr + '</div>';
                     }
 
-                    // Restore subtype states
-                    $('.chevron-icon[data-parent-type="subtype"]').each(function() {
-                        const parentId = $(this).data('parent-id');
-                        if (parentId === undefined) return;
-                        const key = 'subtype:' + parentId;
-                        const $row = $(this).closest('tr');
+                    if (options.timePrepared) {
+                        footerHTML += '<div>Time Prepared: ' + timeStr + '</div>';
+                    }
 
-                        if (window.balanceSheetState.expandedSections.has(key)) {
-                            HierarchyManager.expandHierarchy('subtype', parentId);
-                            window.BalanceHelpers.hideCollapsedBalance($row);
-                            $(this).removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                        } else {
-                            HierarchyManager.collapseHierarchy('subtype', parentId);
-                            window.BalanceHelpers.showCollapsedBalance($row, 'subtype', parentId);
-                            $(this).removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                        }
-                    });
+                    if (options.reportBasis) {
+                        footerHTML += '<div>Report Basis: ' + basisStr + '</div>';
+                    }
 
-                    // Restore account states
-                    $('.chevron-icon[data-parent-type="account"]').each(function() {
-                        const parentId = $(this).data('parent-id');
-                        if (parentId === undefined) return;
-                        const key = 'account:' + parentId;
-                        const $row = $(this).closest('tr');
+                    footerHTML += '</div>';
 
-                        if (window.balanceSheetState.expandedSections.has(key)) {
-                            HierarchyManager.expandHierarchy('account', parentId);
-                            window.BalanceHelpers.hideCollapsedBalance($row);
-                            $(this).removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                        } else {
-                            HierarchyManager.collapseHierarchy('account', parentId);
-                            window.BalanceHelpers.showCollapsedBalance($row, 'account', parentId);
-                            $(this).removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                        }
-                    });
+                    $('.report-content').append(footerHTML);
+                } else {
+                    // Update existing footer
+                    $('.report-footer').css('text-align', options.footerAlignment);
 
-                    // Update section headers
-                    $('.section-header-row').each(function() {
-                        const sectionId = $(this).attr('data-row-id');
-                        if (!sectionId) return;
-                        const anyChildVisible = $('[data-parent="' + sectionId + '"]').filter(':visible').length > 0;
-                        if (anyChildVisible) {
-                            $(this).addClass('section-expanded').find('.section-total-amount').hide();
-                            $(this).find('.toggle-chevron').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                        } else {
-                            $(this).removeClass('section-expanded').find('.section-total-amount').show();
-                            $(this).find('.toggle-chevron').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                        }
-                    });
-                },
+                    if (!options.datePrepared) {
+                        $('.report-footer div:contains("Date Prepared")').hide();
+                    } else {
+                        $('.report-footer div:contains("Date Prepared")').show();
+                    }
 
-                initializeChevronHandlers: function() {
-                    $(document).on('click', '.chevron-icon', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
+                    if (!options.timePrepared) {
+                        $('.report-footer div:contains("Time Prepared")').hide();
+                    } else {
+                        $('.report-footer div:contains("Time Prepared")').show();
+                    }
 
-                        const $icon = $(this);
-                        const parentType = $icon.data('parent-type');
-                        const parentId = $icon.data('parent-id');
-                        const $row = $icon.closest('tr');
-
-                        if (parentType === undefined || parentId === undefined) return;
-
-                        const key = parentType + ':' + parentId;
-
-                        if ($icon.hasClass('fa-chevron-down')) {
-                            // Collapse - NO TABLE REFRESH
-                            $icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                            HierarchyManager.collapseHierarchy(parentType, parentId);
-                            window.BalanceHelpers.showCollapsedBalance($row, parentType, parentId);
-                            window.balanceSheetState.expandedSections.delete(key);
-                        } else {
-                            // Expand - NO TABLE REFRESH
-                            $icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                            HierarchyManager.expandHierarchy(parentType, parentId);
-                            window.BalanceHelpers.hideCollapsedBalance($row);
-                            window.balanceSheetState.expandedSections.add(key);
-                        }
-
-                        HierarchyManager.updateParentSectionState($row);
-                    });
-                },
-
-                updateParentSectionState: function($row) {
-                    const $section = $row.closest('[data-row-id]').length ?
-                        $row.closest('[data-row-id]') :
-                        $row.prevAll('[data-row-id]:first');
-
-                    if ($section.length) {
-                        const sectionId = $section.attr('data-row-id');
-                        if (sectionId) {
-                            const anyChildVisible = $('[data-parent="' + sectionId + '"]').filter(':visible').length > 0;
-                            if (anyChildVisible) {
-                                $section.addClass('section-expanded').find('.section-total-amount').hide();
-                                $section.find('.toggle-chevron').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                            } else {
-                                $section.removeClass('section-expanded').find('.section-total-amount').show();
-                                $section.find('.toggle-chevron').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                            }
-                        }
+                    if (!options.reportBasis) {
+                        $('.report-footer div:contains("Report Basis")').hide();
+                    } else {
+                        $('.report-footer div:contains("Report Basis")').show();
                     }
                 }
-            };
+            }
 
-            // Balance Calculation Helpers
-            window.BalanceHelpers = {
-                calculateTotalBalance: function(parentType, parentId) {
-                    let total = 0;
-                    let found = false;
+            // Apply general options when checkboxes change
+            $('.general-options-modal input, .general-options-modal select').on('change', function() {
+                applyGeneralOptions();
+            });
 
-                    if (parentType === 'subtype') {
-                        $('.subtype-total-row').each(function() {
-                            if ($(this).hasClass('child-of-subtype-' + parentId)) {
-                                const balanceText = $(this).find('td').eq(9).text().trim();
-                                if (balanceText) {
-                                    total = parseFloat(balanceText.replace(/[^0-9.-]+/g, '')) || 0;
-                                    found = true;
-                                    return false;
-                                }
-                            }
-                        });
-                    } else if (parentType === 'account') {
-                        $('.account-total-row').each(function() {
-                            if ($(this).hasClass('child-of-account-' + parentId)) {
-                                const balanceText = $(this).find('td').eq(9).text().trim();
-                                if (balanceText) {
-                                    total = parseFloat(balanceText.replace(/[^0-9.-]+/g, '')) || 0;
-                                    found = true;
-                                    return false;
-                                }
-                            }
-                        });
+            // Column management
+            function updateColumnOrder() {
+                const order = [];
+                $('#sortable-columns .column-item').each(function() {
+                    const columnIndex = $(this).data('column');
+                    if (columnIndex !== undefined) {
+                        order.push(columnIndex);
                     }
+                });
 
-                    return found ? total : null;
-                },
+                // Store column order preference
+                localStorage.setItem('ledger-column-order', JSON.stringify(order));
+                console.log('Column order updated:', order);
 
-                showCollapsedBalance: function($row, parentType, parentId) {
-                    if (!$row || !$row.length) return;
-                    const totalBalance = BalanceHelpers.calculateTotalBalance(parentType, parentId);
-                    const $accountCell = $row.find('td').first();
-                    if (totalBalance === null) return;
-                    if (!$accountCell.find('.collapsed-balance').length) {
-                        $accountCell.append(' <span class="collapsed-balance">(' +
-                            BalanceHelpers.formatCurrency(totalBalance) + ')</span>');
-                    }
-                },
-
-                hideCollapsedBalance: function($row) {
-                    if (!$row || !$row.length) return;
-                    $row.find('.collapsed-balance').remove();
-                },
-
-                formatCurrency: function(amount) {
-                    const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
-                    return num.toLocaleString('en');
+                // Apply column order if DataTable supports it
+                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
+                    // Note: Column reordering requires ColReorder extension
+                    console.log('Column order would be applied:', order);
                 }
-            };
+            }
 
-            // Report Formatting
-            window.ReportFormatter = {
-                applyGeneralOptions: function() {
-                    const options = window.balanceSheetState.reportOptions;
+            // Handle column visibility
+            $('.columns-modal input[type="checkbox"]').on('change', function() {
+                const columnIndex = $(this).closest('.column-item').data('column');
+                const isVisible = $(this).prop('checked');
 
-                    options.divideBy1000 = $('#divide-by-1000').prop('checked');
-                    options.hideZeroAmounts = $('#hide-zero-amounts').prop('checked');
-                    options.roundWholeNumbers = $('#round-whole-numbers').prop('checked');
-                    options.negativeFormat = $('#negative-format').val();
-                    options.showInRed = $('#show-in-red').prop('checked');
-                    options.companyLogo = $('#company-logo').prop('checked');
-                    options.reportPeriod = $('#report-period').prop('checked');
-                    options.companyName = $('#company-name').prop('checked');
-                    options.headerAlignment = $('#header-alignment').val();
-                    options.datePrepared = $('#date-prepared').prop('checked');
-                    options.timePrepared = $('#time-prepared').prop('checked');
-                    options.reportBasis = $('#report-basis').prop('checked');
-                    options.footerAlignment = $('#footer-alignment').val();
-
-                    ReportFormatter.applyNumberFormatting();
-                    ReportFormatter.applyHeaderFooterSettings();
-                    ReportFormatter.applyCellFormatting();
-                    window.TableManager.refreshTable();
-                },
-
-                applyNumberFormatting: function() {
-                    $('#custom-number-format').remove();
-                    let customCSS = '<style id="custom-number-format">';
-                    if (window.balanceSheetState.reportOptions.showInRed) {
-                        customCSS += '.negative-amount { color: #dc2626 !important; }';
+                if (columnIndex !== undefined && window.LaravelDataTables && window.LaravelDataTables[
+                        "customer-balance-table"]) {
+                    try {
+                        window.LaravelDataTables["customer-balance-table"].column(columnIndex).visible(
+                            isVisible);
+                    } catch (error) {
+                        console.log('Column visibility change:', columnIndex, isVisible);
                     }
-                    if (window.balanceSheetState.reportOptions.hideZeroAmounts) {
-                        customCSS += '.zero-amount { display: none !important; }';
+                }
+
+                // Update column count badge
+                updateColumnCountBadge();
+            });
+
+            function updateColumnCountBadge() {
+                const visibleCount = $('.columns-modal input[type="checkbox"]:checked').length;
+                $('.badge').text(visibleCount);
+            }
+
+            // Collapsible sections in General Options
+            $('.section-title').on('click', function() {
+                const section = $(this).next('.option-group');
+                const icon = $(this).find('.fa-chevron-up, .fa-chevron-down');
+
+                section.slideToggle();
+                if (icon.hasClass('fa-chevron-up')) {
+                    icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                } else {
+                    icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                }
+            });
+
+            // Add expand/collapse functionality for account groups
+            $(document).on('click', '.account-group', function() {
+                const accountId = $(this).data('account-id');
+                $('.account-row[data-parent="' + accountId + '"]').toggle();
+
+                // Toggle icon
+                const icon = $(this).find('.expand-icon');
+                if (icon.text() === '▼') {
+                    icon.text('►');
+                } else {
+                    icon.text('▼');
+                }
+            });
+
+            // Initialize with current selection
+            updateDateDisplay();
+
+            // Print functionality
+            $('.btn-icon[title="Print"]').on('click', function() {
+                // Create print-friendly version
+                const printWindow = window.open('', '_blank');
+                const printContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>A/R Aging Summary Report - Print</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; }
+                            .report-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                            .company-name { text-align: center; font-size: 16px; margin-bottom: 10px; }
+                            .date-range { text-align: center; font-size: 14px; margin-bottom: 20px; }
+                            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                            th { background-color: #f5f5f5; font-weight: bold; }
+                            .text-right { text-align: right; }
+                            .negative-amount { color: red; }
+                            @media print { body { margin: 0; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="report-title">A/R Aging Summary Report</div>
+                        <div class="company-name">${$('.company-name').text()}</div>
+                        <div class="date-range">${$('.date-range').text()}</div>
+                        <table>
+                            ${$('.customer-balance-table').html()}
+                        </table>
+                    </body>
+                    </html>
+                `;
+                printWindow.document.write(printContent);
+                printWindow.document.close();
+                printWindow.print();
+            });
+
+            // Save As functionality
+            $('.btn-save').on('click', function() {
+                const reportName = prompt('Enter report name:', 'A/R Aging Summary Report - ' + moment()
+                    .format(
+                        'YYYY-MM-DD'));
+                if (reportName) {
+                    // In a real application, this would save to the server
+                    alert('Report "' + reportName + '" would be saved with current settings');
+
+                    // Save current settings to localStorage for demo
+                    const settings = {
+                        name: reportName,
+                        startDate: $('#filter-start-date').val(),
+                        endDate: $('#filter-end-date').val(),
+                        account: $('#filter-account').val(),
+                        accountingMethod: $('#accounting-method').val(),
+                        options: window.reportOptions,
+                        savedAt: new Date().toISOString()
+                    };
+
+                    localStorage.setItem('saved-report-' + Date.now(), JSON.stringify(settings));
+                }
+            });
+
+            // Export functionality
+            /*$('.btn-icon[title="Export"]').on('click', function() {
+                // Create export menu
+                const exportOptions = [{
+                        text: 'Export to Excel',
+                        action: 'excel'
+                    },
+                    {
+                        text: 'Export to PDF',
+                        action: 'pdf'
+                    },
+                    {
+                        text: 'Export to CSV',
+                        action: 'csv'
                     }
-                    customCSS += '</style>';
-                    $('head').append(customCSS);
-                },
+                ];
 
-                applyHeaderFooterSettings: function() {
-                    const options = window.balanceSheetState.reportOptions;
-                    $('.report-title-section').css('text-align', options.headerAlignment);
-                    $('.company-name').toggle(options.companyName);
-                    $('.date-range').toggle(options.reportPeriod);
-                    ReportFormatter.updateReportFooter();
-                },
+                const option = prompt(
+                    'Choose export format:\n1. Excel\n2. PDF\n3. CSV\n\nEnter number (1-3):');
 
-                updateReportFooter: function() {
-                    const options = window.balanceSheetState.reportOptions;
-                    $('.report-footer').remove();
 
-                    if (options.datePrepared || options.timePrepared || options.reportBasis) {
-                        const currentDate = new Date();
-                        const dateStr = currentDate.toLocaleDateString();
-                        const timeStr = currentDate.toLocaleTimeString();
-                        const basisStr = $('#accounting-method').val() === 'accrual' ? 'Accrual Basis' : 'Cash Basis';
+                // Get table ID dynamically (assumes closest table in DOM)
+                const tableId = $(this).closest('div').find('table').attr('id');
+                const pageTitle = document.title || 'Report';
 
-                        let footerHTML = '<div class="report-footer" style="padding: 20px; border-top: 1px solid #e6e6e6; text-align: ' +
-                            options.footerAlignment + '; font-size: 12px; color: #6b7280;">';
+                switch (option) {
+                    case '1':
+                        // alert('Excel export would be triggered');
+                        $("#ExprotExcel").click();
+                        break;
+                    case '2':
+                        $("#ExprotPDF").click();
+                        // alert('PDF export would be triggered');
+                        break;
+                    case '3':
+                        alert('CSV export would be triggered');
+                        break;
+                    default:
+                        alert('Invalid option');
+                }
+            });*/
 
-                        if (options.datePrepared) footerHTML += '<div>Date Prepared: ' + dateStr + '</div>';
-                        if (options.timePrepared) footerHTML += '<div>Time Prepared: ' + timeStr + '</div>';
-                        if (options.reportBasis) footerHTML += '<div>Report Basis: ' + basisStr + '</div>';
-                        footerHTML += '</div>';
-                        $('#report-content').append(footerHTML);
-                    }
-                },
+            // View options functionality
+            $('#view-options-btn').on('click', function() {
+                alert('View options panel would open here with additional display settings');
+            });
 
-                applyCellFormatting: function() {
-                    const $table = $(window.balanceSheetConstants.TABLE_SELECTOR);
-                    const options = window.balanceSheetState.reportOptions;
+            // Filter button functionality
+            $('#filter-btn').on('click', function() {
+                alert('Advanced filter panel would open here');
+            });
 
-                    $table.find('tbody tr').each(function() {
+            // Refresh button functionality
+            $('.btn-icon[title="Refresh"]').on('click', function() {
+                $(this).find('i').addClass('fa-spin');
+                refreshData();
+                setTimeout(() => {
+                    $(this).find('i').removeClass('fa-spin');
+                }, 1000);
+            });
+
+            // Initialize general options with default values
+            setTimeout(function() {
+                applyGeneralOptions();
+                updateColumnCountBadge();
+            }, 100);
+
+            // Format numbers in table based on options
+            $(document).on('draw.dt', '#customer-balance-table', function() {
+                if (window.reportOptions) {
+                    $('.customer-balance-table tbody tr').each(function() {
                         const $row = $(this);
-                        $row.find('td').each(function() {
+
+                        // Apply number formatting to amount columns
+                        $row.find('td').each(function(index) {
                             const $cell = $(this);
                             const text = $cell.text().trim();
-                            const numText = text.replace(/[,$()]/g, '');
 
-                            if (text && !isNaN(numText) && numText !== '') {
-                                let value = parseFloat(numText);
+                            // Check if cell contains a number
+                            if (text && !isNaN(text.replace(/[,$()]/g, ''))) {
+                                let value = parseFloat(text.replace(/[,$()]/g, ''));
 
-                                if (options.hideZeroAmounts && value === 0) {
+                                if (window.reportOptions.hideZeroAmounts && value === 0) {
                                     $cell.addClass('zero-amount');
-                                    return;
                                 }
 
-                                if (options.divideBy1000) value = value / 1000;
-                                if (options.roundWholeNumbers) value = Math.round(value);
+                                if (window.reportOptions.divideBy1000) {
+                                    value = value / 1000;
+                                }
 
+                                if (window.reportOptions.roundWholeNumbers) {
+                                    value = Math.round(value);
+                                }
+
+                                // Format negative numbers
                                 if (value < 0) {
                                     $cell.addClass('negative-amount');
-                                    switch (options.negativeFormat) {
+
+                                    switch (window.reportOptions.negativeFormat) {
                                         case '(100)':
-                                            $cell.text('(' + Math.abs(value).toLocaleString() + ')');
+                                            $cell.text('(' + Math.abs(value)
+                                                .toLocaleString() + ')');
                                             break;
                                         case '100-':
-                                            $cell.text(Math.abs(value).toLocaleString() + '-');
+                                            $cell.text(Math.abs(value).toLocaleString() +
+                                                '-');
                                             break;
                                         default:
-                                            $cell.text('-' + Math.abs(value).toLocaleString());
+                                            $cell.text('-' + Math.abs(value)
+                                                .toLocaleString());
                                     }
                                 } else if (value > 0) {
                                     $cell.text(value.toLocaleString());
-                                } else {
-                                    $cell.text((0).toLocaleString());
                                 }
                             }
                         });
                     });
                 }
-            };
-
-            // Table Management
-            window.TableManager = {
-                refreshTable: function() {
-                    const dt = window.balanceSheetConstants.getDt();
-                    if (dt && typeof dt.draw === 'function') {
-                        dt.draw(false);
-                    }
-                },
-
-                safeDraw: function() {
-                    TableManager.safeDrawDebounced();
-                },
-
-                safeDrawDebounced: window.debounce(function() {
-                    const dt = window.balanceSheetConstants.getDt();
-                    if (dt && typeof dt.draw === 'function') {
-                        dt.draw(false);
-                    }
-                }, 250),
-
-                setupDataTableEvents: function() {
-                    const $table = $(window.balanceSheetConstants.TABLE_SELECTOR);
-                    window.balanceSheetState.balanceSheetTable = window.balanceSheetConstants.getDt();
-
-                    if (window.balanceSheetState.balanceSheetTable) {
-                        $table.on('draw.dt', function() {
-                            if (typeof attachToggleHandlers === 'function') {
-                                attachToggleHandlers();
-                            }
-
-                            window.ViewStateManager._isTableRedraw = true;
-                            window.ViewStateManager.applyGlobalViewState();
-                            window.HierarchyManager.reapplyPersistedState();
-                            window.ReportFormatter.applyCellFormatting();
-                        });
-
-                        $table.on('preXhr.dt', function(e, settings, data) {
-                            data.asOfDate = $('#asOfDate').val() || moment().format('YYYY-MM-DD');
-                            data.accounting_method = $('#accounting-method').val();
-                            data.accountingMethod = $('#accounting-method').val();
-                        });
-
-                        if (typeof attachToggleHandlers === 'function') {
-                            attachToggleHandlers();
-                        }
-                    }
-                }
-            };
-
-            // Legacy Section Handlers
-            window.LegacySectionHandlers = {
-                initialize: function() {
-                    $(document).on('click', '.section-toggle', function(e) {
-                        LegacySectionHandlers.handleSectionToggle.call(this, e);
-                    });
-                },
-
-                handleSectionToggle: function(e) {
-                    e.preventDefault();
-                    if (window.balanceSheetState.viewState.viewType === 'compact') return;
-
-                    const $this = $(this);
-                    const group = $this.closest('tr').data('row-id');
-                    const $row = $this.closest('tr');
-                    const $chevron = $this.find('.toggle-chevron');
-                    const $sectionTotal = $row.find('.section-total-amount[data-group="' + group + '"]');
-                    const $childRows = $('.group-' + group);
-
-                    if ($chevron.length === 0) return;
-
-                    if ($chevron.hasClass('fa-chevron-down')) {
-                        $childRows.hide();
-                        $chevron.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                        $sectionTotal.show();
-                    } else {
-                        $childRows.show();
-                        $chevron.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                        $sectionTotal.hide();
-                    }
-                },
-
-                toggleSection: function($headerRow) {
-                    if (window.balanceSheetState.viewState.viewType === 'compact') return;
-                    const sectionId = $headerRow.attr('data-row-id');
-                    if (!sectionId) return;
-
-                    if ($headerRow.hasClass('section-expanded')) {
-                        LegacySectionHandlers.collapseSection(sectionId);
-                    } else {
-                        LegacySectionHandlers.expandSection(sectionId);
-                    }
-                },
-
-                expandSection: function(sectionId) {
-                    const $headerRow = $('[data-row-id="' + sectionId + '"]');
-                    const $childRows = $('[data-parent="' + sectionId + '"]');
-
-                    $headerRow.addClass('section-expanded');
-                    $childRows.addClass('section-expanded').show();
-                    $headerRow.find('.toggle-chevron').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                    $headerRow.find('.section-total-amount').hide();
-                    window.balanceSheetState.expandedSections.add('section:' + sectionId);
-                },
-
-                collapseSection: function(sectionId) {
-                    const $headerRow = $('[data-row-id="' + sectionId + '"]');
-                    const $childRows = $('[data-parent="' + sectionId + '"]');
-
-                    $headerRow.removeClass('section-expanded');
-                    $childRows.removeClass('section-expanded').hide();
-                    $headerRow.find('.toggle-chevron').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                    $headerRow.find('.section-total-amount').show();
-                    window.balanceSheetState.expandedSections.delete('section:' + sectionId);
-                }
-            };
-
-            // Public API and Event Handlers
-            window.BalanceSheetAPI = {
-                setAsOfDate: function(date) {
-                    const m = moment(date);
-                    if (m.isValid()) {
-                        window.balanceSheetState.filterState.asOfDate = m.format('YYYY-MM-DD');
-                        $('#asOfDate').val(window.balanceSheetState.filterState.asOfDate);
-                        window.FilterManager.updateAsOfDisplay();
-                        window.TableManager.safeDraw();
-                    }
-                },
-
-                setAccountingMethod: function(method) {
-                    window.balanceSheetState.filterState.accountingMethod = method;
-                    $('#accounting-method').val(method);
-                    window.TableManager.safeDraw();
-                },
-
-                setViewOption: function(view) {
-                    $('#view-options-dropdown .view-option-item').filter(function() {
-                        return $(this).data('value') === view;
-                    }).trigger('click');
-                }
-            };
-
-            window.BalanceSheetEventHandlers = {
-                initialize: function() {
-                    // Close dropdowns when clicking outside
-                    $(document).on('click', function(e) {
-                        if (!$(e.target).closest('.view-options').length) {
-                            $('#view-options-dropdown').removeClass('show');
-                        }
-                    });
-                }
-            };
-
-            // Expose API globally
-            window.BalanceSheetFilters = window.BalanceSheetAPI;
-
-            // Main Initialization Function
-            function initializeBalanceSheet() {
-                console.log('Initializing Balance Sheet...');
-                
-                // Initialize all managers in correct order
-                window.ModalManager.initialize();
-                window.ViewStateManager.initializeViewOptions();
-                window.HierarchyManager.initializeChevronHandlers();
-                window.FilterManager.initialize();
-                window.LegacySectionHandlers.initialize();
-                window.BalanceSheetEventHandlers.initialize();
-                window.TableManager.setupDataTableEvents();
-
-                // Set initial state
-                window.FilterManager.updateAsOfDisplay();
-                window.ViewStateManager.applyGlobalViewState();
-                window.HierarchyManager.reapplyPersistedState();
-
-                console.log('Balance Sheet initialized successfully');
-            }
-
-            // Initialize when document ready
-            $(document).ready(function() {
-                // Wait a bit for DataTable to be fully loaded
-                setTimeout(function() {
-                    window.balanceSheetState.balanceSheetTable = window.balanceSheetConstants.getDt();
-                    initializeBalanceSheet();
-                }, 100);
             });
 
-        })(jQuery, moment);
-    </script>
+            // Keyboard shortcuts
+            $(document).on('keydown', function(e) {
+                // Ctrl/Cmd + P for print
+                if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                    e.preventDefault();
+                    $('.btn-icon[title="Print"]').click();
+                }
 
-    {!! $dataTable->scripts() !!}
+                // Escape to close modals
+                if (e.key === 'Escape') {
+                    $('.modal-overlay').hide();
+                }
+            });
+
+            console.log('QuickBooks-style General Ledger initialized successfully');
+        });
+    </script>
 @endpush

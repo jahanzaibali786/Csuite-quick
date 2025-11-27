@@ -115,8 +115,9 @@ class SalesTaxLiabilityReportDataTable extends DataTable
         $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
         $ownerColumn = $user->type === 'company' ? 'invoices.created_by' : 'invoices.owned_by';
 
-        $start = request()->get('start_date') ?? Carbon::now()->startOfYear()->format('Y-m-d');
-        $end = request()->get('end_date') ?? Carbon::now()->endOfDay()->format('Y-m-d');
+        $start = request()->get('startDate') ?? Carbon::now()->startOfYear()->format('Y-m-d');
+        $end = request()->get('endDate') ?? Carbon::now()->endOfDay()->format('Y-m-d');
+
 
         return DB::table('invoices')
             ->join('invoice_products', 'invoices.id', '=', 'invoice_products.invoice_id')

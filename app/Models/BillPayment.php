@@ -22,4 +22,5 @@ class BillPayment extends Model
     {
         return $this->hasOne('App\Models\BankAccount', 'id', 'account_id');
     }
+    
 }

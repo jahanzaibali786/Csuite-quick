@@ -99,7 +99,7 @@ class CustomerBalanceDataTable extends DataTable
             ->parameters([
                 'paging' => false,
                 'searching' => false,
-                'info' => true,
+                'info' => false,
                 'ordering' => false,
                 'scrollY' => '500px',
                 'scrollCollapse' => true,
