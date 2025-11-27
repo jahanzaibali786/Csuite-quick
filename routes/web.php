@@ -239,7 +239,8 @@ Route::post('/quickbooks/import/expenses', [QuickBooksImportController::class, '
 Route::post('/quickbooks/import/employees', [QuickBooksImportController::class, 'importEmployees'])->name('quickbooks.import.employees');
 Route::post('/quickbooks/import/journalReport', [QuickBooksImportController::class, 'journalReport'])->name('quickbooks.import.journalReport');
 Route::post('/quickbooks/api/query', [QuickBooksApiController::class, 'rawQuery'])->name('quickbooks.api.rawQuery'); 
-
+Route::post('/quickbooks/import/full', [QuickBooksImportController::class, 'startFullImport'])->name('quickbooks.import.full');
+Route::get('/quickbooks/import/progress', [QuickBooksImportController::class, 'getImportProgress'])->name('quickbooks.import.progress');
 Route::get('/Journalledger', [VoucherController::class, 'Journalledger'])->name('Journalledger.index');
 
 // All Reports Route
@@ -740,6 +741,8 @@ Route::group(['middleware' => ['verified']], function () {
             ],
         ],
         function () {
+            //bill/payment
+            Route::get('bill/payments', 'BillController@billpayments')->name('bill.payments');
             Route::post('bill/send-for-approval/{id}', 'BillController@sendForApproval')->name('bill.send-for-approval');
             Route::post('bill/approve/{id}', 'BillController@approveBill')->name('bill.approve');
             Route::post('bill/reject/{id}', 'BillController@rejectBill')->name('bill.reject');

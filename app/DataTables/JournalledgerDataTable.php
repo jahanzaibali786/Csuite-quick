@@ -110,6 +110,8 @@ class JournalLedgerDataTable extends DataTable
 
     public function query()
     {
+        // dd(request()->all());
+        // $journalItems = JournalItem::get()->dd();
         $query = JournalItem::query()
             ->with([
                 'accounts:id,name',

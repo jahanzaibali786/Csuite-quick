@@ -62,13 +62,94 @@ class QuickBooksApiController extends Controller
         return view('privacy-policy');
     }
     public function accessToken()
-        return Session::get('qb_access_token');
+    {
+        // Try session first (for web requests)
+        $sessionToken = Session::get('qb_access_token');
+        if ($sessionToken) {
+            return $sessionToken;
+        }
+
+        // Fall back to database (for queue jobs)
+        $userId = \Auth::id();
+        if ($userId) {
+            $tokenRecord = \App\Models\QuickBooksToken::where('user_id', $userId)
+                ->orderBy('created_at', 'desc')
+                ->first();
+            return $tokenRecord ? $tokenRecord->access_token : null;
+        }
+
+        return null;
     }
 
     public function realmId()
-
     {
-        return Session::get('qb_realm_id');
+        // Try session first (for web requests)
+        $sessionRealmId = Session::get('qb_realm_id');
+        if ($sessionRealmId) {
+            return $sessionRealmId;
+        }
+
+        // Fall back to database (for queue jobs)
+        $userId = \Auth::id();
+        if ($userId) {
+            $tokenRecord = \App\Models\QuickBooksToken::where('user_id', $userId)
+                ->orderBy('created_at', 'desc')
+                ->first();
+            return $tokenRecord ? $tokenRecord->realm_id : null;
+        }
+
+        return null;
+    }
+
+    public function refreshToken($refreshToken)
+    {
+        try {
+            $response = Http::asForm()
+                ->withBasicAuth($this->clientId, $this->clientSecret)
+                ->post($this->tokenUrl, [
+                    'grant_type' => 'refresh_token',
+                    'refresh_token' => $refreshToken,
+                ]);
+
+            if ($response->failed()) {
+                return false;
+            }
+
+            $data = $response->json();
+
+            // Store new tokens in session (for immediate use)
+            Session::put('qb_access_token', $data['access_token']);
+            Session::put('qb_refresh_token', $data['refresh_token'] ?? $refreshToken); // Keep old refresh token if not provided
+
+            // Store expiry time (access tokens typically last 1 hour)
+            $expiresAt = now()->addSeconds($data['expires_in'] ?? 3600);
+            \Illuminate\Support\Facades\Cache::put('qb_token_data', [
+                'expires_at' => $expiresAt->timestamp,
+            ], 3600);
+
+            // IMPORTANT: Also update database for queue jobs
+            $userId = \Auth::id();
+            if ($userId) {
+                $tokenRecord = \App\Models\QuickBooksToken::where('user_id', $userId)->first();
+
+                if ($tokenRecord) {
+                    $tokenRecord->update([
+                        'access_token' => $data['access_token'],
+                        'refresh_token' => $data['refresh_token'] ?? $refreshToken,
+                        'expires_at' => $expiresAt,
+                    ]);
+
+                    \Log::info("QuickBooks tokens refreshed in database for user {$userId}");
+                }
+            }
+
+            return $data;
+        } catch (\Exception $e) {
+            \Log::error('QuickBooks token refresh failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
@@ -100,9 +181,15 @@ class QuickBooksApiController extends Controller
                 ]);
         }
 
+        // IMPORTANT: Also remove tokens from database
+        $userId = \Auth::id();
+        if ($userId) {
+            \App\Models\QuickBooksToken::where('user_id', $userId)->delete();
+            \Log::info("QuickBooks tokens removed from database for user {$userId}");
+        }
+
         return redirect()->route('quickbooks.sync')->with('success', 'Disconnected from QuickBooks.');
     }
-
 
     /**
      * Handle the callback from QuickBooks OAuth.
@@ -134,10 +221,30 @@ class QuickBooksApiController extends Controller
 
         $data = $response->json();
 
-        // Store access token and realmId in session
+        // Store access token and realmId in session (for immediate use)
         Session::put('qb_access_token', $data['access_token']);
         Session::put('qb_refresh_token', $data['refresh_token']);
         Session::put('qb_realm_id', $realmId);
+
+        // IMPORTANT: Also save to database for queue jobs
+        $userId = \Auth::id();
+        if ($userId) {
+            // Calculate token expiry time (QuickBooks tokens expire in 1 hour)
+            $expiresAt = now()->addSeconds($data['expires_in'] ?? 3600);
+
+            // Save or update token in database
+            \App\Models\QuickBooksToken::updateOrCreate(
+                ['user_id' => $userId],
+                [
+                    'realm_id' => $realmId,
+                    'access_token' => $data['access_token'],
+                    'refresh_token' => $data['refresh_token'],
+                    'expires_at' => $expiresAt,
+                ]
+            );
+
+            \Log::info("QuickBooks tokens saved to database for user {$userId}");
+        }
 
         return redirect()->route('quickbooks.sync')->with('success', 'QuickBooks connected successfully!');
     }
@@ -146,7 +253,7 @@ class QuickBooksApiController extends Controller
      * Helper to run a QuickBooks query.
      */
     public function runQuery(string $query)
-
+    
     {
         $token = $this->accessToken();
         $realm = $this->realmId();
@@ -187,7 +294,6 @@ class QuickBooksApiController extends Controller
     {
         $data = $this->runQuery("SELECT * FROM Invoice STARTPOSITION 1 MAXRESULTS 50");
         dd($data, collect($data['QueryResponse']['Invoice'])->first());
-
     }
 
     public function bills()
@@ -237,8 +343,7 @@ class QuickBooksApiController extends Controller
 
         // Optional query parameters
         $startDate = $request->input('start_date', '2025-10-01');
-
-        $endDate   = $request->input('end_date', now()->format('Y-m-d'));
+        $endDate = $request->input('end_date', now()->format('Y-m-d'));
         $accountingMethod = $request->input('accounting_method', 'Accrual');
         $url = "{$this->baseUrl}/v3/company/{$realm}/reports/JournalReport"
             . "?start_date={$startDate}&end_date={$endDate}&accounting_method={$accountingMethod}";
@@ -1035,7 +1140,6 @@ class QuickBooksApiController extends Controller
                             $linked[] = $l['LinkedTxn'];
                     }
                 }
-
                 return [
                     'PaymentId' => $payment['Id'] ?? null,
                     'CustomerId' => $payment['CustomerRef']['value'] ?? null,
@@ -1908,6 +2012,8 @@ class QuickBooksApiController extends Controller
     }
 }
 
+
+
     /**
      * 📊 Credit Card Credits with Bill Links - Enhanced version showing bill applications
      */
@@ -2376,7 +2482,6 @@ GRAPHQL;
             'status' => 'success',
             'count' => $invoicePayments->count(),
             'linked_record' => $first
-
         ]);
 
     } catch (\Exception $e) {
@@ -2386,5 +2491,4 @@ GRAPHQL;
         ], 500);
     }
 }
-
 }

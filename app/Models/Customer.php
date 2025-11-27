@@ -113,7 +113,6 @@ class Customer extends Authenticatable
 
         return $settings["proposal_prefix"] . sprintf("%05d", $number);
     }
-
     public function invoiceChartData()
     {
         $month[]       = __('January');
@@ -224,7 +223,13 @@ class Customer extends Authenticatable
 
         return $invoices;
     }
+        //deposits
+    public function customerDeposits($customerId)
+    {
+        $deposits  = Deposit:: where('customer_id', $customerId)->orderBy('txn_date', 'desc')->get();
 
+        return $deposits;
+    }
     public function customerProposal($customerId)
     {
         $proposals = Proposal:: where('customer_id', $customerId)->orderBy('issue_date', 'desc')->get();
