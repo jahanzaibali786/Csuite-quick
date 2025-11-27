@@ -19,6 +19,8 @@ class Vender extends Authenticatable
         'password',
         'contact',
         'avatar',
+        'qb_balance',
+        'balance',
         'is_active',
         'created_by',
         'email_verified_at',

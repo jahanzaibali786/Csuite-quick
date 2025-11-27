@@ -190,16 +190,28 @@ require __DIR__ . '/auth.php';
 
 use App\Http\Controllers\QuickBooksImportController;
 use App\Http\Controllers\QuickBooksApiController;
+use Illuminate\Support\Facades\Artisan;
+
 Route::get('/license', [QuickBooksApiController::class, 'license'])->name('license');
 Route::get('/privacy-policy', [QuickBooksApiController::class, 'privacyPolicy'])->name('privacy.policy');
-
+// Route::get('/run-empty-quick', function () {
+//     Artisan::call('db:empty-quick');
+//     dd('done');
+//     return back()->with('status', 'Tables emptied successfully!');
+// });
+Route::get('/fix-autoload', function () {
+    \Artisan::call('optimize:clear');
+    return 'Autoload fixed';
+});
 
 // page and api endpoints
 Route::get('/quickbooks/sync', [QuickBooksApiController::class, 'index'])->name('quickbooks.sync');
 Route::get('/quickbooks/connect', [QuickBooksApiController::class, 'connect'])->name('quickbooks.connect');
 Route::get('/quickbooks/callback', [QuickBooksApiController::class, 'callback'])->name('quickbooks.callback');
 Route::get('/quickbooks/disconnect', [QuickBooksApiController::class, 'disconnect'])->name('quickbooks.disconnect');
-
+Route::get('/download-skipped-entries/{file}', 
+    [QuickBooksImportController::class, 'downloadSkippedEntries']
+)->name('download.skipped.entries');
 
 Route::post('/quickbooks/getAllTransactionsGrouped', [QuickBooksApiController::class, 'getAllTransactionsGrouped'])->name('quickbooks.getAllTransactionsGrouped');
 Route::post('/quickbooks/getTransfers', [QuickBooksApiController::class, 'getTransfers'])->name('quickbooks.getTransfers');
@@ -217,6 +229,7 @@ Route::post('/quickbooks/bill-payments', [QuickBooksApiController::class, 'billP
 Route::post('/quickbooks/bills-with-payments', [QuickBooksApiController::class, 'billsWithPayments'])->name('quickbooks.billsWithPayments');
 Route::post('/quickbooks/invoices-with-payments', [QuickBooksApiController::class, 'invoicesWithPayments'])->name('quickbooks.invoicesWithPayments');
 Route::post('/quickbooks/deposits', [QuickBooksApiController::class, 'deposits'])->name('quickbooks.deposits');
+Route::post('/quickbooks/checkUnbalancedBills', [QuickBooksApiController::class, 'checkUnbalancedBills'])->name('quickbooks.checkUnbalancedBills');
 Route::post('/quickbooks/deposits-with-voucher', [QuickBooksApiController::class, 'depositsWithVoucher'])->name('quickbooks.depositsWithVoucher');   
 Route::post('/quickbooks/sales-receipts', [QuickBooksApiController::class, 'getSalesReceipts'])->name('quickbooks.salesReceipts');
 Route::post('/quickbooks/journal-fr-report', [QuickBooksApiController::class, 'journalFRReport'])->name('quickbooks.journalFRReport');
@@ -237,6 +250,7 @@ Route::get('/quickbooks/import/invoices/view', [QuickBooksImportController::clas
 Route::post('/quickbooks/import/bills', [QuickBooksImportController::class, 'importBills'])->name('quickbooks.import.bills');
 Route::post('/quickbooks/import/expenses', [QuickBooksImportController::class, 'importExpenses'])->name('quickbooks.import.expenses');
 Route::post('/quickbooks/import/employees', [QuickBooksImportController::class, 'importEmployees'])->name('quickbooks.import.employees');
+Route::get('/scratch-analyze-invoices-payments', [QuickBooksImportController::class, 'scratchAnalyzeInvoicesPayments'])->name('scratchAnalyzeInvoicesPayments');
 Route::post('/quickbooks/import/journalReport', [QuickBooksImportController::class, 'journalReport'])->name('quickbooks.import.journalReport');
 Route::post('/quickbooks/api/query', [QuickBooksApiController::class, 'rawQuery'])->name('quickbooks.api.rawQuery'); 
 Route::post('/quickbooks/import/full', [QuickBooksImportController::class, 'startFullImport'])->name('quickbooks.import.full');
