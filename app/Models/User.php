@@ -643,7 +643,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function countCustomers()
     {
-        return Customer::where('created_by', '=', $this->creatorId())->count();
+        return Customer::where('created_by', '=', $this->creatorId())->where('is_active',1)->count();
     }
 
     public function countVenders()
