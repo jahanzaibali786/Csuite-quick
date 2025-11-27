@@ -1,8 +1,8 @@
 <?php
 
 namespace App\Http\Controllers\sync;
-use App\DataTables\JournalLedgerDataTable;
 use App\DataTables\LedgerDataTable;
+use App\DataTables\JournalLedgerDataTable;
 use App\Http\Controllers\Controller;
 use App\DataTables\VouchersDataTable;
 use App\Helper\Reply;
@@ -206,8 +206,9 @@ class VoucherController extends Controller
             'redirectUrl' => route('vouchers.index')
         ]);
     }
-    public function Journalledger(JournalLedgerDataTable $dataTable, Request $request)
+    public function Journalledger(Request $request)
     {
+        $dataTable = new JournalLedgerDataTable();
         $this->pageTitle = 'Journal Ledger';
 
 
@@ -291,7 +292,7 @@ class VoucherController extends Controller
 
         // return $dataTable->render('sync.profit_loss.index', $this->data);
 
-        return $dataTable->render('sync.customerbalance.index', [
+        return $dataTable->render('sync.DoubleDateReport.index', [
             'pageTitle' => $this->pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
@@ -344,7 +345,7 @@ class VoucherController extends Controller
         }
 
         // return $dataTable->render('sync.profit-loss-detail.index', $this->data);
-        return $dataTable->render('sync.customerbalance.index', [
+        return $dataTable->render('sync.DoubleDateReport.index', [
             'pageTitle' => $this->pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
@@ -360,11 +361,11 @@ class VoucherController extends Controller
         }
 
         // return $dataTable->render('sync.balance-sheet.index', $this->data);
-        return $dataTable->render('sync.customerbalance.index', [
+        return $dataTable->render('sync.balance-sheet.index', [
             'pageTitle' => $this->pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day'))),
-            'accounting_method' => true,
+            'accounting_method' => false,
 
         ]);
 
@@ -379,8 +380,8 @@ class VoucherController extends Controller
         }
 
         // return $dataTable->render('sync.balance-sheet-standard.index', $this->data);
-        return $dataTable->render('sync.customerbalance.index', [
-            'accounting_method' => true,
+        return $dataTable->render('sync.balance-sheet.index', [ // ✅ keep same view, or create vendorbalance.index
+            'accounting_method' => false,
             'pageTitle' => $this->pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
@@ -396,9 +397,9 @@ class VoucherController extends Controller
         }
 
         // return $dataTable->render('sync.balance-sheet-detail.index', $this->data);
-        return $dataTable->render('sync.customerbalance.index', [
+        return $dataTable->render('sync.balance-sheet-detail.index', [
             'pageTitle' => $this->pageTitle,
-            'accounting_method' => true,
+            'accounting_method' => false,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
         ]);
@@ -802,8 +803,16 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.balance-sheet-comparison.index', $this->data, [
+         // return $dataTable->render('sync.balance-sheet-comparison.index', $this->data, [
+        //     'pageTitle' => $this->pageTitle,
+        // ]);
+
+        // return $dataTable->render('sync.balance-sheet-standard.index', $this->data);
+        return $dataTable->render('sync.balance-sheet.index', [ // ✅ keep same view, or create vendorbalance.index
+            'accounting_method' => false,
             'pageTitle' => $this->pageTitle,
+            'startDate' => $request->get('start_date', date('Y-01-01')),
+            'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))
         ]);
 
         // return $dataTable->render('sync.customerbalance.index', [ // ✅ keep same view, or create vendorbalance.index
@@ -1072,7 +1081,7 @@ class VoucherController extends Controller
             return $dataTable->ajax();
         }
 
-        return $dataTable->render('sync.customerbalance.index', [
+        return $dataTable->render('sync.DoubleDateReport.index', [
             'pageTitle' => $this->pageTitle,
             'startDate' => $request->get('start_date', date('Y-01-01')),
             'endDate' => $request->get('end_date', date('Y-m-d', strtotime('+1 day')))

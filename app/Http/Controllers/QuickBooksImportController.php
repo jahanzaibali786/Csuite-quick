@@ -48,1236 +48,72 @@ class QuickBooksImportController extends Controller
         return view('quickbooks_invoices');
     }
 
-    public function startFullImport(Request $request)
-    {
-        try {
-            $userId = \Auth::id();
-            $cacheKey = 'qb_import_progress_' . $userId;
-            Cache::forget($cacheKey);
-            // Check if QuickBooks is connected
-            $qbController = new QuickBooksApiController();
-            if (!$qbController->accessToken() || !$qbController->realmId()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'QuickBooks is not connected. Please connect first.'
-                ], 400);
-            }
 
-            // Check if import is already running for this user
-            $cacheKey = 'qb_import_progress_' . $userId;
-            $progress = Cache::get($cacheKey);
-            if ($progress && $progress['status'] == 'running') {
-                // Import is already running, return current progress instead of error
-                return response()->json([
-                    'status' => 'already_running',
-                    'message' => 'Import is already running. Showing current progress...',
-                    'progress' => [
-                        'status' => $progress['status'] ?? 'running',
-                        'current_step' => $progress['current_step'] ?? 0,
-                        'total_steps' => $progress['total_steps'] ?? 8,
-                        'current_import' => $progress['current_import'] ?? 'Processing...',
-                        'percentage' => $progress['percentage'] ?? 0,
-                        'logs' => $progress['logs'] ?? [],
-                    ]
-                ]);
-            }
-
-            // Clear any old completed/failed import data before starting new one
-            Cache::forget($cacheKey);
-
-            // Initialize fresh progress state BEFORE dispatching job
-            $initialProgress = [
-                'status' => 'running',
-                'current_step' => 0,
-                'total_steps' => 8,
-                'current_import' => 'Dispatching import job...',
-                'logs' => ['[' . now()->format('g:i:s A') . '] Import job dispatched successfully. Monitoring progress...'],
-                'percentage' => 0,
-            ];
-            Cache::put($cacheKey, $initialProgress, 3600);
-            $this->startQueueWorkerForJob();
-            // Dispatch the job with user ID
-            \App\Jobs\QuickBooksFullImportJob::dispatch($userId);
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Full import job has been dispatched and will run in the background.'
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Failed to start QuickBooks import: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to start import: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function getImportProgress(Request $request)
-    {
-        $userId = \Auth::id();
-        $cacheKey = 'qb_import_progress_' . $userId;
-
-        $progress = Cache::get($cacheKey, [
-            'status' => 'idle',
-            'current_step' => 0,
-            'total_steps' => 8,
-            'current_import' => 'Not started',
-            'logs' => [],
-            'percentage' => 0,
-        ]);
-
-        // Send all logs (we handle deduplication on frontend)
-        $displayLogs = [];
-        if (isset($progress['logs']) && is_array($progress['logs'])) {
-            $displayLogs = $progress['logs'];
-        }
-
-        // If status is running but no logs in cache, try to read from laravel.log
-        if (($progress['status'] ?? 'idle') === 'running' && empty($displayLogs)) {
-            $laravelLogs = $this->getRecentLaravelLogs($userId);
-            if (!empty($laravelLogs)) {
-                $displayLogs = $laravelLogs;
-            }
-        }
-
-        return response()->json([
-            'status' => $progress['status'] ?? 'idle',
-            'current_step' => $progress['current_step'] ?? 0,
-            'total_steps' => $progress['total_steps'] ?? 8,
-            'current_import' => $progress['current_import'] ?? 'Not started',
-            'percentage' => $progress['percentage'] ?? 0,
-            'logs' => $displayLogs,
-        ]);
-    }
-
-    /**
-     * Read recent QuickBooks import logs from laravel.log file
-     */
-    protected function getRecentLaravelLogs($userId, $lines = 50)
-    {
-        try {
-            $logFile = storage_path('logs/laravel.log');
-
-            if (!file_exists($logFile)) {
-                return [];
-            }
-
-            // Read last N lines from log file
-            $file = new \SplFileObject($logFile, 'r');
-            $file->seek(PHP_INT_MAX);
-            $lastLine = $file->key();
-            $startLine = max(0, $lastLine - $lines);
-
-            $logs = [];
-            $file->seek($startLine);
-
-            while (!$file->eof()) {
-                $line = $file->current();
-                $file->next();
-
-                // Filter logs related to QuickBooks import for this user
-                if (strpos($line, "user {$userId}") !== false ||
-                    strpos($line, "QuickBooks") !== false ||
-                    strpos($line, "Importing") !== false) {
-
-                    // Extract timestamp and message
-                    if (preg_match('/\[(.*?)\].*?(local\.(INFO|ERROR|WARNING)):\s*(.+)/', $line, $matches)) {
-                        $timestamp = $matches[1];
-                        $level = $matches[2];
-                        $message = trim($matches[4]);
-
-                        // Format log message
-                        $formattedLog = "[{$timestamp}] {$message}";
-                        $logs[] = $formattedLog;
-                    }
-                }
-            }
-
-            return array_slice($logs, -30); // Return last 30 relevant logs
-
-        } catch (\Exception $e) {
-            \Log::error('Failed to read laravel.log: ' . $e->getMessage());
-            return [];
-        }
-    }
-    // prev invoice import
-    // public function importInvoices(Request $request)
-    // {
-    //     try {
-    //         // Fetch all invoices with pagination
-    //         $allInvoices = collect();
-    //         $startPosition = 1;
-    //         $maxResults = 50; // Adjust batch size as needed
-
-    //         do {
-    //             // Fetch paginated batch
-    //             $query = "SELECT * FROM Invoice STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
-    //             $invoicesResponse = $this->qbController->runQuery($query);
-
-    //             // Handle API errors
-    //             if ($invoicesResponse instanceof \Illuminate\Http\JsonResponse) {
-    //                 return $invoicesResponse;
-    //             }
-
-    //             // Get invoices from response
-    //             $invoicesData = $invoicesResponse['QueryResponse']['Invoice'] ?? [];
-
-    //             // Merge entire objects (keep all keys)
-    //             $allInvoices = $allInvoices->merge($invoicesData);
-
-    //             // Move to next page
-    //             $fetchedCount = count($invoicesData);
-    //             $startPosition += $fetchedCount;
-    //         } while ($fetchedCount === $maxResults); // continue if page is full
-
-    //         // Fetch all payments with pagination
-    //         $allPayments = collect();
-    //         $startPosition = 1;
-
-    //         do {
-    //             // Fetch paginated batch
-    //             $query = "SELECT * FROM Payment STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
-    //             $paymentsResponse = $this->qbController->runQuery($query);
-
-    //             // Handle API errors
-    //             if ($paymentsResponse instanceof \Illuminate\Http\JsonResponse) {
-    //                 return $paymentsResponse;
-    //             }
-
-    //             // Get payments from response
-    //             $paymentsData = $paymentsResponse['QueryResponse']['Payment'] ?? [];
-
-    //             // Merge entire objects (keep all keys)
-    //             $allPayments = $allPayments->merge($paymentsData);
-
-    //             // Move to next page
-    //             $fetchedCount = count($paymentsData);
-    //             $startPosition += $fetchedCount;
-    //         } while ($fetchedCount === $maxResults); // continue if page is full
-
-    //         // Fetch items and accounts (these are usually smaller datasets)
-    //         $itemsRaw = $this->qbController->runQuery("SELECT * FROM Item STARTPOSITION 1 MAXRESULTS 500");
-    //         $accountsRaw = $this->qbController->runQuery("SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 500");
-
-    //         $itemsList = collect($itemsRaw['QueryResponse']['Item'] ?? []);
-    //         $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
-
-    //         $itemsMap = $itemsList->keyBy(fn($it) => $it['Id'] ?? null)->toArray();
-    //         $accountsMap = $accountsList->keyBy(fn($a) => $a['Id'] ?? null)->toArray();
-
-    //         // Helper functions as in the original
-    //         $findARAccount = function () use ($accountsList) {
-    //             $ar = $accountsList->first(fn($a) => isset($a['AccountType']) && strcasecmp($a['AccountType'], 'AccountsReceivable') === 0);
-    //             if ($ar)
-    //                 return ['Id' => $ar['Id'], 'Name' => $ar['Name'] ?? null];
-    //             $ar = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'receivable') !== false);
-    //             return $ar ? ['Id' => $ar['Id'], 'Name' => $ar['Name'] ?? null] : null;
-    //         };
-    //         $findTaxPayableAccount = function () use ($accountsList) {
-    //             $found = $accountsList->first(function ($a) {
-    //                 if (isset($a['AccountType']) && strcasecmp($a['AccountType'], 'OtherCurrentLiability') === 0) {
-    //                     return (stripos($a['Name'] ?? '', 'tax') !== false) || (stripos($a['Name'] ?? '', 'payable') !== false);
-    //                 }
-    //                 return false;
-    //             });
-    //             if ($found)
-    //                 return ['Id' => $found['Id'], 'Name' => $found['Name'] ?? null];
-    //             $found = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'tax') !== false);
-    //             return $found ? ['Id' => $found['Id'], 'Name' => $found['Name'] ?? null] : null;
-    //         };
-
-    //         $arAccount = $findARAccount();
-    //         $taxAccount = $findTaxPayableAccount();
-
-    //         $detectAccountForSalesItem = function ($sid) use ($itemsMap, $accountsMap) {
-    //             if (!empty($sid['ItemAccountRef']['value'])) {
-    //                 return [
-    //                     'AccountId' => $sid['ItemAccountRef']['value'],
-    //                     'AccountName' => $sid['ItemAccountRef']['name'] ?? ($accountsMap[$sid['ItemAccountRef']['value']]['Name'] ?? null)
-    //                 ];
-    //             }
-    //             if (!empty($sid['ItemRef']['value'])) {
-    //                 $itemId = $sid['ItemRef']['value'];
-    //                 $item = $itemsMap[$itemId] ?? null;
-    //                 if ($item) {
-    //                     if (!empty($item['IncomeAccountRef']['value'])) {
-    //                         return ['AccountId' => $item['IncomeAccountRef']['value'], 'AccountName' => $item['IncomeAccountRef']['name'] ?? ($accountsMap[$item['IncomeAccountRef']['value']]['Name'] ?? null)];
-    //                     }
-    //                     if (!empty($item['ExpenseAccountRef']['value'])) {
-    //                         return ['AccountId' => $item['ExpenseAccountRef']['value'], 'AccountName' => $item['ExpenseAccountRef']['name'] ?? ($accountsMap[$item['ExpenseAccountRef']['value']]['Name'] ?? null)];
-    //                     }
-    //                     if (!empty($item['AssetAccountRef']['value'])) {
-    //                         return ['AccountId' => $item['AssetAccountRef']['value'], 'AccountName' => $item['AssetAccountRef']['name'] ?? ($accountsMap[$item['AssetAccountRef']['value']]['Name'] ?? null)];
-    //                     }
-    //                 }
-    //             }
-    //             return ['AccountId' => null, 'AccountName' => null];
-    //         };
-
-    //         $parseInvoiceLine = function ($line) use ($detectAccountForSalesItem, $itemsMap, $accountsMap) {
-    //             $out = [];
-    //             $detailType = $line['DetailType'] ?? null;
-
-    //             if (!empty($line['GroupLineDetail']) && !empty($line['GroupLineDetail']['Line'])) {
-    //                 foreach ($line['GroupLineDetail']['Line'] as $child) {
-    //                     if (!empty($child['SalesItemLineDetail'])) {
-    //                         $sid = $child['SalesItemLineDetail'];
-    //                         $acc = $detectAccountForSalesItem($sid);
-    //                         $out[] = [
-    //                             'DetailType' => $child['DetailType'] ?? 'SalesItemLineDetail',
-    //                             'Description' => $child['Description'] ?? $sid['ItemRef']['name'] ?? null,
-    //                             'Amount' => $child['Amount'] ?? 0,
-    //                             'AccountId' => $acc['AccountId'],
-    //                             'AccountName' => $acc['AccountName'],
-    //                             'RawLine' => $child,
-    //                         ];
-    //                     } else {
-    //                         $out[] = [
-    //                             'DetailType' => $child['DetailType'] ?? null,
-    //                             'Description' => $child['Description'] ?? null,
-    //                             'Amount' => $child['Amount'] ?? 0,
-    //                             'AccountId' => null,
-    //                             'AccountName' => null,
-    //                             'RawLine' => $child,
-    //                         ];
-    //                     }
-    //                 }
-    //                 return $out;
-    //             }
-
-    //             if (!empty($line['SalesItemLineDetail'])) {
-    //                 $sid = $line['SalesItemLineDetail'];
-    //                 $acc = $detectAccountForSalesItem($sid);
-    //                 $out[] = [
-    //                     'DetailType' => $line['DetailType'] ?? 'SalesItemLineDetail',
-    //                     'Description' => $line['Description'] ?? ($sid['ItemRef']['name'] ?? null),
-    //                     'Amount' => $line['Amount'] ?? 0,
-    //                     'AccountId' => $acc['AccountId'],
-    //                     'AccountName' => $acc['AccountName'],
-    //                     'RawLine' => $line,
-    //                 ];
-    //                 return $out;
-    //             }
-
-    //             if (!empty($line['TaxLineDetail']) || stripos($detailType ?? '', 'Tax') !== false) {
-    //                 $out[] = [
-    //                     'DetailType' => $detailType,
-    //                     'Description' => $line['Description'] ?? null,
-    //                     'Amount' => $line['Amount'] ?? 0,
-    //                     'AccountId' => null,
-    //                     'AccountName' => null,
-    //                     'RawLine' => $line,
-    //                 ];
-    //                 return $out;
-    //             }
-
-    //             $out[] = [
-    //                 'DetailType' => $detailType,
-    //                 'Description' => $line['Description'] ?? null,
-    //                 'Amount' => $line['Amount'] ?? 0,
-    //                 'AccountId' => null,
-    //                 'AccountName' => null,
-    //                 'RawLine' => $line,
-    //             ];
-    //             return $out;
-    //         };
-
-    //         $invoices = $allInvoices->map(function ($invoice) use ($parseInvoiceLine, $accountsMap, $arAccount, $taxAccount, &$invoicesList) {
-    //             $parsedLines = [];
-    //             foreach ($invoice['Line'] ?? [] as $line) {
-    //                 $parsedLines = array_merge($parsedLines, $parseInvoiceLine($line));
-    //             }
-
-    //             $unmapped = array_values(array_filter($parsedLines, fn($l) => empty($l['AccountId']) && (float) $l['Amount'] != 0.0));
-
-    //             $taxTotal = 0;
-    //             if (!empty($invoice['TxnTaxDetail']['TotalTax']))
-    //                 $taxTotal = $invoice['TxnTaxDetail']['TotalTax'];
-    //             elseif (!empty($invoice['TotalTax']))
-    //                 $taxTotal = $invoice['TotalTax'];
-
-    //             $totalAmount = (float) ($invoice['TotalAmt'] ?? 0);
-
-    //             $journalLines = [];
-
-    //             if ($arAccount) {
-    //                 $journalLines[] = [
-    //                     'AccountId' => $arAccount['Id'],
-    //                     'AccountName' => $arAccount['Name'],
-    //                     'Debit' => $totalAmount,
-    //                     'Credit' => 0.0,
-    //                     'Note' => 'Accounts Receivable (invoice total)'
-    //                 ];
-    //             } else {
-    //                 dd($arAccount);
-    //                 // $journalLines[] = [
-    //                 //     'AccountId' => null,
-    //                 //     'AccountName' => 'Accounts Receivable (not found)',
-    //                 //     'Debit' => $totalAmount,
-    //                 //     'Credit' => 0.0,
-    //                 //     'Note' => 'Accounts Receivable (invoice total, account not auto-detected)'
-    //                 // ];
-    //             }
-
-    //             foreach ($parsedLines as $pl) {
-    //                 if ((float) $pl['Amount'] == 0.0)
-    //                     continue;
-    //                 if (empty($pl['AccountId']))
-    //                     continue;
-    //                 $journalLines[] = [
-    //                     'AccountId' => $pl['AccountId'],
-    //                     'AccountName' => $pl['AccountName'] ?? null,
-    //                     'Debit' => 0.0,
-    //                     'Credit' => (float) $pl['Amount'],
-    //                     'Note' => $pl['Description'] ?? 'Sales / line item'
-    //                 ];
-    //             }
-
-    //             if ($taxTotal > 0) {
-    //                 $journalLines[] = [
-    //                     'AccountId' => $taxAccount['Id'] ?? null,
-    //                     'AccountName' => $taxAccount['Name'] ?? 'Sales Tax Payable (heuristic)',
-    //                     'Debit' => 0.0,
-    //                     'Credit' => (float) $taxTotal,
-    //                     'Note' => 'Sales/Tax payable'
-    //                 ];
-    //             }
-
-    //             $sumDebits = array_sum(array_map(fn($l) => $l['Debit'] ?? 0, $journalLines));
-    //             $sumCredits = array_sum(array_map(fn($l) => $l['Credit'] ?? 0, $journalLines));
-    //             $balanced = abs($sumDebits - $sumCredits) < 0.01;
-
-    //             return [
-    //                 'InvoiceId' => (string) ($invoice['Id'] ?? null),
-    //                 'Id' => $invoice['Id'] ?? null,
-    //                 'DocNumber' => $invoice['DocNumber'] ?? null,
-    //                 'CustomerName' => $invoice['CustomerRef']['name'] ?? null,
-    //                 'CustomerId' => $invoice['CustomerRef']['value'] ?? null,
-    //                 'TxnDate' => $invoice['TxnDate'] ?? null,
-    //                 'DueDate' => $invoice['DueDate'] ?? null,
-    //                 'TotalAmount' => $totalAmount,
-    //                 'Balance' => $invoice['Balance'] ?? 0,
-    //                 'Currency' => $invoice['CurrencyRef']['name'] ?? null,
-    //                 'Payments' => [],
-    //                 'ParsedLines' => $parsedLines,
-    //                 'UnmappedInvoiceLines' => $unmapped,
-    //                 'TaxTotal' => (float) $taxTotal,
-    //                 'ReconstructedJournal' => [
-    //                     'Source' => 'InvoiceLines',
-    //                     'Lines' => $journalLines,
-    //                     'SumDebits' => (float) $sumDebits,
-    //                     'SumCredits' => (float) $sumCredits,
-    //                     'Balanced' => $balanced,
-    //                 ],
-    //                 'RawInvoice' => $invoice,
-    //             ];
-    //         });
-
-    //         $payments = $allPayments->map(function ($payment) use (&$paymentsList) {
-    //             $linked = [];
-    //             foreach ($payment['Line'] ?? [] as $l) {
-    //                 if (!empty($l['LinkedTxn'])) {
-    //                     if (isset($l['LinkedTxn'][0]))
-    //                         $linked = array_merge($linked, $l['LinkedTxn']);
-    //                     else
-    //                         $linked[] = $l['LinkedTxn'];
-    //                 }
-    //             }
-    //             return [
-    //                 'PaymentId' => $payment['Id'] ?? null,
-    //                 'CustomerId' => $payment['CustomerRef']['value'] ?? null,
-    //                 'CustomerName' => $payment['CustomerRef']['name'] ?? null,
-    //                 'TxnDate' => $payment['TxnDate'] ?? null,
-    //                 'TotalAmount' => $payment['TotalAmt'] ?? 0,
-    //                 'PaymentMethod' => $payment['PaymentMethodRef']['name'] ?? null,
-    //                 'LinkedTxn' => $linked,
-    //                 'RawPayment' => $payment,
-    //             ];
-    //         });
-
-    //         $invoicesById = $invoices->keyBy('InvoiceId')->toArray();
-    //         foreach ($invoicesById as $invId => &$inv) {
-    //             $inv['Payments'] = collect($payments)->filter(function ($p) use ($invId) {
-    //                 return collect($p['LinkedTxn'])->contains(fn($txn) => isset($txn['TxnType'], $txn['TxnId']) && strcasecmp($txn['TxnType'], 'Invoice') === 0 && (string) $txn['TxnId'] === (string) $invId);
-    //             })->values()->toArray();
-    //         }
-    //         $invoicesWithPayments = collect($invoicesById);
-    //         // dd($invoicesWithPayments->first());
-    //         // Now, import logic
-    //         $imported = 0;
-    //         $skipped = 0;
-    //         $failed = 0;
-
-    //         DB::beginTransaction();
-    //         try {
-    //             foreach ($invoicesWithPayments as $qbInvoice) {
-    //                 $qbId = $qbInvoice['InvoiceId'];
-
-    //                 // Check for duplicate
-    //                 $existing = Invoice::where('invoice_id', $qbId)->first();
-    //                 if ($existing) {
-    //                     $skipped++;
-    //                     continue;
-    //                 }
-
-    //                 // Map customer_id - assuming CustomerRef value maps to local customer id, but need to handle
-    //                 // For simplicity, assume customer_id is the QB CustomerRef value, but in reality, you might need to map QB customers to local customers
-    //                 $customerId = $qbInvoice['CustomerId']; // This might need adjustment
-
-    //                 // Insert invoice
-    //                 $invoice = Invoice::create([
-    //                     'invoice_id' => $qbId,
-    //                     'customer_id' => $customerId,
-    //                     'issue_date' => $qbInvoice['TxnDate'],
-    //                     'due_date' => $qbInvoice['DueDate'],
-    //                     'ref_number' => $qbInvoice['DocNumber'],
-    //                     'status' => 2, // default
-    //                     // other fields as needed
-    //                     'created_by' => \Auth::user()->creatorId(),
-    //                     'owned_by' => \Auth::user()->ownedId(),
-    //                 ]);
-
-    //                 // Insert products
-    //                 foreach ($qbInvoice['ParsedLines'] as $line) {
-    //                     if (empty($line['AccountId']))
-    //                         continue; // Skip unmapped
-
-    //                     // Map to product by name - create if doesn't exist
-    //                     $itemName = $line['RawLine']['SalesItemLineDetail']['ItemRef']['name'] ?? null;
-    //                     if (!$itemName)
-    //                         continue;
-
-    //                     $product = ProductService::where('name', $itemName)
-    //                         ->where('created_by', \Auth::user()->creatorId())
-    //                         ->first();
-
-    //                     if (!$product) {
-    //                         // Create product if it doesn't exist
-    //                         $unit = ProductServiceUnit::firstOrCreate(
-    //                             ['name' => 'pcs'],
-    //                             ['created_by' => \Auth::user()->creatorId()]
-    //                         );
-
-    //                         $productCategory = ProductServiceCategory::firstOrCreate(
-    //                             [
-    //                                 'name' => 'Product',
-    //                                 'created_by' => \Auth::user()->creatorId(),
-    //                             ],
-    //                             [
-    //                                 'color' => '#4CAF50',
-    //                                 'type' => 'Product',
-    //                                 'chart_account_id' => 0,
-    //                                 'created_by' => \Auth::user()->creatorId(),
-    //                                 'owned_by' => \Auth::user()->ownedId(),
-    //                             ]
-    //                         );
-
-    //                         $productData = [
-    //                             'name' => $itemName,
-    //                             'sku' => $itemName,
-    //                             'sale_price' => $line['Amount'] ?? 0,
-    //                             'purchase_price' => 0,
-    //                             'quantity' => 0,
-    //                             'unit_id' => $unit->id,
-    //                             'type' => 'product',
-    //                             'category_id' => $productCategory->id,
-    //                             'created_by' => \Auth::user()->creatorId(),
-    //                         ];
-
-    //                         // Map chart accounts if available
-    //                         if (!empty($line['AccountId'])) {
-    //                             $account = ChartOfAccount::where('code', $line['AccountId'])
-    //                                 ->where('created_by', \Auth::user()->creatorId())
-    //                                 ->first();
-    //                             if ($account) {
-    //                                 $productData['sale_chartaccount_id'] = $account->id;
-    //                             }
-    //                         }
-
-    //                         $product = ProductService::create($productData);
-    //                     }
-    //                     // dd($line,$product,$qbInvoice);
-    //                     InvoiceProduct::create([
-    //                         'invoice_id' => $invoice->id,
-    //                         'product_id' => $product->id,
-    //                         'quantity' => $line['RawLine']['SalesItemLineDetail']['Qty'] ?? 1,
-    //                         'price' => $line['Amount'],
-    //                         'description' => $line['Description'],
-    //                     ]);
-    //                 }
-
-    //                 // Insert payments
-    //                 foreach ($qbInvoice['Payments'] as $payment) {
-    //                     // Determine payment method based on payment data
-    //                     $paymentMethod = $payment['PaymentMethod'];
-
-    //                     // If payment method is null, try to determine from payment type or account
-    //                     if (!$paymentMethod) {
-    //                         // Check if it's a credit card payment
-    //                         if (isset($payment['RawPayment']['CreditCardPayment'])) {
-    //                             $paymentMethod = 'Credit Card';
-    //                         }
-    //                         // Check if it's a check payment
-    //                         elseif (isset($payment['RawPayment']['CheckPayment'])) {
-    //                             $paymentMethod = 'Check';
-    //                         }
-    //                         // Check deposit account type
-    //                         elseif (isset($payment['RawPayment']['DepositToAccountRef'])) {
-    //                             $accountId = $payment['RawPayment']['DepositToAccountRef']['value'];
-    //                             $account = collect($accountsList)->firstWhere('Id', $accountId);
-    //                             if ($account) {
-    //                                 $accountType = strtolower($account['AccountType'] ?? '');
-    //                                 if (strpos($accountType, 'bank') !== false || strpos($accountType, 'checking') !== false) {
-    //                                     $paymentMethod = 'Bank Transfer';
-    //                                 } elseif (strpos($accountType, 'credit') !== false) {
-    //                                     $paymentMethod = 'Credit Card';
-    //                                 } else {
-    //                                     $paymentMethod = 'Cash';
-    //                                 }
-    //                             } else {
-    //                                 $paymentMethod = 'Cash';
-    //                             }
-    //                         } else {
-    //                             $paymentMethod = 'Cash';
-    //                         }
-    //                     }
-
-    //                     InvoicePayment::create([
-    //                         'invoice_id' => $invoice->id,
-    //                         'date' => $payment['TxnDate'],
-    //                         'amount' => $payment['TotalAmount'],
-    //                         'payment_method' => $paymentMethod,
-    //                         'txn_id' => $payment['PaymentId'],
-    //                         'currency' => 'USD', // default
-    //                         'reference' => $payment['PaymentId'],
-    //                         'description' => 'Payment for Invoice ' . $qbInvoice['DocNumber'],
-    //                     ]);
-    //                 }
-    //                 if (!empty($qbInvoice['Payments'])) {
-    //                     $invoice->status = 4;
-    //                     $invoice->send_date = $qbInvoice['TxnDate'];
-
-    //                 }
-    //                 $invoice->save();
-    //                 $imported++;
-    //             }
-
-    //             DB::commit();
-    //         } catch (\Exception $e) {
-    //             DB::rollBack();
-    //             dd($e);
-    //             return response()->json([
-    //                 'status' => 'error',
-    //                 'message' => 'Import failed: ' . $e->getMessage(),
-    //             ], 500);
-    //         }
-
-    //         return response()->json([
-    //             'status' => 'success',
-    //             'message' => "Invoices import completed. Imported: {$imported}, Skipped: {$skipped}, Failed: {$failed}",
-    //             'imported' => $imported,
-    //             'skipped' => $skipped,
-    //             'failed' => $failed,
-    //         ]);
-
-    //     } catch (\Exception $e) {
-    //         dd($e);
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Error: ' . $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
-
-    // public function importInvoices(Request $request)
-    // {
-    //     try {
-    //         // Fetch all invoices with pagination
-    //         $allInvoices = collect();
-    //         $startPosition = 1;
-    //         $maxResults = 50;
-
-    //         do {
-    //             $query = "SELECT * FROM Invoice STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
-    //             $invoicesResponse = $this->qbController->runQuery($query);
-
-    //             if ($invoicesResponse instanceof \Illuminate\Http\JsonResponse) {
-    //                 return $invoicesResponse;
-    //             }
-
-    //             $invoicesData = $invoicesResponse['QueryResponse']['Invoice'] ?? [];
-    //             $allInvoices = $allInvoices->merge($invoicesData);
-
-    //             $fetchedCount = count($invoicesData);
-    //             $startPosition += $fetchedCount;
-    //         } while ($fetchedCount === $maxResults);
-
-    //         // Fetch all payments with pagination
-    //         $allPayments = collect();
-    //         $startPosition = 1;
-
-    //         do {
-    //             $query = "SELECT * FROM Payment STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
-    //             $paymentsResponse = $this->qbController->runQuery($query);
-
-    //             if ($paymentsResponse instanceof \Illuminate\Http\JsonResponse) {
-    //                 return $paymentsResponse;
-    //             }
-
-    //             $paymentsData = $paymentsResponse['QueryResponse']['Payment'] ?? [];
-    //             $allPayments = $allPayments->merge($paymentsData);
-
-    //             $fetchedCount = count($paymentsData);
-    //             $startPosition += $fetchedCount;
-    //         } while ($fetchedCount === $maxResults);
-
-    //         // Fetch items and accounts
-    //         $itemsRaw = $this->qbController->runQuery("SELECT * FROM Item STARTPOSITION 1 MAXRESULTS 500");
-    //         $accountsRaw = $this->qbController->runQuery("SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 500");
-
-    //         $itemsList = collect($itemsRaw['QueryResponse']['Item'] ?? []);
-    //         $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
-
-    //         $itemsMap = $itemsList->keyBy(fn($it) => $it['Id'] ?? null)->toArray();
-    //         $accountsMap = $accountsList->keyBy(fn($a) => $a['Id'] ?? null)->toArray();
-
-    //         // Helper functions
-    //         $findARAccount = function () use ($accountsList) {
-    //             $ar = $accountsList->first(fn($a) => isset($a['AccountType']) && strcasecmp($a['AccountType'], 'AccountsReceivable') === 0);
-    //             if ($ar)
-    //                 return ['Id' => $ar['Id'], 'Name' => $ar['Name'] ?? null];
-    //             $ar = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'receivable') !== false);
-    //             return $ar ? ['Id' => $ar['Id'], 'Name' => $ar['Name'] ?? null] : null;
-    //         };
-
-    //         $findTaxPayableAccount = function () use ($accountsList) {
-    //             $found = $accountsList->first(function ($a) {
-    //                 if (isset($a['AccountType']) && strcasecmp($a['AccountType'], 'OtherCurrentLiability') === 0) {
-    //                     return (stripos($a['Name'] ?? '', 'tax') !== false) || (stripos($a['Name'] ?? '', 'payable') !== false);
-    //                 }
-    //                 return false;
-    //             });
-    //             if ($found)
-    //                 return ['Id' => $found['Id'], 'Name' => $found['Name'] ?? null];
-    //             $found = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'tax') !== false);
-    //             return $found ? ['Id' => $found['Id'], 'Name' => $found['Name'] ?? null] : null;
-    //         };
-
-    //         $arAccount = $findARAccount();
-    //         $taxAccount = $findTaxPayableAccount();
-
-    //         $detectAccountForSalesItem = function ($sid) use ($itemsMap, $accountsMap) {
-    //             if (!empty($sid['ItemAccountRef']['value'])) {
-    //                 return [
-    //                     'AccountId' => $sid['ItemAccountRef']['value'],
-    //                     'AccountName' => $sid['ItemAccountRef']['name'] ?? ($accountsMap[$sid['ItemAccountRef']['value']]['Name'] ?? null)
-    //                 ];
-    //             }
-    //             if (!empty($sid['ItemRef']['value'])) {
-    //                 $itemId = $sid['ItemRef']['value'];
-    //                 $item = $itemsMap[$itemId] ?? null;
-    //                 if ($item) {
-    //                     if (!empty($item['IncomeAccountRef']['value'])) {
-    //                         return ['AccountId' => $item['IncomeAccountRef']['value'], 'AccountName' => $item['IncomeAccountRef']['name'] ?? ($accountsMap[$item['IncomeAccountRef']['value']]['Name'] ?? null)];
-    //                     }
-    //                     if (!empty($item['ExpenseAccountRef']['value'])) {
-    //                         return ['AccountId' => $item['ExpenseAccountRef']['value'], 'AccountName' => $item['ExpenseAccountRef']['name'] ?? ($accountsMap[$item['ExpenseAccountRef']['value']]['Name'] ?? null)];
-    //                     }
-    //                     if (!empty($item['AssetAccountRef']['value'])) {
-    //                         return ['AccountId' => $item['AssetAccountRef']['value'], 'AccountName' => $item['AssetAccountRef']['name'] ?? ($accountsMap[$item['AssetAccountRef']['value']]['Name'] ?? null)];
-    //                     }
-    //                 }
-    //             }
-    //             return ['AccountId' => null, 'AccountName' => null];
-    //         };
-
-    //         $parseInvoiceLine = function ($line) use ($detectAccountForSalesItem, $itemsMap, $accountsMap) {
-    //             $out = [];
-    //             $detailType = $line['DetailType'] ?? null;
-
-    //             if (!empty($line['GroupLineDetail']) && !empty($line['GroupLineDetail']['Line'])) {
-    //                 foreach ($line['GroupLineDetail']['Line'] as $child) {
-    //                     if (!empty($child['SalesItemLineDetail'])) {
-    //                         $sid = $child['SalesItemLineDetail'];
-    //                         $acc = $detectAccountForSalesItem($sid);
-    //                         $out[] = [
-    //                             'DetailType' => $child['DetailType'] ?? 'SalesItemLineDetail',
-    //                             'Description' => $child['Description'] ?? $sid['ItemRef']['name'] ?? null,
-    //                             'Amount' => $child['Amount'] ?? 0,
-    //                             'Quantity' => $sid['Qty'] ?? 1,
-    //                             'ItemName' => $sid['ItemRef']['name'] ?? null,
-    //                             'AccountId' => $acc['AccountId'],
-    //                             'AccountName' => $acc['AccountName'],
-    //                             'RawLine' => $child,
-    //                             'HasProduct' => true,
-    //                         ];
-    //                     } else {
-    //                         $out[] = [
-    //                             'DetailType' => $child['DetailType'] ?? null,
-    //                             'Description' => $child['Description'] ?? null,
-    //                             'Amount' => $child['Amount'] ?? 0,
-    //                             'Quantity' => 1,
-    //                             'ItemName' => null,
-    //                             'AccountId' => null,
-    //                             'AccountName' => null,
-    //                             'RawLine' => $child,
-    //                             'HasProduct' => false,
-    //                         ];
-    //                     }
-    //                 }
-    //                 return $out;
-    //             }
-
-    //             if (!empty($line['SalesItemLineDetail'])) {
-    //                 $sid = $line['SalesItemLineDetail'];
-    //                 $acc = $detectAccountForSalesItem($sid);
-    //                 $out[] = [
-    //                     'DetailType' => $line['DetailType'] ?? 'SalesItemLineDetail',
-    //                     'Description' => $line['Description'] ?? ($sid['ItemRef']['name'] ?? null),
-    //                     'Amount' => $line['Amount'] ?? 0,
-    //                     'Quantity' => $sid['Qty'] ?? 1,
-    //                     'ItemName' => $sid['ItemRef']['name'] ?? null,
-    //                     'AccountId' => $acc['AccountId'],
-    //                     'AccountName' => $acc['AccountName'],
-    //                     'RawLine' => $line,
-    //                     'HasProduct' => true,
-    //                 ];
-    //                 return $out;
-    //             }
-
-    //             if (!empty($line['TaxLineDetail']) || stripos($detailType ?? '', 'Tax') !== false) {
-    //                 $out[] = [
-    //                     'DetailType' => $detailType,
-    //                     'Description' => $line['Description'] ?? null,
-    //                     'Amount' => $line['Amount'] ?? 0,
-    //                     'Quantity' => 1,
-    //                     'ItemName' => null,
-    //                     'AccountId' => null,
-    //                     'AccountName' => null,
-    //                     'RawLine' => $line,
-    //                     'HasProduct' => false,
-    //                 ];
-    //                 return $out;
-    //             }
-
-    //             $out[] = [
-    //                 'DetailType' => $detailType,
-    //                 'Description' => $line['Description'] ?? null,
-    //                 'Amount' => $line['Amount'] ?? 0,
-    //                 'Quantity' => 1,
-    //                 'ItemName' => null,
-    //                 'AccountId' => null,
-    //                 'AccountName' => null,
-    //                 'RawLine' => $line,
-    //                 'HasProduct' => false,
-    //             ];
-    //             return $out;
-    //         };
-
-    //         $invoices = $allInvoices->map(function ($invoice) use ($parseInvoiceLine, $accountsMap, $arAccount, $taxAccount) {
-    //             $parsedLines = [];
-    //             foreach ($invoice['Line'] ?? [] as $line) {
-    //                 $parsedLines = array_merge($parsedLines, $parseInvoiceLine($line));
-    //             }
-
-    //             $unmapped = array_values(array_filter($parsedLines, fn($l) => empty($l['AccountId']) && (float) $l['Amount'] != 0.0));
-
-    //             $taxTotal = 0;
-    //             if (!empty($invoice['TxnTaxDetail']['TotalTax']))
-    //                 $taxTotal = $invoice['TxnTaxDetail']['TotalTax'];
-    //             elseif (!empty($invoice['TotalTax']))
-    //                 $taxTotal = $invoice['TotalTax'];
-
-    //             $totalAmount = (float) ($invoice['TotalAmt'] ?? 0);
-
-    //             $journalLines = [];
-
-    //             if ($arAccount) {
-    //                 $journalLines[] = [
-    //                     'AccountId' => $arAccount['Id'],
-    //                     'AccountName' => $arAccount['Name'],
-    //                     'Debit' => $totalAmount,
-    //                     'Credit' => 0.0,
-    //                     'Note' => 'Accounts Receivable (invoice total)'
-    //                 ];
-    //             }
-
-    //             foreach ($parsedLines as $pl) {
-    //                 if ((float) $pl['Amount'] == 0.0)
-    //                     continue;
-    //                 if (empty($pl['AccountId']))
-    //                     continue;
-    //                 $journalLines[] = [
-    //                     'AccountId' => $pl['AccountId'],
-    //                     'AccountName' => $pl['AccountName'] ?? null,
-    //                     'Debit' => 0.0,
-    //                     'Credit' => (float) $pl['Amount'],
-    //                     'Note' => $pl['Description'] ?? 'Sales / line item'
-    //                 ];
-    //             }
-
-    //             if ($taxTotal > 0) {
-    //                 $journalLines[] = [
-    //                     'AccountId' => $taxAccount['Id'] ?? null,
-    //                     'AccountName' => $taxAccount['Name'] ?? 'Sales Tax Payable (heuristic)',
-    //                     'Debit' => 0.0,
-    //                     'Credit' => (float) $taxTotal,
-    //                     'Note' => 'Sales/Tax payable'
-    //                 ];
-    //             }
-
-    //             $sumDebits = array_sum(array_map(fn($l) => $l['Debit'] ?? 0, $journalLines));
-    //             $sumCredits = array_sum(array_map(fn($l) => $l['Credit'] ?? 0, $journalLines));
-    //             $balanced = abs($sumDebits - $sumCredits) < 0.01;
-
-    //             return [
-    //                 'InvoiceId' => (string) ($invoice['Id'] ?? null),
-    //                 'Id' => $invoice['Id'] ?? null,
-    //                 'DocNumber' => $invoice['DocNumber'] ?? null,
-    //                 'CustomerName' => $invoice['CustomerRef']['name'] ?? null,
-    //                 'CustomerId' => $invoice['CustomerRef']['value'] ?? null,
-    //                 'TxnDate' => $invoice['TxnDate'] ?? null,
-    //                 'DueDate' => $invoice['DueDate'] ?? null,
-    //                 'TotalAmount' => $totalAmount,
-    //                 'Balance' => $invoice['Balance'] ?? 0,
-    //                 'Currency' => $invoice['CurrencyRef']['name'] ?? null,
-    //                 'Payments' => [],
-    //                 'ParsedLines' => $parsedLines,
-    //                 'UnmappedInvoiceLines' => $unmapped,
-    //                 'TaxTotal' => (float) $taxTotal,
-    //                 'ReconstructedJournal' => [
-    //                     'Source' => 'InvoiceLines',
-    //                     'Lines' => $journalLines,
-    //                     'SumDebits' => (float) $sumDebits,
-    //                     'SumCredits' => (float) $sumCredits,
-    //                     'Balanced' => $balanced,
-    //                 ],
-    //                 'RawInvoice' => $invoice,
-    //             ];
-    //         });
-
-    //         $payments = $allPayments->map(function ($payment) {
-    //             $linked = [];
-    //             foreach ($payment['Line'] ?? [] as $l) {
-    //                 if (!empty($l['LinkedTxn'])) {
-    //                     if (isset($l['LinkedTxn'][0]))
-    //                         $linked = array_merge($linked, $l['LinkedTxn']);
-    //                     else
-    //                         $linked[] = $l['LinkedTxn'];
-    //                 }
-    //             }
-    //             return [
-    //                 'PaymentId' => $payment['Id'] ?? null,
-    //                 'CustomerId' => $payment['CustomerRef']['value'] ?? null,
-    //                 'CustomerName' => $payment['CustomerRef']['name'] ?? null,
-    //                 'TxnDate' => $payment['TxnDate'] ?? null,
-    //                 'TotalAmount' => $payment['TotalAmt'] ?? 0,
-    //                 'PaymentMethod' => $payment['PaymentMethodRef']['name'] ?? null,
-    //                 'LinkedTxn' => $linked,
-    //                 'RawPayment' => $payment,
-    //             ];
-    //         });
-
-    //         $invoicesById = $invoices->keyBy('InvoiceId')->toArray();
-    //         foreach ($invoicesById as $invId => &$inv) {
-    //             $inv['Payments'] = collect($payments)->filter(function ($p) use ($invId) {
-    //                 return collect($p['LinkedTxn'])->contains(fn($txn) => isset($txn['TxnType'], $txn['TxnId']) && strcasecmp($txn['TxnType'], 'Invoice') === 0 && (string) $txn['TxnId'] === (string) $invId);
-    //             })->values()->toArray();
-    //         }
-    //         $invoicesWithPayments = collect($invoicesById);
-
-    //         // Import logic
-    //         $imported = 0;
-    //         $skipped = 0;
-    //         $failed = 0;
-
-    //         DB::beginTransaction();
-    //         try {
-    //             foreach ($invoicesWithPayments as $qbInvoice) {
-    //                 try {
-    //                     $qbId = $qbInvoice['InvoiceId'];
-
-    //                     // Check for duplicate
-    //                     $existing = Invoice::where('invoice_id', $qbId)->first();
-    //                     if ($existing) {
-    //                         \Log::error("Invoice already exists: " .$qbId);
-    //                         $skipped++;
-    //                         continue;
-    //                     }
-
-    //                     // Map customer - find local customer by QB customer ID or name
-    //                     $qbCustomerId = $qbInvoice['CustomerId'];
-    //                     $qbCustomerName = $qbInvoice['CustomerName'];
-
-    //                     $customer = null;
-    //                     if ($qbCustomerId) {
-    //                         $customer = Customer::where('customer_id', $qbCustomerId)
-    //                             ->where('created_by', \Auth::user()->creatorId())
-    //                             ->first();
-    //                     }
-
-    //                     if (!$customer && $qbCustomerName) {
-    //                         $customer = Customer::where('name', $qbCustomerName)
-    //                             ->where('created_by', \Auth::user()->creatorId())
-    //                             ->first();
-    //                     }
-
-    //                     if (!$customer) {
-    //                     \Log::error('Customer Not Found', [
-    //                         'qb_customer_id'   => $qbCustomerId,
-    //                         'qb_customer_name' => $qbCustomerName,
-    //                         'creator_id'       => \Auth::user()->creatorId(),
-    //                     ]);
-    //                     $skipped++;
-    //                     continue;
-    //                 }
-
-
-    //                     $customerId = $customer->id;
-
-    //                     // Insert invoice
-    //                     $invoice = Invoice::create([
-    //                         'invoice_id' => $qbId,
-    //                         'customer_id' => $customerId,
-    //                         'issue_date' => $qbInvoice['TxnDate'],
-    //                         'due_date' => $qbInvoice['DueDate'],
-    //                         'ref_number' => $qbInvoice['DocNumber'],
-    //                         'issue_date' => $qbInvoice['TxnDate'],
-    //                         'send_date' => $qbInvoice['TxnDate'],
-    //                         'due_date' => $qbInvoice['DueDate'],
-    //                         'status' => 2,
-    //                         'created_by' => \Auth::user()->creatorId(),
-    //                         'owned_by' => \Auth::user()->ownedId(),
-    //                     ]);
-
-    //                     // Track total payments for customer balance update
-    //                     $totalPayments = 0;
-
-    //                     // Insert products
-    //                     foreach ($qbInvoice['ParsedLines'] as $line) {
-    //                         if ($line['HasProduct']) {
-    //                             $itemName = $line['ItemName'];
-    //                             if (!$itemName)
-    //                                 continue;
-
-    //                             $product = ProductService::where('name', $itemName)
-    //                                 ->where('created_by', \Auth::user()->creatorId())
-    //                                 ->first();
-
-    //                             if (!$product) {
-    //                                 // Create product if it doesn't exist
-    //                                 $unit = ProductServiceUnit::firstOrCreate(
-    //                                     ['name' => 'pcs'],
-    //                                     ['created_by' => \Auth::user()->creatorId()]
-    //                                 );
-
-    //                                 $productCategory = ProductServiceCategory::firstOrCreate(
-    //                                     [
-    //                                         'name' => 'Product',
-    //                                         'created_by' => \Auth::user()->creatorId(),
-    //                                     ],
-    //                                     [
-    //                                         'color' => '#4CAF50',
-    //                                         'type' => 'Product',
-    //                                         'chart_account_id' => 0,
-    //                                         'created_by' => \Auth::user()->creatorId(),
-    //                                         'owned_by' => \Auth::user()->ownedId(),
-    //                                     ]
-    //                                 );
-
-    //                                 $productData = [
-    //                                     'name' => $itemName,
-    //                                     'sku' => $itemName,
-    //                                     'sale_price' => $line['Amount'] ?? 0,
-    //                                     'purchase_price' => 0,
-    //                                     'quantity' => 0,
-    //                                     'unit_id' => $unit->id,
-    //                                     'type' => 'product',
-    //                                     'category_id' => $productCategory->id,
-    //                                     'created_by' => \Auth::user()->creatorId(),
-    //                                 ];
-
-    //                                 // Map chart accounts if available
-    //                                 if (!empty($line['AccountId'])) {
-    //                                     $account = ChartOfAccount::where('code', $line['AccountId'])
-    //                                         ->where('created_by', \Auth::user()->creatorId())
-    //                                         ->first();
-    //                                     if ($account) {
-    //                                         $productData['sale_chartaccount_id'] = $account->id;
-    //                                     }
-    //                                 }
-
-    //                                 $product = ProductService::create($productData);
-    //                             }
-
-    //                             InvoiceProduct::create([
-    //                                 'invoice_id' => $invoice->id,
-    //                                 'product_id' => $product->id,
-    //                                 'quantity' => $line['Quantity'] ?? 1,
-    //                                 'price' => $line['Amount'],
-    //                                 'description' => $line['Description'],
-    //                             ]);
-    //                         }
-    //                     }
-
-    //                     // Insert payments
-    //                     foreach ($qbInvoice['Payments'] as $payment) {
-    //                         // Determine payment method
-    //                         $paymentMethod = $payment['PaymentMethod'];
-
-    //                         if (!$paymentMethod) {
-    //                             if (isset($payment['RawPayment']['CreditCardPayment'])) {
-    //                                 $paymentMethod = 'Credit Card';
-    //                             } elseif (isset($payment['RawPayment']['CheckPayment'])) {
-    //                                 $paymentMethod = 'Check';
-    //                             } elseif (isset($payment['RawPayment']['DepositToAccountRef'])) {
-    //                                 $accountId = $payment['RawPayment']['DepositToAccountRef']['value'];
-    //                                 $account = collect($accountsList)->firstWhere('Id', $accountId);
-    //                                 if ($account) {
-    //                                     $accountType = strtolower($account['AccountType'] ?? '');
-    //                                     if (strpos($accountType, 'bank') !== false || strpos($accountType, 'checking') !== false) {
-    //                                         $paymentMethod = 'Bank Transfer';
-    //                                     } elseif (strpos($accountType, 'credit') !== false) {
-    //                                         $paymentMethod = 'Credit Card';
-    //                                     } else {
-    //                                         $paymentMethod = 'Cash';
-    //                                     }
-    //                                 } else {
-    //                                     $paymentMethod = 'Cash';
-    //                                 }
-    //                             } else {
-    //                                 $paymentMethod = 'Cash';
-    //                             }
-    //                         }
-
-    //                         $paymentAmount = $payment['TotalAmount'] ?? 0;
-
-    //                         InvoicePayment::create([
-    //                             'invoice_id' => $invoice->id,
-    //                             'date' => $payment['TxnDate'],
-    //                             'amount' => $paymentAmount,
-    //                             'account_id' => $accountId,
-    //                             'payment_method' => $paymentMethod,
-    //                             'txn_id' => $payment['PaymentId'],
-    //                             'currency' => 'USD',
-    //                             'reference' => $payment['PaymentId'],
-    //                             'description' => 'Payment for Invoice ' . $qbInvoice['DocNumber'],
-    //                         ]);
-
-    //                         $totalPayments += $paymentAmount;
-    //                     }
-
-    //                     if (!empty($qbInvoice['Payments'])) {
-    //                         $invoice->status = 4;
-    //                         $invoice->send_date = $qbInvoice['TxnDate'];
-    //                     }
-
-    //                     $invoice->save();
-
-    //                     // Update customer balance
-    //                     if ($customer) {
-    //                         // Credit: invoices increase customer's receivable balance
-    //                         if ($qbInvoice['TotalAmount'] > 0) {
-    //                             Utility::updateUserBalance('customer', $customer->id, $qbInvoice['TotalAmount'], 'credit');
-    //                         }
-
-    //                         // Debit: payments decrease customer's receivable balance
-    //                         if ($totalPayments > 0) {
-    //                             Utility::updateUserBalance('customer', $customer->id, $totalPayments, 'debit');
-    //                         }
-    //                     }
-
-    //                     $imported++;
-
-    //                 } catch (\Exception $e) {
-    //                     \Log::error("Failed to import invoice {$qbId}: " . $e->getMessage());
-    //                     $failed++;
-    //                     continue;
-    //                 }
-    //             }
-
-    //             DB::commit();
-    //         } catch (\Exception $e) {
-    //             DB::rollBack();
-    //             \Log::error("Invoices import error: " . $e->getMessage());
-    //             return response()->json([
-    //                 'status' => 'error',
-    //                 'message' => 'Import failed: ' . $e->getMessage(),
-    //             ], 500);
-    //         }
-
-    //         return response()->json([
-    //             'status' => 'success',
-    //             'message' => "Invoices import completed. Imported: {$imported}, Skipped: {$skipped}, Failed: {$failed}",
-    //             'imported' => $imported,
-    //             'skipped' => $skipped,
-    //             'failed' => $failed,
-    //         ]);
-
-    //     } catch (\Exception $e) {
-    //         \Log::error("Invoices import error: " . $e->getMessage());
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Error: ' . $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
     public function importInvoices(Request $request)
     {
         try {
             // Fetch all invoices with pagination
             $allInvoices = collect();
             $startPosition = 1;
-            $maxResults = 50;
+            $maxResults = 50; // Adjust batch size as needed
 
             do {
+                // Fetch paginated batch
                 $query = "SELECT * FROM Invoice STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
                 $invoicesResponse = $this->qbController->runQuery($query);
 
+                // Handle API errors
                 if ($invoicesResponse instanceof \Illuminate\Http\JsonResponse) {
                     return $invoicesResponse;
                 }
 
+                // Get invoices from response
                 $invoicesData = $invoicesResponse['QueryResponse']['Invoice'] ?? [];
+
+                // Merge entire objects (keep all keys)
                 $allInvoices = $allInvoices->merge($invoicesData);
 
+                // Move to next page
                 $fetchedCount = count($invoicesData);
                 $startPosition += $fetchedCount;
-            } while ($fetchedCount === $maxResults);
+            } while ($fetchedCount === $maxResults); // continue if page is full
 
-            // Fetch all payments with pagination
-            $allPayments = collect();
-            $startPosition = 1;
+        // Fetch all payments with pagination
+        $allPayments = collect();
+        $startPosition = 1;
 
             do {
+                // Fetch paginated batch
                 $query = "SELECT * FROM Payment STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
                 $paymentsResponse = $this->qbController->runQuery($query);
 
+                // Handle API errors
                 if ($paymentsResponse instanceof \Illuminate\Http\JsonResponse) {
                     return $paymentsResponse;
                 }
 
+                // Get payments from response
                 $paymentsData = $paymentsResponse['QueryResponse']['Payment'] ?? [];
+
+                // Merge entire objects (keep all keys)
                 $allPayments = $allPayments->merge($paymentsData);
 
+                // Move to next page
                 $fetchedCount = count($paymentsData);
                 $startPosition += $fetchedCount;
-            } while ($fetchedCount === $maxResults);
+            } while ($fetchedCount === $maxResults); // continue if page is full
 
-            // Fetch items and accounts
+            // Fetch items and accounts (these are usually smaller datasets)
             $itemsRaw = $this->qbController->runQuery("SELECT * FROM Item STARTPOSITION 1 MAXRESULTS 500");
             $accountsRaw = $this->qbController->runQuery("SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 500");
 
-            $itemsList = collect($itemsRaw['QueryResponse']['Item'] ?? []);
-            $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
+        $itemsList = collect($itemsRaw['QueryResponse']['Item'] ?? []);
+        $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
 
-            $itemsMap = $itemsList->keyBy(fn($it) => $it['Id'] ?? null)->toArray();
-            $accountsMap = $accountsList->keyBy(fn($a) => $a['Id'] ?? null)->toArray();
+        $itemsMap = $itemsList->keyBy(fn($it) => $it['Id'] ?? null)->toArray();
+        $accountsMap = $accountsList->keyBy(fn($a) => $a['Id'] ?? null)->toArray();
 
-            // Helper functions
+            // Helper functions as in the original
             $findARAccount = function () use ($accountsList) {
                 $ar = $accountsList->first(fn($a) => isset($a['AccountType']) && strcasecmp($a['AccountType'], 'AccountsReceivable') === 0);
                 if ($ar)
@@ -1285,7 +121,6 @@ class QuickBooksImportController extends Controller
                 $ar = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'receivable') !== false);
                 return $ar ? ['Id' => $ar['Id'], 'Name' => $ar['Name'] ?? null] : null;
             };
-
             $findTaxPayableAccount = function () use ($accountsList) {
                 $found = $accountsList->first(function ($a) {
                     if (isset($a['AccountType']) && strcasecmp($a['AccountType'], 'OtherCurrentLiability') === 0) {
@@ -1302,34 +137,34 @@ class QuickBooksImportController extends Controller
             $arAccount = $findARAccount();
             $taxAccount = $findTaxPayableAccount();
 
-            $detectAccountForSalesItem = function ($sid) use ($itemsMap, $accountsMap) {
-                if (!empty($sid['ItemAccountRef']['value'])) {
-                    return [
-                        'AccountId' => $sid['ItemAccountRef']['value'],
-                        'AccountName' => $sid['ItemAccountRef']['name'] ?? ($accountsMap[$sid['ItemAccountRef']['value']]['Name'] ?? null)
-                    ];
-                }
-                if (!empty($sid['ItemRef']['value'])) {
-                    $itemId = $sid['ItemRef']['value'];
-                    $item = $itemsMap[$itemId] ?? null;
-                    if ($item) {
-                        if (!empty($item['IncomeAccountRef']['value'])) {
-                            return ['AccountId' => $item['IncomeAccountRef']['value'], 'AccountName' => $item['IncomeAccountRef']['name'] ?? ($accountsMap[$item['IncomeAccountRef']['value']]['Name'] ?? null)];
-                        }
-                        if (!empty($item['ExpenseAccountRef']['value'])) {
-                            return ['AccountId' => $item['ExpenseAccountRef']['value'], 'AccountName' => $item['ExpenseAccountRef']['name'] ?? ($accountsMap[$item['ExpenseAccountRef']['value']]['Name'] ?? null)];
-                        }
-                        if (!empty($item['AssetAccountRef']['value'])) {
-                            return ['AccountId' => $item['AssetAccountRef']['value'], 'AccountName' => $item['AssetAccountRef']['name'] ?? ($accountsMap[$item['AssetAccountRef']['value']]['Name'] ?? null)];
-                        }
+        $detectAccountForSalesItem = function ($sid) use ($itemsMap, $accountsMap) {
+            if (!empty($sid['ItemAccountRef']['value'])) {
+                return [
+                    'AccountId' => $sid['ItemAccountRef']['value'],
+                    'AccountName' => $sid['ItemAccountRef']['name'] ?? ($accountsMap[$sid['ItemAccountRef']['value']]['Name'] ?? null)
+                ];
+            }
+            if (!empty($sid['ItemRef']['value'])) {
+                $itemId = $sid['ItemRef']['value'];
+                $item = $itemsMap[$itemId] ?? null;
+                if ($item) {
+                    if (!empty($item['IncomeAccountRef']['value'])) {
+                        return ['AccountId' => $item['IncomeAccountRef']['value'], 'AccountName' => $item['IncomeAccountRef']['name'] ?? ($accountsMap[$item['IncomeAccountRef']['value']]['Name'] ?? null)];
+                    }
+                    if (!empty($item['ExpenseAccountRef']['value'])) {
+                        return ['AccountId' => $item['ExpenseAccountRef']['value'], 'AccountName' => $item['ExpenseAccountRef']['name'] ?? ($accountsMap[$item['ExpenseAccountRef']['value']]['Name'] ?? null)];
+                    }
+                    if (!empty($item['AssetAccountRef']['value'])) {
+                        return ['AccountId' => $item['AssetAccountRef']['value'], 'AccountName' => $item['AssetAccountRef']['name'] ?? ($accountsMap[$item['AssetAccountRef']['value']]['Name'] ?? null)];
                     }
                 }
-                return ['AccountId' => null, 'AccountName' => null];
-            };
+            }
+            return ['AccountId' => null, 'AccountName' => null];
+        };
 
-            $parseInvoiceLine = function ($line) use ($detectAccountForSalesItem, $itemsMap, $accountsMap) {
-                $out = [];
-                $detailType = $line['DetailType'] ?? null;
+        $parseInvoiceLine = function ($line) use ($detectAccountForSalesItem) {
+            $out = [];
+            $detailType = $line['DetailType'] ?? null;
 
                 if (!empty($line['GroupLineDetail']) && !empty($line['GroupLineDetail']['Line'])) {
                     foreach ($line['GroupLineDetail']['Line'] as $child) {
@@ -1340,24 +175,18 @@ class QuickBooksImportController extends Controller
                                 'DetailType' => $child['DetailType'] ?? 'SalesItemLineDetail',
                                 'Description' => $child['Description'] ?? $sid['ItemRef']['name'] ?? null,
                                 'Amount' => $child['Amount'] ?? 0,
-                                'Quantity' => $sid['Qty'] ?? 1,
-                                'ItemName' => $sid['ItemRef']['name'] ?? null,
                                 'AccountId' => $acc['AccountId'],
                                 'AccountName' => $acc['AccountName'],
                                 'RawLine' => $child,
-                                'HasProduct' => true,
                             ];
                         } else {
                             $out[] = [
                                 'DetailType' => $child['DetailType'] ?? null,
                                 'Description' => $child['Description'] ?? null,
                                 'Amount' => $child['Amount'] ?? 0,
-                                'Quantity' => 1,
-                                'ItemName' => null,
                                 'AccountId' => null,
                                 'AccountName' => null,
                                 'RawLine' => $child,
-                                'HasProduct' => false,
                             ];
                         }
                     }
@@ -1371,12 +200,9 @@ class QuickBooksImportController extends Controller
                         'DetailType' => $line['DetailType'] ?? 'SalesItemLineDetail',
                         'Description' => $line['Description'] ?? ($sid['ItemRef']['name'] ?? null),
                         'Amount' => $line['Amount'] ?? 0,
-                        'Quantity' => $sid['Qty'] ?? 1,
-                        'ItemName' => $sid['ItemRef']['name'] ?? null,
                         'AccountId' => $acc['AccountId'],
                         'AccountName' => $acc['AccountName'],
                         'RawLine' => $line,
-                        'HasProduct' => true,
                     ];
                     return $out;
                 }
@@ -1386,12 +212,9 @@ class QuickBooksImportController extends Controller
                         'DetailType' => $detailType,
                         'Description' => $line['Description'] ?? null,
                         'Amount' => $line['Amount'] ?? 0,
-                        'Quantity' => 1,
-                        'ItemName' => null,
                         'AccountId' => null,
                         'AccountName' => null,
                         'RawLine' => $line,
-                        'HasProduct' => false,
                     ];
                     return $out;
                 }
@@ -1400,17 +223,14 @@ class QuickBooksImportController extends Controller
                     'DetailType' => $detailType,
                     'Description' => $line['Description'] ?? null,
                     'Amount' => $line['Amount'] ?? 0,
-                    'Quantity' => 1,
-                    'ItemName' => null,
                     'AccountId' => null,
                     'AccountName' => null,
                     'RawLine' => $line,
-                    'HasProduct' => false,
                 ];
                 return $out;
             };
 
-            $invoices = $allInvoices->map(function ($invoice) use ($parseInvoiceLine, $accountsMap, $arAccount, $taxAccount) {
+            $invoices = $allInvoices->map(function ($invoice) use ($parseInvoiceLine, $accountsMap, $arAccount, $taxAccount, &$invoicesList) {
                 $parsedLines = [];
                 foreach ($invoice['Line'] ?? [] as $line) {
                     $parsedLines = array_merge($parsedLines, $parseInvoiceLine($line));
@@ -1436,6 +256,15 @@ class QuickBooksImportController extends Controller
                         'Credit' => 0.0,
                         'Note' => 'Accounts Receivable (invoice total)'
                     ];
+                } else {
+                    dd($arAccount);
+                    // $journalLines[] = [
+                    //     'AccountId' => null,
+                    //     'AccountName' => 'Accounts Receivable (not found)',
+                    //     'Debit' => $totalAmount,
+                    //     'Credit' => 0.0,
+                    //     'Note' => 'Accounts Receivable (invoice total, account not auto-detected)'
+                    // ];
                 }
 
                 foreach ($parsedLines as $pl) {
@@ -1492,7 +321,7 @@ class QuickBooksImportController extends Controller
                 ];
             });
 
-            $payments = $allPayments->map(function ($payment) {
+            $payments = $allPayments->map(function ($payment) use (&$paymentsList) {
                 $linked = [];
                 foreach ($payment['Line'] ?? [] as $l) {
                     if (!empty($l['LinkedTxn'])) {
@@ -1521,8 +350,8 @@ class QuickBooksImportController extends Controller
                 })->values()->toArray();
             }
             $invoicesWithPayments = collect($invoicesById);
-
-            // Import logic
+            // dd($invoicesWithPayments->first());
+            // Now, import logic
             $imported = 0;
             $skipped = 0;
             $failed = 0;
@@ -1530,237 +359,186 @@ class QuickBooksImportController extends Controller
             DB::beginTransaction();
             try {
                 foreach ($invoicesWithPayments as $qbInvoice) {
-                    try {
-                        $qbId = $qbInvoice['InvoiceId'];
+                    $qbId = $qbInvoice['InvoiceId'];
 
-                        // Check for duplicate
-                        $existing = Invoice::where('invoice_id', $qbId)->first();
-                        if ($existing) {
-                            \Log::error("Invoice already exists: " . $qbId);
-                            $skipped++;
+                    // Check for duplicate
+                    $existing = Invoice::where('invoice_id', $qbId)->first();
+                    if ($existing) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    // Map customer_id - assuming CustomerRef value maps to local customer id, but need to handle
+                    // For simplicity, assume customer_id is the QB CustomerRef value, but in reality, you might need to map QB customers to local customers
+                    $customerId = $qbInvoice['CustomerId']; // This might need adjustment
+
+                    // Insert invoice
+                    $invoice = Invoice::create([
+                        'invoice_id' => $qbId,
+                        'customer_id' => $customerId,
+                        'issue_date' => $qbInvoice['TxnDate'],
+                        'due_date' => $qbInvoice['DueDate'],
+                        'ref_number' => $qbInvoice['DocNumber'],
+                        'status' => 2, // default
+                        // other fields as needed
+                        'created_by' => \Auth::user()->creatorId(),
+                        'owned_by' => \Auth::user()->ownedId(),
+                    ]);
+
+                    // Insert products
+                    foreach ($qbInvoice['ParsedLines'] as $line) {
+                        if (empty($line['AccountId']))
+                            continue; // Skip unmapped
+
+                        // Map to product by name - create if doesn't exist
+                        $itemName = $line['RawLine']['SalesItemLineDetail']['ItemRef']['name'] ?? null;
+                        if (!$itemName)
                             continue;
-                        }
 
-                        // Map customer
-                        $qbCustomerId = $qbInvoice['CustomerId'];
-                        $qbCustomerName = $qbInvoice['CustomerName'];
+                        $product = ProductService::where('name', $itemName)
+                            ->where('created_by', \Auth::user()->creatorId())
+                            ->first();
 
-                        $customer = null;
-                        if ($qbCustomerId) {
-                            $customer = Customer::where('customer_id', $qbCustomerId)
-                                ->where('created_by', \Auth::user()->creatorId())
-                                ->first();
-                        }
+                        if (!$product) {
+                            // Create product if it doesn't exist
+                            $unit = ProductServiceUnit::firstOrCreate(
+                                ['name' => 'pcs'],
+                                ['created_by' => \Auth::user()->creatorId()]
+                            );
 
-                        if (!$customer && $qbCustomerName) {
-                            $customer = Customer::where('name', $qbCustomerName)
-                                ->where('created_by', \Auth::user()->creatorId())
-                                ->first();
-                        }
+                            $productCategory = ProductServiceCategory::firstOrCreate(
+                                [
+                                    'name' => 'Product',
+                                    'created_by' => \Auth::user()->creatorId(),
+                                ],
+                                [
+                                    'color' => '#4CAF50',
+                                    'type' => 'Product',
+                                    'chart_account_id' => 0,
+                                    'created_by' => \Auth::user()->creatorId(),
+                                    'owned_by' => \Auth::user()->ownedId(),
+                                ]
+                            );
 
-                        if (!$customer) {
-                            \Log::error('Customer Not Found', [
-                                'qb_customer_id'   => $qbCustomerId,
-                                'qb_customer_name' => $qbCustomerName,
-                                'creator_id'       => \Auth::user()->creatorId(),
-                            ]);
-                            $skipped++;
-                            continue;
-                        }
+                            $productData = [
+                                'name' => $itemName,
+                                'sku' => $itemName,
+                                'sale_price' => $line['Amount'] ?? 0,
+                                'purchase_price' => 0,
+                                'quantity' => 0,
+                                'unit_id' => $unit->id,
+                                'type' => 'product',
+                                'category_id' => $productCategory->id,
+                                'created_by' => \Auth::user()->creatorId(),
+                            ];
 
-                        $customerId = $customer->id;
-
-                        // Insert invoice
-                        $invoice = Invoice::create([
-                            'invoice_id' => $qbId,
-                            'customer_id' => $customerId,
-                            'issue_date' => $qbInvoice['TxnDate'],
-                            'due_date' => $qbInvoice['DueDate'],
-                            'ref_number' => $qbInvoice['DocNumber'],
-                            'send_date' => $qbInvoice['TxnDate'],
-                            'status' => 2,
-                            'created_by' => \Auth::user()->creatorId(),
-                            'owned_by' => \Auth::user()->ownedId(),
-                        ]);
-
-                        $totalPayments = 0;
-
-                        // Insert products
-                        foreach ($qbInvoice['ParsedLines'] as $line) {
-                            if ($line['HasProduct']) {
-                                $itemName = $line['ItemName'];
-                                if (!$itemName)
-                                    continue;
-
-                                $product = ProductService::where('name', $itemName)
+                            // Map chart accounts if available
+                            if (!empty($line['AccountId'])) {
+                                $account = ChartOfAccount::where('code', $line['AccountId'])
                                     ->where('created_by', \Auth::user()->creatorId())
                                     ->first();
-
-                                if (!$product) {
-                                    $unit = ProductServiceUnit::firstOrCreate(
-                                        ['name' => 'pcs'],
-                                        ['created_by' => \Auth::user()->creatorId()]
-                                    );
-
-                                    $productCategory = ProductServiceCategory::firstOrCreate(
-                                        [
-                                            'name' => 'Product',
-                                            'created_by' => \Auth::user()->creatorId(),
-                                        ],
-                                        [
-                                            'color' => '#4CAF50',
-                                            'type' => 'Product',
-                                            'chart_account_id' => 0,
-                                            'created_by' => \Auth::user()->creatorId(),
-                                            'owned_by' => \Auth::user()->ownedId(),
-                                        ]
-                                    );
-
-                                    $productData = [
-                                        'name' => $itemName,
-                                        'sku' => $itemName,
-                                        'sale_price' => $line['Amount'] ?? 0,
-                                        'purchase_price' => 0,
-                                        'quantity' => 0,
-                                        'unit_id' => $unit->id,
-                                        'type' => 'product',
-                                        'category_id' => $productCategory->id,
-                                        'created_by' => \Auth::user()->creatorId(),
-                                    ];
-
-                                    if (!empty($line['AccountId'])) {
-                                        $account = ChartOfAccount::where('code', $line['AccountId'])
-                                            ->where('created_by', \Auth::user()->creatorId())
-                                            ->first();
-                                        if ($account) {
-                                            $productData['sale_chartaccount_id'] = $account->id;
-                                        }
-                                    }
-
-                                    $product = ProductService::create($productData);
+                                if ($account) {
+                                    $productData['sale_chartaccount_id'] = $account->id;
                                 }
-
-                                InvoiceProduct::create([
-                                    'invoice_id' => $invoice->id,
-                                    'product_id' => $product->id,
-                                    'quantity' => $line['Quantity'] ?? 1,
-                                    'price' => $line['Amount'],
-                                    'description' => $line['Description'],
-                                ]);
                             }
+
+                            $product = ProductService::create($productData);
                         }
+                        // dd($line,$product,$qbInvoice);
+                        InvoiceProduct::create([
+                            'invoice_id' => $invoice->id,
+                            'product_id' => $product->id,
+                            'quantity' => $line['RawLine']['SalesItemLineDetail']['Qty'] ?? 1,
+                            'price' => $line['Amount'],
+                            'description' => $line['Description'],
+                        ]);
+                    }
 
-                        // Insert payments
-                        foreach ($qbInvoice['Payments'] as $payment) {
-                            $bankAccountId = null;
-                            $paymentMethod = $payment['PaymentMethod'];
+                    // Insert payments
+                    foreach ($qbInvoice['Payments'] as $payment) {
+                        // Determine payment method based on payment data
+                        $paymentMethod = $payment['PaymentMethod'];
 
-                            if (!$paymentMethod) {
-                                if (isset($payment['RawPayment']['CreditCardPayment'])) {
-                                    $paymentMethod = 'Credit Card';
-                                } elseif (isset($payment['RawPayment']['CheckPayment'])) {
-                                    $paymentMethod = 'Check';
-                                } elseif (isset($payment['RawPayment']['DepositToAccountRef'])) {
-                                    $depositAccountRef = json_decode(json_encode($payment['RawPayment']['DepositToAccountRef'] ?? []), true);
-                                    $accountCode = $depositAccountRef['value'] ?? null;
-                                    $accountName = $depositAccountRef['name'] ?? 'Bank Account';
-
-                                    $bankAccountId = $this->getOrCreateBankAccountFromChartAccount($accountCode, $accountName);
-
-                                    if ($bankAccountId) {
-                                        $accountId = $depositAccountRef['value'] ?? null;
-                                        $account = collect($accountsList)->firstWhere('Id', $accountId);
-                                        
-                                        if ($account) {
-                                            $accountType = strtolower($account['AccountType'] ?? '');
-                                            if (strpos($accountType, 'bank') !== false || strpos($accountType, 'checking') !== false) {
-                                                $paymentMethod = 'Bank Transfer';
-                                            } elseif (strpos($accountType, 'credit') !== false) {
-                                                $paymentMethod = 'Credit Card';
-                                            } else {
-                                                $paymentMethod = 'Cash';
-                                            }
-                                        } else {
-                                            $paymentMethod = 'Bank Transfer';
-                                        }
+                        // If payment method is null, try to determine from payment type or account
+                        if (!$paymentMethod) {
+                            // Check if it's a credit card payment
+                            if (isset($payment['RawPayment']['CreditCardPayment'])) {
+                                $paymentMethod = 'Credit Card';
+                            }
+                            // Check if it's a check payment
+                            elseif (isset($payment['RawPayment']['CheckPayment'])) {
+                                $paymentMethod = 'Check';
+                            }
+                            // Check deposit account type
+                            elseif (isset($payment['RawPayment']['DepositToAccountRef'])) {
+                                $accountId = $payment['RawPayment']['DepositToAccountRef']['value'];
+                                $account = collect($accountsList)->firstWhere('Id', $accountId);
+                                if ($account) {
+                                    $accountType = strtolower($account['AccountType'] ?? '');
+                                    if (strpos($accountType, 'bank') !== false || strpos($accountType, 'checking') !== false) {
+                                        $paymentMethod = 'Bank Transfer';
+                                    } elseif (strpos($accountType, 'credit') !== false) {
+                                        $paymentMethod = 'Credit Card';
                                     } else {
-                                        \Log::error("Could not find or create chart account for payment: " . json_encode($depositAccountRef) . ' - Creator: ' . \Auth::user()->creatorId());
-                                        continue;
+                                        $paymentMethod = 'Cash';
                                     }
                                 } else {
                                     $paymentMethod = 'Cash';
                                 }
-                            }
-
-                            if (!$bankAccountId) {
-                                \Log::error("No bank account found for payment: " . $payment['PaymentId']);
-                                continue;
-                            }
-
-                            $paymentAmount = $payment['TotalAmount'] ?? 0;
-                            
-                            InvoicePayment::create([
-                                'invoice_id' => $invoice->id,
-                                'date' => $payment['TxnDate'],
-                                'amount' => $paymentAmount,
-                                'account_id' => $bankAccountId,
-                                'payment_method' => $paymentMethod,
-                                'txn_id' => $payment['PaymentId'],
-                                'currency' => 'USD',
-                                'reference' => $payment['PaymentId'],
-                                'description' => 'Payment for Invoice ' . $qbInvoice['DocNumber'],
-                            ]);
-
-                            $totalPayments += $paymentAmount;
-                            Utility::bankAccountBalance($bankAccountId, $paymentAmount, 'credit');
-                        }
-
-                        if (!empty($qbInvoice['Payments'])) {
-                            $invoice->status = 4;
-                            $invoice->send_date = $qbInvoice['TxnDate'];
-                        }
-
-                        $invoice->save();
-
-                        if ($customer) {
-                            if ($qbInvoice['TotalAmount'] > 0) {
-                                Utility::updateUserBalance('customer', $customer->id, $qbInvoice['TotalAmount'], 'credit');
-                            }
-
-                            if ($totalPayments > 0) {
-                                Utility::updateUserBalance('customer', $customer->id, $totalPayments, 'debit');
+                            } else {
+                                $paymentMethod = 'Cash';
                             }
                         }
 
-                        $imported++;
-
-                    } catch (\Exception $e) {
-                        \Log::error("Failed to import invoice {$qbId}: " . $e->getMessage());
-                        $failed++;
-                        continue;
+                        InvoicePayment::create([
+                            'invoice_id' => $invoice->id,
+                            'date' => $payment['TxnDate'],
+                            'amount' => $payment['TotalAmount'],
+                            'payment_method' => $paymentMethod,
+                            'txn_id' => $payment['PaymentId'],
+                            'currency' => 'USD', // default
+                            'reference' => $payment['PaymentId'],
+                            'description' => 'Payment for Invoice ' . $qbInvoice['DocNumber'],
+                        ]);
                     }
+                    if (!empty($qbInvoice['Payments'])) {
+                        $invoice->status = 4;
+                        $invoice->send_date = $qbInvoice['TxnDate'];
+
+                    }
+                    $invoice->save();
+                    $imported++;
                 }
 
                 DB::commit();
             } catch (\Exception $e) {
                 DB::rollBack();
-                \Log::error("Invoices import error: " . $e->getMessage());
+                dd($e);
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Import failed: ' . $e->getMessage(),
                 ], 500);
             }
 
-            return response()->json([
-                'status' => 'success',
-                'message' => "Invoices import completed. Imported: {$imported}, Skipped: {$skipped}, Failed: {$failed}",
-                'imported' => $imported,
-                'skipped' => $skipped,
-                'failed' => $failed,
-            ]);
+        return response()->json([
+            'status' => 'success',
+            'message' => "Invoices import completed successfully",
+            'imported' => $imported,
+            'skipped' => $skipped,
+            'failed' => $failed,
+            'errors' => $errors,
+            'summary' => [
+                'total_invoices_processed' => $imported + $skipped + $failed,
+                'successfully_imported' => $imported,
+                'skipped_invoices' => $skipped,
+                'failed_invoices' => $failed,
+                'invoice_count' => count($invoicesData),
+                'allocation_count' => count($allocationsData),
+            ]
+        ]);
 
         } catch (\Exception $e) {
-            \Log::error("Invoices import error: " . $e->getMessage());
+            dd($e);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Error: ' . $e->getMessage(),
@@ -3261,118 +2039,82 @@ class QuickBooksImportController extends Controller
     //     }
     // }
     public function importExpenses(Request $request)
-    {
-        try {
-            // Fetch expenses with payments using existing function
-            $response = $this->qbController->expensesWithPayments();
+{
+    try {
+        // Fetch expenses with payments using existing function
+        $response = $this->qbController->expensesWithPayments();
 
-            // Decode JsonResponse safely
-            if ($response instanceof \Illuminate\Http\JsonResponse) {
-                $responseData = json_decode($response->getContent(), true);
-            } else {
-                $responseData = $response;
-            }
+        // Decode JsonResponse safely
+        if ($response instanceof \Illuminate\Http\JsonResponse) {
+            $responseData = json_decode($response->getContent(), true);
+        } else {
+            $responseData = $response;
+        }
 
-            // Validate structure
-            if (!is_array($responseData) || !isset($responseData['status']) || $responseData['status'] !== 'success') {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => $responseData['message'] ?? 'Failed to fetch expenses',
-                ], 400);
-            }
-
-            // Fetch chart accounts for mapping
-            $accountsRaw = $this->qbController->runQuery("SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 500");
-            $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
+        // Validate structure
+        if (!is_array($responseData) || !isset($responseData['status']) || $responseData['status'] !== 'success') {
+            return response()->json([
+                'status' => 'error',
+                'message' => $responseData['message'] ?? 'Failed to fetch expenses',
+            ], 400);
+        }
 
             // Now it's safe to access data
             $expensesData = collect($responseData['data'] ?? []);
+            // dd($expensesData->first());
+            // Fetch chart accounts for mapping
+            $accountsRaw = $this->qbController->runQuery("SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 500");
+            $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
+            $accountsMap = $accountsList->keyBy(fn($a) => $a['Id'] ?? null)->toArray();
 
-            // === Helper function to process and create bank accounts ===
-            $processBankAccount = function ($paymentAccount) {
-                if (empty($paymentAccount)) {
-                    return null;
-                }
+        // Counters
+        $imported = 0;
+        $skipped = 0;
+        $failed = 0;
+        $defaultCashAccountId = null;
 
-                $creatorId = \Auth::user()->creatorId();
-                
-                // Extract account ID and name from payment account
-                $qbAccountCode = $paymentAccount['Id'] ?? null;
-                $qbAccountName = $paymentAccount['Name'] ?? 'Bank Account';
-
-                if (!$qbAccountCode) {
-                    return null;
-                }
-
-                // Check if chart of account exists with this code
-                $chartAccount = ChartOfAccount::where('code', $qbAccountCode)
-                    ->where('created_by', $creatorId)
-                    ->first();
-
-                if (!$chartAccount) {
-                    \Log::error("chart of account not found: " . $qbAccountCode .'-'. $paymentAccount);
-                    return 0;
-                }
-
-                // Check if bank account already exists for this chart account
-                $bankAccount = BankAccount::where('chart_account_id', $chartAccount->id)
-                    ->where('created_by', $creatorId)
-                    ->first();
-
-                if ($bankAccount) {
-                    return $bankAccount->id;
-                }
-
-                // Create new bank account
+        DB::beginTransaction();
+        try {
+            foreach ($expensesData as $qbExpense) {
                 try {
-                    $newBankAccount = BankAccount::create([
-                        'name' => $qbAccountName,
-                        'chart_account_id' => $chartAccount->id,
-                        'created_by' => $creatorId,
-                        'owned_by' => \Auth::user()->ownedId(),
-                    ]);
+                    $qbId = $qbExpense['ExpenseId'];
 
-                    return $newBankAccount->id;
-                } catch (\Exception $e) {
-                    \Log::error("Failed to create bank account: " . $e->getMessage());
-                    return null;
-                }
-            };
+                    // Check for duplicate
+                    $existing = Bill::where('bill_id', $qbId)->first();
+                    if ($existing) {
+                        $skipped++;
+                        continue;
+                    }
 
-            // Counters
-            $imported = 0;
-            $skipped = 0;
-            $failed = 0;
-
-            DB::beginTransaction();
-            try {
-                foreach ($expensesData as $qbExpense) {
-                    try {
-                        $qbId = $qbExpense['ExpenseId'];
-
-                        // Check for duplicate
-                        $existing = Bill::where('bill_id', $qbId)->first();
-                        if ($existing) {
-                            $skipped++;
-                            continue;
-                        }
-
-                        // Get vendor
-                        $qbvendorId = $qbExpense['VendorId'] ?? null;
+                        // Skip if no vendor (cannot link to system vendor)
+                        $vendorName = $qbExpense['VendorName'] ?? null;
                         $vendor = null;
 
-                        if ($qbvendorId) {
-                            $vendor = Vender::where('vender_id', $qbvendorId)
+                        if ($vendorName) {
+                            $vendor = Vender::where('name', $vendorName)
                                 ->where('created_by', \Auth::user()->creatorId())
                                 ->first();
+
+                            if (!$vendor) {
+                                $skipped++;
+                                continue;
+                            }
+                        } else {
+                            // Create generic vendor if none exists
+                            $vendor = Vender::firstOrCreate(
+                                [
+                                    'name' => 'Generic Vendor',
+                                    'created_by' => \Auth::user()->creatorId(),
+                                ],
+                                [
+                                    'email' => 'generic@vendor.local',
+                                    'created_by' => \Auth::user()->creatorId(),
+                                    'owned_by' => \Auth::user()->ownedId(),
+                                ]
+                            );
                         }
 
-                        if (!$vendor) {
-                            $skipped++;
-                            continue;
-                        }
-
-                        $vendorId = $vendor->id;
+                    $vendorId = $vendor->id;
 
                         // Create bill record
                         $bill = Bill::create([
@@ -3388,127 +2130,66 @@ class QuickBooksImportController extends Controller
                             'user_type' => 'Vendor'
                         ]);
 
-                        // Track total amount for vendor balance update
-                        $totalAmount = 0;
+                        // Process expense accounts from ExpenseAccounts array
+                        if (!empty($qbExpense['ExpenseAccounts']) && is_array($qbExpense['ExpenseAccounts'])) {
+                            foreach ($qbExpense['ExpenseAccounts'] as $expenseAccount) {
+                                $accountQbId = $expenseAccount['Id'] ?? null;
 
-                        // Process parsed lines (both products and accounts)
-                        if (!empty($qbExpense['ParsedLines']) && is_array($qbExpense['ParsedLines'])) {
-                            foreach ($qbExpense['ParsedLines'] as $line) {
-                                if ($line['HasProduct']) {
-                                    // This is a product line
-                                    $itemName = $line['ItemName'];
-                                    if (!$itemName)
-                                        continue;
+                                if (!$accountQbId)
+                                    continue;
 
-                                    $product = ProductService::where('name', $itemName)
+                                // Find local chart account by QB ID
+                                $account = ChartOfAccount::where('code', $accountQbId)
+                                    ->where('created_by', \Auth::user()->creatorId())
+                                    ->first();
+
+                                if (!$account) {
+                                    // Try to find by name
+                                    $account = ChartOfAccount::where('name', $expenseAccount['Name'] ?? '')
                                         ->where('created_by', \Auth::user()->creatorId())
                                         ->first();
+                                }
 
-                                    if (!$product) {
-                                        // Create product if it doesn't exist
-                                        $unit = ProductServiceUnit::firstOrCreate(
-                                            ['name' => 'pcs'],
-                                            ['created_by' => \Auth::user()->creatorId()]
-                                        );
-
-                                        $productCategory = ProductServiceCategory::firstOrCreate(
-                                            [
-                                                'name' => 'Product',
-                                                'created_by' => \Auth::user()->creatorId(),
-                                            ],
-                                            [
-                                                'color' => '#4CAF50',
-                                                'type' => 'Product',
-                                                'chart_account_id' => 0,
-                                                'created_by' => \Auth::user()->creatorId(),
-                                                'owned_by' => \Auth::user()->ownedId(),
-                                            ]
-                                        );
-
-                                        $productData = [
-                                            'name' => $itemName,
-                                            'sku' => $itemName,
-                                            'sale_price' => 0,
-                                            'purchase_price' => $line['Amount'] ?? 0,
-                                            'quantity' => 0,
-                                            'unit_id' => $unit->id,
-                                            'type' => 'product',
-                                            'category_id' => $productCategory->id,
-                                            'created_by' => \Auth::user()->creatorId(),
-                                        ];
-
-                                        // Map chart accounts if available
-                                        if (!empty($line['AccountId'])) {
-                                            $account = ChartOfAccount::where('code', $line['AccountId'])
-                                                ->where('created_by', \Auth::user()->creatorId())
-                                                ->first();
-                                            if ($account) {
-                                                $productData['expense_chartaccount_id'] = $account->id;
-                                            }
-                                        }
-
-                                        $product = ProductService::create($productData);
-                                    }
-
-                                    BillProduct::create([
+                                if ($account) {
+                                    BillAccount::create([
                                         'bill_id' => $bill->id,
-                                        'product_id' => $product->id,
-                                        'quantity' => $line['Quantity'] ?? 1,
-                                        'price' => $line['Amount'],
-                                        'description' => $line['Description'],
+                                        'chart_account_id' => $account->id,
+                                        'price' => $expenseAccount['Amount'] ?? 0,
+                                        'description' => $expenseAccount['Description'] ?? '',
+                                        'type' => 'Expense',
+                                        'ref_id' => $bill->id,
                                     ]);
-
-                                    $totalAmount += $line['Amount'];
-
-                                } else {
-                                    // This is an account line
-                                    if (empty($line['AccountId']))
-                                        continue;
-
-                                    $account = ChartOfAccount::where('code', $line['AccountId'])
-                                        ->where('created_by', \Auth::user()->creatorId())
-                                        ->first();
-
-                                    if (!$account) {
-                                        $account = ChartOfAccount::where('name', $line['AccountName'] ?? '')
-                                            ->where('created_by', \Auth::user()->creatorId())
-                                            ->first();
-                                    }
-
-                                    if ($account) {
-                                        BillAccount::create([
-                                            'bill_id' => $bill->id,
-                                            'chart_account_id' => $account->id,
-                                            'price' => $line['Amount'] ?? 0,
-                                            'description' => $line['Description'] ?? '',
-                                            'type' => 'Expense',
-                                            'ref_id' => $bill->id,
-                                        ]);
-
-                                        $totalAmount += $line['Amount'];
-                                    }
                                 }
                             }
                         }
 
-                        // Track total payments for vendor balance update
-                        $totalPayments = 0;
-
                         // Process payments if exist
                         $payments = $qbExpense['Payments'] ?? null;
                         if ($payments) {
+                            // Handle if it's a Collection or array
                             $paymentsArray = $payments instanceof \Illuminate\Support\Collection
                                 ? $payments->toArray()
                                 : (is_array($payments) ? $payments : []);
 
                             if (!empty($paymentsArray)) {
                                 foreach ($paymentsArray as $payment) {
-                                    // Process bank account from payment
-                                    $bankAccountId = null;
-                                    $paymentAccount = $payment['PaymentAccount'] ?? null;
-                                    
-                                    if ($paymentAccount) {
-                                        $bankAccountId = $this->processBankAccount($paymentAccount);
+                                    // Map payment account
+                                    $accountId = 0;
+                                    if (!empty($payment['PaymentAccount']['Id'])) {
+                                        $qbAccountId = $payment['PaymentAccount']['Id'];
+                                        $localAccount = ChartOfAccount::where('code', $qbAccountId)
+                                            ->where('created_by', \Auth::user()->creatorId())
+                                            ->first();
+
+                                        if (!$localAccount) {
+                                            $localAccount = ChartOfAccount::where('name', $payment['PaymentAccount']['Name'] ?? '')
+                                                ->where('created_by', \Auth::user()->creatorId())
+                                                ->first();
+                                        }
+
+                                        if ($localAccount) {
+                                            $accountId = $localAccount->id;
+                                        }
                                     }
 
                                     // Determine payment method
@@ -3517,20 +2198,15 @@ class QuickBooksImportController extends Controller
                                         $paymentMethod = $payment['Raw']['PaymentType'];
                                     }
 
-                                    $paymentAmount = $payment['TotalAmount'] ?? 0;
-
                                     BillPayment::create([
                                         'bill_id' => $bill->id,
                                         'date' => $payment['TxnDate'] ?? $qbExpense['TxnDate'],
-                                        'amount' => $paymentAmount,
-                                        'account_id' => $bankAccountId,
+                                        'amount' => $payment['TotalAmount'] ?? 0,
+                                        'account_id' => $accountId,
                                         'payment_method' => $paymentMethod,
                                         'reference' => $payment['PaymentId'],
                                         'description' => 'QB Expense Payment',
                                     ]);
-
-                                    $totalPayments += $paymentAmount;
-                                    Utility::bankAccountBalance($bankAccountId, $paymentAmount, 'debit');
                                 }
 
                                 // Mark as paid if payments exist
@@ -3540,43 +2216,30 @@ class QuickBooksImportController extends Controller
                             }
                         }
 
-                        // Update vendor balance
-                        if ($vendor) {
-                            // Debit: expenses increase vendor's liability
-                            if ($totalAmount > 0) {
-                                Utility::updateUserBalance('vendor', $vendor->id, $totalAmount, 'debit');
-                            }
+                    $imported++;
 
-                            // Credit: payments decrease vendor's liability
-                            if ($totalPayments > 0) {
-                                Utility::updateUserBalance('vendor', $vendor->id, $totalPayments, 'credit');
-                            }
-                        }
-
-                        $imported++;
-
-                    } catch (\Exception $e) {
-                        \Log::error("Failed to import expense {$qbId}: " . $e->getMessage());
-                        $failed++;
-                        continue;
-                    }
+                } catch (\Exception $e) {
+                    \Log::error("Failed to import expense {$qbId}: " . $e->getMessage());
+                    $failed++;
+                    continue;
                 }
-
-                DB::commit();
-
-            } catch (\Exception $e) {
-                DB::rollBack();
-                \Log::error("Import transaction failed: " . $e->getMessage());
-                throw $e;
             }
 
-            return response()->json([
-                'status' => 'success',
-                'message' => "Import completed. Imported: {$imported}, Skipped: {$skipped}, Failed: {$failed}",
-                'imported' => $imported,
-                'skipped' => $skipped,
-                'failed' => $failed,
-            ]);
+            DB::commit();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error("Import transaction failed: " . $e->getMessage());
+            throw $e;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Import completed. Imported: {$imported}, Skipped: {$skipped}, Failed: {$failed}",
+            'imported' => $imported,
+            'skipped' => $skipped,
+            'failed' => $failed,
+        ]);
 
         } catch (\Exception $e) {
             \Log::error("Import expenses error: " . $e->getMessage());
@@ -3586,475 +2249,7 @@ class QuickBooksImportController extends Controller
             ], 500);
         }
     }
-    // import bills previous
-    // public function importBills(Request $request)
-    // {
-    //     try {
-    //         // Fetch all bills with pagination
-    //         $allBills = collect();
-    //         $startPosition = 1;
-    //         $maxResults = 50; // Adjust batch size as needed
 
-    //         do {
-    //             // Fetch paginated batch
-    //             $query = "SELECT * FROM Bill STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
-    //             $billsResponse = $this->qbController->runQuery($query);
-
-    //             // Handle API errors
-    //             if ($billsResponse instanceof \Illuminate\Http\JsonResponse) {
-    //                 return $billsResponse;
-    //             }
-
-    //             // Get bills from response
-    //             $billsData = $billsResponse['QueryResponse']['Bill'] ?? [];
-
-    //             // Merge entire objects (keep all keys)
-    //             $allBills = $allBills->merge($billsData);
-
-    //             // Move to next page
-    //             $fetchedCount = count($billsData);
-    //             $startPosition += $fetchedCount;
-    //         } while ($fetchedCount === $maxResults); // continue if page is full
-
-    //         // Fetch all bill payments with pagination
-    //         $allBillPayments = collect();
-    //         $startPosition = 1;
-
-    //         do {
-    //             // Fetch paginated batch
-    //             $query = "SELECT * FROM BillPayment STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
-    //             $billPaymentsResponse = $this->qbController->runQuery($query);
-
-    //             // Handle API errors
-    //             if ($billPaymentsResponse instanceof \Illuminate\Http\JsonResponse) {
-    //                 return $billPaymentsResponse;
-    //             }
-
-    //             // Get bill payments from response
-    //             $billPaymentsData = $billPaymentsResponse['QueryResponse']['BillPayment'] ?? [];
-
-    //             // Merge entire objects (keep all keys)
-    //             $allBillPayments = $allBillPayments->merge($billPaymentsData);
-
-    //             // Move to next page
-    //             $fetchedCount = count($billPaymentsData);
-    //             $startPosition += $fetchedCount;
-    //         } while ($fetchedCount === $maxResults); // continue if page is full
-
-    //         // Fetch items and accounts (these are usually smaller datasets)
-    //         $itemsRaw = $this->qbController->runQuery("SELECT * FROM Item STARTPOSITION 1 MAXRESULTS 500");
-    //         $accountsRaw = $this->qbController->runQuery("SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 500");
-
-    //         $itemsList = collect($itemsRaw['QueryResponse']['Item'] ?? []);
-    //         $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
-
-    //         $itemsMap = $itemsList->keyBy(fn($it) => $it['Id'] ?? null)->toArray();
-    //         $accountsMap = $accountsList->keyBy(fn($a) => $a['Id'] ?? null)->toArray();
-
-    //         // Helper functions as in the original
-    //         $findAPAccount = function () use ($accountsList) {
-    //             $ap = $accountsList->first(fn($a) => isset($a['AccountType']) && strcasecmp($a['AccountType'], 'AccountsPayable') === 0);
-    //             if ($ap)
-    //                 return ['Id' => $ap['Id'], 'Name' => $ap['Name'] ?? null];
-    //             $ap = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'payable') !== false);
-    //             return $ap ? ['Id' => $ap['Id'], 'Name' => $ap['Name'] ?? null] : null;
-    //         };
-
-    //         $apAccount = $findAPAccount();
-
-    //         $detectAccountForExpenseItem = function ($sid) use ($itemsMap, $accountsMap) {
-    //             if (!empty($sid['AccountRef']['value'])) {
-    //                 return [
-    //                     'AccountId' => $sid['AccountRef']['value'],
-    //                     'AccountName' => $sid['AccountRef']['name'] ?? ($accountsMap[$sid['AccountRef']['value']]['Name'] ?? null)
-    //                 ];
-    //             }
-    //             if (!empty($sid['ItemRef']['value'])) {
-    //                 $itemId = $sid['ItemRef']['value'];
-    //                 $item = $itemsMap[$itemId] ?? null;
-    //                 if ($item) {
-    //                     if (!empty($item['ExpenseAccountRef']['value'])) {
-    //                         return ['AccountId' => $item['ExpenseAccountRef']['value'], 'AccountName' => $item['ExpenseAccountRef']['name'] ?? ($accountsMap[$item['ExpenseAccountRef']['value']]['Name'] ?? null)];
-    //                     }
-    //                     if (!empty($item['AssetAccountRef']['value'])) {
-    //                         return ['AccountId' => $item['AssetAccountRef']['value'], 'AccountName' => $item['AssetAccountRef']['name'] ?? ($accountsMap[$item['AssetAccountRef']['value']]['Name'] ?? null)];
-    //                     }
-    //                 }
-    //             }
-    //             return ['AccountId' => null, 'AccountName' => null];
-    //         };
-
-    //         $parseBillLine = function ($line) use ($detectAccountForExpenseItem, $itemsMap, $accountsMap) {
-    //             $out = [];
-    //             $detailType = $line['DetailType'] ?? null;
-
-    //             if (!empty($line['GroupLineDetail']) && !empty($line['GroupLineDetail']['Line'])) {
-    //                 foreach ($line['GroupLineDetail']['Line'] as $child) {
-    //                     if (!empty($child['ItemBasedExpenseLineDetail'])) {
-    //                         $sid = $child['ItemBasedExpenseLineDetail'];
-    //                         $acc = $detectAccountForExpenseItem($sid);
-    //                         $out[] = [
-    //                             'DetailType' => $child['DetailType'] ?? 'ItemBasedExpenseLineDetail',
-    //                             'Description' => $child['Description'] ?? $sid['ItemRef']['name'] ?? null,
-    //                             'Amount' => $child['Amount'] ?? 0,
-    //                             'AccountId' => $acc['AccountId'],
-    //                             'AccountName' => $acc['AccountName'],
-    //                             'RawLine' => $child,
-    //                             'HasProduct' => true,
-    //                         ];
-    //                     } elseif (!empty($child['AccountBasedExpenseLineDetail'])) {
-    //                         $accDetail = $child['AccountBasedExpenseLineDetail'];
-    //                         $out[] = [
-    //                             'DetailType' => $child['DetailType'] ?? 'AccountBasedExpenseLineDetail',
-    //                             'Description' => $child['Description'] ?? null,
-    //                             'Amount' => $child['Amount'] ?? 0,
-    //                             'AccountId' => $accDetail['AccountRef']['value'] ?? null,
-    //                             'AccountName' => $accDetail['AccountRef']['name'] ?? null,
-    //                             'RawLine' => $child,
-    //                             'HasProduct' => false,
-    //                         ];
-    //                     } else {
-    //                         $out[] = [
-    //                             'DetailType' => $child['DetailType'] ?? null,
-    //                             'Description' => $child['Description'] ?? null,
-    //                             'Amount' => $child['Amount'] ?? 0,
-    //                             'AccountId' => null,
-    //                             'AccountName' => null,
-    //                             'RawLine' => $child,
-    //                             'HasProduct' => false,
-    //                         ];
-    //                     }
-    //                 }
-    //                 return $out;
-    //             }
-
-    //             if (!empty($line['ItemBasedExpenseLineDetail'])) {
-    //                 $sid = $line['ItemBasedExpenseLineDetail'];
-    //                 $acc = $detectAccountForExpenseItem($sid);
-    //                 $out[] = [
-    //                     'DetailType' => $line['DetailType'] ?? 'ItemBasedExpenseLineDetail',
-    //                     'Description' => $line['Description'] ?? ($sid['ItemRef']['name'] ?? null),
-    //                     'Amount' => $line['Amount'] ?? 0,
-    //                     'AccountId' => $acc['AccountId'],
-    //                     'AccountName' => $acc['AccountName'],
-    //                     'RawLine' => $line,
-    //                     'HasProduct' => true,
-    //                 ];
-    //                 return $out;
-    //             }
-
-    //             if (!empty($line['AccountBasedExpenseLineDetail'])) {
-    //                 $accDetail = $line['AccountBasedExpenseLineDetail'];
-    //                 $out[] = [
-    //                     'DetailType' => $line['DetailType'] ?? 'AccountBasedExpenseLineDetail',
-    //                     'Description' => $line['Description'] ?? null,
-    //                     'Amount' => $line['Amount'] ?? 0,
-    //                     'AccountId' => $accDetail['AccountRef']['value'] ?? null,
-    //                     'AccountName' => $accDetail['AccountRef']['name'] ?? null,
-    //                     'RawLine' => $line,
-    //                     'HasProduct' => false,
-    //                 ];
-    //                 return $out;
-    //             }
-
-    //             $out[] = [
-    //                 'DetailType' => $detailType,
-    //                 'Description' => $line['Description'] ?? null,
-    //                 'Amount' => $line['Amount'] ?? 0,
-    //                 'AccountId' => null,
-    //                 'AccountName' => null,
-    //                 'RawLine' => $line,
-    //                 'HasProduct' => false,
-    //             ];
-    //             return $out;
-    //         };
-
-    //         $bills = $allBills->map(function ($bill) use ($parseBillLine, $accountsMap, $apAccount) {
-    //             $parsedLines = [];
-    //             foreach ($bill['Line'] ?? [] as $line) {
-    //                 $parsedLines = array_merge($parsedLines, $parseBillLine($line));
-    //             }
-
-    //             return [
-    //                 'BillId' => (string) ($bill['Id'] ?? null),
-    //                 'Id' => $bill['Id'] ?? null,
-    //                 'DocNumber' => $bill['DocNumber'] ?? null,
-    //                 'VendorName' => $bill['VendorRef']['name'] ?? null,
-    //                 'VendorId' => $bill['VendorRef']['value'] ?? null,
-    //                 'TxnDate' => $bill['TxnDate'] ?? null,
-    //                 'DueDate' => $bill['DueDate'] ?? null,
-    //                 'TotalAmount' => (float) ($bill['TotalAmt'] ?? 0),
-    //                 'Balance' => $bill['Balance'] ?? 0,
-    //                 'Currency' => $bill['CurrencyRef']['name'] ?? null,
-    //                 'Payments' => [],
-    //                 'ParsedLines' => $parsedLines,
-    //                 'RawBill' => $bill,
-    //             ];
-    //         });
-
-    //         $billPayments = $allBillPayments->map(function ($payment) {
-    //             $linked = [];
-    //             foreach ($payment['Line'] ?? [] as $l) {
-    //                 if (!empty($l['LinkedTxn'])) {
-    //                     if (isset($l['LinkedTxn'][0]))
-    //                         $linked = array_merge($linked, $l['LinkedTxn']);
-    //                     else
-    //                         $linked[] = $l['LinkedTxn'];
-    //                 }
-    //             }
-    //             return [
-    //                 'PaymentId' => $payment['Id'] ?? null,
-    //                 'VendorId' => $payment['VendorRef']['value'] ?? null,
-    //                 'VendorName' => $payment['VendorRef']['name'] ?? null,
-    //                 'TxnDate' => $payment['TxnDate'] ?? null,
-    //                 'TotalAmount' => $payment['TotalAmt'] ?? 0,
-    //                 'PaymentMethod' => $payment['PayType'] ?? null,
-    //                 'LinkedTxn' => $linked,
-    //                 'RawPayment' => $payment,
-    //             ];
-    //         });
-
-    //         $billsById = $bills->keyBy('BillId')->toArray();
-    //         foreach ($billsById as $billId => &$bill) {
-    //             $bill['Payments'] = collect($billPayments)->filter(function ($p) use ($billId) {
-    //                 return collect($p['LinkedTxn'])->contains(fn($txn) => isset($txn['TxnType'], $txn['TxnId']) && strcasecmp($txn['TxnType'], 'Bill') === 0 && (string) $txn['TxnId'] === (string) $billId);
-    //             })->values()->toArray();
-    //         }
-    //         $billsWithPayments = collect($billsById);
-    //         // dd($billsWithPayments);
-    //         // Now, import logic
-    //         $imported = 0;
-    //         $skipped = 0;
-    //         $failed = 0;
-
-    //         DB::beginTransaction();
-    //         try {
-    //             foreach ($billsWithPayments as $qbBill) {
-    //                 $qbId = $qbBill['BillId'];
-
-    //                 // Check for duplicate
-    //                 $existing = Bill::where('bill_id', $qbId)->first();
-    //                 if ($existing) {
-    //                     $skipped++;
-    //                     continue;
-    //                 }
-
-    //                 // Map vendor_id - find local vendor by name from QuickBooks
-    //                 $vendorName = $qbBill['VendorName'];
-    //                 $vendor = Vender::where('name', $vendorName)
-    //                     ->where('created_by', \Auth::user()->creatorId())
-    //                     ->first();
-
-    //                 if (!$vendor) {
-    //                     // Skip this bill if vendor doesn't exist in local DB
-    //                     $skipped++;
-    //                     continue;
-    //                 }
-
-    //                 $vendorId = $vendor->id;
-
-    //                 // Insert bill
-    //                 $bill = Bill::create([
-    //                     'bill_id' => $qbId ?: 0, // Generate unique ID if QB ID is missing
-    //                     'vender_id' => $vendorId,
-    //                     'bill_date' => $qbBill['TxnDate'],
-    //                     'due_date' => $qbBill['DueDate'],
-    //                     'order_number' => $qbBill['DocNumber'] ?? 0,
-    //                     'status' => 3, // default
-    //                     'created_by' => \Auth::user()->creatorId(),
-    //                     'owned_by' => \Auth::user()->ownedId(),
-    //                     'type' => 'Bill',
-    //                     'user_type' => 'Vendor'
-    //                 ]);
-
-    //                 // Process lines: products vs accounts
-    //                 foreach ($qbBill['ParsedLines'] as $line) {
-    //                     if (empty($line['AccountId']))
-    //                         continue; // Skip unmapped
-
-    //                     if ($line['HasProduct']) {
-    //                         // This is a product line - insert into bill_products
-    //                         $itemName = $line['RawLine']['ItemBasedExpenseLineDetail']['ItemRef']['name'] ?? null;
-    //                         if (!$itemName)
-    //                             continue;
-
-    //                         $product = ProductService::where('name', $itemName)
-    //                             ->where('created_by', \Auth::user()->creatorId())
-    //                             ->first();
-
-    //                         if (!$product) {
-    //                             // Create product if it doesn't exist
-    //                             $unit = ProductServiceUnit::firstOrCreate(
-    //                                 ['name' => 'pcs'],
-    //                                 ['created_by' => \Auth::user()->creatorId()]
-    //                             );
-
-    //                             $productCategory = ProductServiceCategory::firstOrCreate(
-    //                                 [
-    //                                     'name' => 'Product',
-    //                                     'created_by' => \Auth::user()->creatorId(),
-    //                                 ],
-    //                                 [
-    //                                     'color' => '#4CAF50',
-    //                                     'type' => 'Product',
-    //                                     'chart_account_id' => 0,
-    //                                     'created_by' => \Auth::user()->creatorId(),
-    //                                     'owned_by' => \Auth::user()->ownedId(),
-    //                                 ]
-    //                             );
-
-    //                             $productData = [
-    //                                 'name' => $itemName,
-    //                                 'sku' => $itemName,
-    //                                 'sale_price' => 0,
-    //                                 'purchase_price' => $line['Amount'] ?? 0,
-    //                                 'quantity' => 0,
-    //                                 'unit_id' => $unit->id,
-    //                                 'type' => 'product',
-    //                                 'category_id' => $productCategory->id,
-    //                                 'created_by' => \Auth::user()->creatorId(),
-    //                             ];
-
-    //                             // Map chart accounts if available
-    //                             if (!empty($line['AccountId'])) {
-    //                                 $account = ChartOfAccount::where('code', $line['AccountId'])
-    //                                     ->where('created_by', \Auth::user()->creatorId())
-    //                                     ->first();
-    //                                 if ($account) {
-    //                                     $productData['expense_chartaccount_id'] = $account->id;
-    //                                 }
-    //                             }
-
-    //                             $product = ProductService::create($productData);
-    //                         }
-
-    //                         BillProduct::create([
-    //                             'bill_id' => $bill->id,
-    //                             'product_id' => $product->id,
-    //                             'quantity' => $line['RawLine']['ItemBasedExpenseLineDetail']['Qty'] ?? 1,
-    //                             'price' => $line['Amount'],
-    //                             'description' => $line['Description'],
-    //                             // tax, discount as needed
-    //                         ]);
-    //                     } else {
-    //                         // This is an account line - insert into bill_accounts
-    //                         $account = ChartOfAccount::where('code', $line['AccountId'])
-    //                             ->where('created_by', \Auth::user()->creatorId())
-    //                             ->first();
-
-    //                         if ($account) {
-    //                             BillAccount::create([
-    //                                 'chart_account_id' => $account->id,
-    //                                 'price' => $line['Amount'],
-    //                                 'description' => $line['Description'],
-    //                                 'type' => 'Bill',
-    //                                 'ref_id' => $bill->id,
-    //                             ]);
-    //                         }
-    //                     }
-    //                 }
-
-    //                 // Insert payments
-    //                 foreach ($qbBill['Payments'] as $payment) {
-    //                     // Determine payment method based on payment data
-    //                     $paymentMethod = $payment['PaymentMethod'];
-
-    //                     // If payment method is null, try to determine from payment type or account
-    //                     if (!$paymentMethod) {
-    //                         // Check if it's a check payment
-    //                         if (isset($payment['RawPayment']['CheckPayment'])) {
-    //                             $paymentMethod = 'Check';
-    //                         }
-    //                         // Check deposit account type
-    //                         elseif (isset($payment['RawPayment']['PayFromAccountRef'])) {
-    //                             $accountId = $payment['RawPayment']['PayFromAccountRef']['value'];
-    //                             $account = collect($accountsList)->firstWhere('Id', $accountId);
-    //                             if ($account) {
-    //                                 $accountType = strtolower($account['AccountType'] ?? '');
-    //                                 if (strpos($accountType, 'bank') !== false || strpos($accountType, 'checking') !== false) {
-    //                                     $paymentMethod = 'Bank Transfer';
-    //                                 } elseif (strpos($accountType, 'credit') !== false) {
-    //                                     $paymentMethod = 'Credit Card';
-    //                                 } else {
-    //                                     $paymentMethod = 'Cash';
-    //                                 }
-    //                             } else {
-    //                                 $paymentMethod = 'Cash'; // Default fallback
-    //                             }
-    //                         }
-    //                         // Default to Cash if nothing else matches
-    //                         else {
-    //                             $paymentMethod = 'Cash';
-    //                         }
-    //                     }
-    //                     // Map account_id from QuickBooks payment account using the same logic as billsWithPayments()
-    //                     $accountId = 0; // Default to 0
-    //                     $paymentAccount = null;
-    //                     if (isset($payment['RawPayment']['CreditCardPayment']['CCAccountRef'])) {
-    //                         $paymentAccount = $payment['RawPayment']['CreditCardPayment']['CCAccountRef'];
-    //                     } elseif (isset($payment['RawPayment']['CheckPayment']['BankAccountRef'])) {
-    //                         $paymentAccount = $payment['RawPayment']['CheckPayment']['BankAccountRef'];
-    //                     } elseif (isset($payment['RawPayment']['PayFromAccountRef'])) {
-    //                         $paymentAccount = $payment['RawPayment']['PayFromAccountRef'];
-    //                     }
-
-    //                     if ($paymentAccount && isset($paymentAccount['value'])) {
-    //                         $qbAccountId = $paymentAccount['value'];
-    //                         $localAccount = ChartOfAccount::where('code', $qbAccountId)
-    //                             ->where('created_by', \Auth::user()->creatorId())
-    //                             ->first();
-    //                         if ($localAccount) {
-    //                             $accountId = $localAccount->id;
-    //                         }
-    //                     }
-
-    //                     BillPayment::create([
-    //                         'bill_id' => $bill->id,
-    //                         'date' => $payment['TxnDate'],
-    //                         'amount' => $payment['TotalAmount'],
-    //                         'account_id' => $accountId,
-    //                         'payment_method' => $paymentMethod,
-    //                         'reference' => $payment['PaymentId'],
-    //                         'description' => 'QuickBooks Bill Payment',
-    //                     ]);
-    //                 }
-
-    //                 if (!empty($qbBill['Payments'])) {
-    //                     $bill->status = 4;
-    //                     $bill->send_date = $qbBill['TxnDate'];
-    //                     $bill->save();
-    //                 }
-    //                 $bill->save();
-
-    //                 $imported++;
-    //             }
-
-    //             DB::commit();
-    //         } catch (\Exception $e) {
-    //             dd($e);
-    //             DB::rollBack();
-    //             return response()->json([
-    //                 'status' => 'error',
-    //                 'message' => 'Import failed: ' . $e->getMessage(),
-    //             ], 500);
-    //         }
-
-    //         return response()->json([
-    //             'status' => 'success',
-    //             'message' => "Bills import completed. Imported: {$imported}, Skipped: {$skipped}, Failed: {$failed}",
-    //             'imported' => $imported,
-    //             'skipped' => $skipped,
-    //             'failed' => $failed,
-    //         ]);
-
-    //     } catch (\Exception $e) {
-    //         dd($e);
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'Error: ' . $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
     public function importBills(Request $request)
     {
         try {
@@ -4205,55 +2400,11 @@ class QuickBooksImportController extends Controller
                     'AccountName' => null,
                     'RawLine' => $line,
                     'HasProduct' => false,
-                ]];
+                ];
+                return $out;
             };
 
-            // === Helper function to process and create bank accounts ===
-            $processBankAccount = function ($payFromAccountRef) {
-                if (empty($payFromAccountRef) || empty($payFromAccountRef['value'])) {
-                    return null;
-                }
-
-                $qbAccountCode = $payFromAccountRef['value'];
-                $qbAccountName = $payFromAccountRef['name'] ?? 'Bank Account';
-                $creatorId = \Auth::user()->creatorId();
-
-                // Check if chart of account exists with this code
-                $chartAccount = ChartOfAccount::where('code', $qbAccountCode)
-                    ->where('created_by', $creatorId)
-                    ->first();
-
-                if (!$chartAccount) {
-                    return null;
-                }
-
-                // Check if bank account already exists for this chart account
-                $bankAccount = BankAccount::where('chart_account_id', $chartAccount->id)
-                    ->where('created_by', $creatorId)
-                    ->first();
-
-                if ($bankAccount) {
-                    return $bankAccount->id;
-                }
-
-                // Create new bank account
-                try {
-                    $newBankAccount = BankAccount::create([
-                        'name' => $qbAccountName,
-                        'chart_account_id' => $chartAccount->id,
-                        'created_by' => $creatorId,
-                        'owned_by' => \Auth::user()->ownedId(),
-                    ]);
-
-                    return $newBankAccount->id;
-                } catch (\Exception $e) {
-                    \Log::error("Failed to create bank account: " . $e->getMessage());
-                    return null;
-                }
-            };
-
-            // === Parse Bills ===
-            $bills = $allBills->map(function ($bill) use ($parseBillLine) {
+            $bills = $allBills->map(function ($bill) use ($parseBillLine, $accountsMap, $apAccount) {
                 $parsedLines = [];
                 foreach ($bill['Line'] ?? [] as $line) {
                     $parsedLines = array_merge($parsedLines, $parseBillLine($line));
@@ -4273,7 +2424,6 @@ class QuickBooksImportController extends Controller
                 ];
             });
 
-            // === Match Payments ===
             $billPayments = $allBillPayments->map(function ($payment) {
                 $linked = [];
                 foreach ($payment['Line'] ?? [] as $l) {
@@ -4287,6 +2437,7 @@ class QuickBooksImportController extends Controller
                     'TxnDate' => $payment['TxnDate'] ?? null,
                     'TotalAmount' => (float) ($payment['TotalAmt'] ?? 0),
                     'LinkedTxn' => $linked,
+                    'PaymentAccountRef' => $extractPaymentAccountRef($payment),
                     'RawPayment' => $payment,
                 ];
             });
@@ -4300,11 +2451,13 @@ class QuickBooksImportController extends Controller
 
             // === Import Logic ===
             DB::beginTransaction();
-            $imported = $skipped = $failed = 0;
+            try {
+                foreach ($billsWithPayments as $qbBill) {
+                    $qbId = $qbBill['BillId'];
 
-            foreach ($billsById as $qbBill) {
-                try {
-                    if (Bill::where('bill_id', $qbBill['BillId'])->exists()) {
+                    // Check for duplicate
+                    $existing = Bill::where('bill_id', $qbId)->first();
+                    if ($existing) {
                         $skipped++;
                         continue;
                     }
@@ -4328,7 +2481,9 @@ class QuickBooksImportController extends Controller
                         'created_by' => \Auth::user()->creatorId(),
                         'owned_by' => \Auth::user()->ownedId(),
                         'type' => 'Bill',
-                        'user_type' => 'Vendor'
+                        'user_type' => 'Vendor',
+                        'created_at'  => Carbon::parse($qbBill['TxnDate'])->format('Y-m-d H:i:s'),
+                        'updated_at'  => Carbon::parse($qbBill['TxnDate'])->format('Y-m-d H:i:s'),
                     ]);
 
                     // === Handle Bill Lines (Items + Accounts) ===
@@ -4414,44 +2569,78 @@ class QuickBooksImportController extends Controller
                                 ]);
                             }
                         }
-                        $totalAmount += $line['Amount'];
                     }
 
-                    // === Payment Handling ===
-                    $billPaid = $qbBill['TotalAmount'] - $qbBill['Balance'];
-                    if ($billPaid > 0) {
-                        $bankAccountId = null;
+                    // Insert payments
+                    foreach ($qbBill['Payments'] as $payment) {
+                        // Determine payment method based on payment data
+                        $paymentMethod = $payment['PaymentMethod'];
 
-                        // Try to get bank account from linked payments
-                        if (!empty($qbBill['Payments'])) {
-                            foreach ($qbBill['Payments'] as $payment) {
-                                $paymentAccount = $payment['PaymentAccount'] ?? null;
-                                if ($paymentAccount) {
-                                    $bankAccountId = $this->processBankAccount($paymentAccount);
-                                    if ($bankAccountId) {
-                                        break;
+                        // If payment method is null, try to determine from payment type or account
+                        if (!$paymentMethod) {
+                            // Check if it's a check payment
+                            if (isset($payment['RawPayment']['CheckPayment'])) {
+                                $paymentMethod = 'Check';
+                            }
+                            // Check deposit account type
+                            elseif (isset($payment['RawPayment']['PayFromAccountRef'])) {
+                                $accountId = $payment['RawPayment']['PayFromAccountRef']['value'];
+                                $account = collect($accountsList)->firstWhere('Id', $accountId);
+                                if ($account) {
+                                    $accountType = strtolower($account['AccountType'] ?? '');
+                                    if (strpos($accountType, 'bank') !== false || strpos($accountType, 'checking') !== false) {
+                                        $paymentMethod = 'Bank Transfer';
+                                    } elseif (strpos($accountType, 'credit') !== false) {
+                                        $paymentMethod = 'Credit Card';
+                                    } else {
+                                        $paymentMethod = 'Cash';
                                     }
+                                } else {
+                                    $paymentMethod = 'Cash'; // Default fallback
                                 }
+                            }
+                            // Default to Cash if nothing else matches
+                            else {
+                                $paymentMethod = 'Cash';
+                            }
+                        }
+                        // Map account_id from QuickBooks payment account using the same logic as billsWithPayments()
+                        $accountId = 0; // Default to 0
+                        $paymentAccount = null;
+                        if (isset($payment['RawPayment']['CreditCardPayment']['CCAccountRef'])) {
+                            $paymentAccount = $payment['RawPayment']['CreditCardPayment']['CCAccountRef'];
+                        } elseif (isset($payment['RawPayment']['CheckPayment']['BankAccountRef'])) {
+                            $paymentAccount = $payment['RawPayment']['CheckPayment']['BankAccountRef'];
+                        } elseif (isset($payment['RawPayment']['PayFromAccountRef'])) {
+                            $paymentAccount = $payment['RawPayment']['PayFromAccountRef'];
+                        }
+
+                        if ($paymentAccount && isset($paymentAccount['value'])) {
+                            $qbAccountId = $paymentAccount['value'];
+                            $localAccount = ChartOfAccount::where('code', $qbAccountId)
+                                ->where('created_by', \Auth::user()->creatorId())
+                                ->first();
+                            if ($localAccount) {
+                                $accountId = $localAccount->id;
                             }
                         }
 
                         BillPayment::create([
                             'bill_id' => $bill->id,
-                            'date' => $qbBill['TxnDate'],
-                            'amount' => $billPaid,
-                            'account_id' => $bankAccountId,
-                            'payment_method' => 'QuickBooks Auto',
-                            'reference' => 'Balance-based Settlement',
-                            'description' => 'Auto Payment from Bill Balance'
+                            'date' => $payment['TxnDate'],
+                            'amount' => $payment['TotalAmount'],
+                            'account_id' => $accountId,
+                            'payment_method' => $paymentMethod,
+                            'reference' => $payment['PaymentId'],
+                            'description' => 'QuickBooks Bill Payment',
                         ]);
-                        $bill->status = 4;
-                        $bill->save();
-                        Utility::bankAccountBalance($bankAccountId, $billPaid, 'debit');
-                        Utility::updateUserBalance('vendor', $vendor->id, $billPaid, 'credit');
                     }
 
-                    // === Vendor Balance Update ===
-                    Utility::updateUserBalance('vendor', $vendor->id, $totalAmount, 'debit');
+                    if (!empty($qbBill['Payments'])) {
+                        $bill->status = 4;
+                        $bill->save();
+                    }
+                    $bill->save();
 
                     $imported++;
                 } catch (\Exception $e) {

@@ -107,7 +107,7 @@ class BillController extends Controller
             }
 
             // load bills
-            $bills = $query->with('category')->get();
+            $bills = $query->with('category')->paginate(10)->appends($request->all());
 
             // Ensure amount and open_balance exist as properties for blade; use fallbacks if model fields differ
             // If your model uses different field names, replace 'amount' / 'open_balance' below.

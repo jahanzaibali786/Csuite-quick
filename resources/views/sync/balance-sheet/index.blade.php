@@ -1,135 +1,790 @@
 @extends('layouts.admin')
 
 @section('content')
+    <div class="content-wrapper">
+        <!-- Header with actions -->
+        <div class="report-header">
+            <h4 class="mb-0">{{ $pageTitle }}</h4>
+            <div class="header-actions">
+                <span class="last-updated">Last updated 8 minutes ago</span>
+                <div class="actions">
+                    <button class="btn btn-icon" title="Refresh"><i class="fa fa-sync"></i></button>
+                    <button class="btn btn-icon"
+                        onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'print')"><i
+                            class="fa fa-print"></i></button>
+                    <button class="btn btn-icon" title="Export"><i class="fa fa-external-link-alt"></i></button>
+                    {{-- <button class="btn btn-icon" title="More options"><i class="fa fa-ellipsis-v"></i></button> 
+                    <button class="btn btn-success btn-save">Save As</button> --}}
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Bootstrap Modal -->
+        <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content p-0">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Choose Export Format</h5> <button type="button" class="btn-close"
+                            data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center row">
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="excel">Export to
+                                Excel</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')"
+                                class="btn btn-success mx-auto w-75 justify-content-center text-center"
+                                data-action="pdf">Export to
+                                PDF</button>
+                        </div>
+                        {{-- <button class="btn btn-success mx-auto w-50 text-center" data-action="csv">Export to CSV</button> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Show modal on export button click
+            $('.btn-icon[title="Export"]').on('click', function() {
+                $('#exportModal').modal('show');
+            });
+
+            // Handle export actions
+            $('#exportModal button[data-action]').on('click', function() {
+                // Hide modal after action
+                $('#exportModal').modal('hide');
+            });
+        </script>
+
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+            <div class="filter-row">
+                <div class="filter-group d-flex">
+
+                    {{-- filter row --}}
+                    <div class="col-md-7">
+                        <div class="row">
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">Report period</label>
+                                <select id="header-filter-period" class="form-control filter-period">
+                                    <option value="all_dates">All Dates</option>
+                                    <option value="custom_date">Custom dates</option>
+                                    <option value="today">Today</option>
+                                    <option value="this_week">This week</option>
+                                    <option value="this_week_to_date">This week to date</option>
+                                    <option value="this_month">This month</option>
+                                    <option value="this_month_to_date" selected>This month to date</option>
+                                    <option value="this_quarter">This quarter</option>
+                                    <option value="this_quarter_to_date">This quarter to date</option>
+                                    <option value="this_year">This year</option>
+                                    <option value="this_year_to_date">This year to date</option>
+                                    <option value="this_year_to_last_month">This year to last month</option>
+                                    <option value="yesterday">Yesterday</option>
+                                    <option value="recent">Recent</option>
+                                    <option value="last_week">Last week</option>
+                                    <option value="last_week_to_date">Last week to date</option>
+                                    <option value="last_week_to_today">Last week to today</option>
+                                    <option value="last_month">Last month</option>
+                                    <option value="last_month_to_date">Last month to date</option>
+                                    <option value="last_month_to_today">Last month to today</option>
+                                    <option value="last_quarter">Last quarter</option>
+                                    <option value="last_quarter_to_date">Last quarter to date</option>
+                                    <option value="last_quarter_to_today">Last quarter to today</option>
+                                    <option value="last_year">Last year</option>
+                                    <option value="last_year_to_date">Last year to date</option>
+                                    <option value="last_year_to_today">Last year to today</option>
+                                    <option value="last_7_days">Last 7 days</option>
+                                    <option value="last_30_days">Last 30 days</option>
+                                    <option value="last_90_days">Last 90 days</option>
+                                    <option value="last_12_months">Last 12 months</option>
+                                    <option value="since_30_days_ago">Since 30 days ago</option>
+                                    <option value="since_60_days_ago">Since 60 days ago</option>
+                                    <option value="since_90_days_ago">Since 90 days ago</option>
+                                    <option value="since_365_days_ago">Since 365 days ago</option>
+                                    <option value="next_week">Next week</option>
+                                    <option value="next_4_weeks">Next 4 weeks</option>
+                                    <option value="next_month">Next month</option>
+                                    <option value="next_quarter">Next quarter</option>
+                                    <option value="next_year">Next year</option>
+                                </select>
+
+                            </div>
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">From</label>
+                                {{-- <input type="text" id="daterange" class="form-control "
+                                    value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                <input type="date" class="form-control" name="start_date" id="filter-start-date"
+                                    value="{{ Carbon\Carbon::now()->startOfYear()->format('Y-m-d') }}">
+                            </div>
+                            <div class="filter-item col-md-2">
+                                <label class="filter-label">To</label>
+                                {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                <input type="date" class="form-control " name="end_date" id="filter-end-date"
+                                    value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                            </div>
+                            @if (isset($accounting_method) && $accounting_method)
+                                <div class="filter-item col-md-2">
+                                    <label class="filter-label">Accounting method</label>
+                                    <select id="accounting-method" class="form-control">
+                                        <option value="accrual" selected>Accrual</option>
+                                        <option value="cash">Cash</option>
+                                    </select>
+                                </div>
+                            @endif
+                            {{-- <div class="filter-item col-md-2 mt-4">
+                                <button class="btn btn-view-options" id="view-options-btn"
+                                    style="border: none !important; border-left: 1px solid #d1d5db !important; border-radius: 0px !important; width: 130px;">
+                                    <i class="fa fa-eye"></i>
+                                    <span>View options</span>
+                                </button>
+                            </div> --}}
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="row mt-4">
+                            <!-- Action buttons row -->
+                            <div class="d-flex gap-2 justify-content-end align-items-center">
+
+
+                                <button class="btn btn-outline" id="columns-btn">
+                                    <i class="fa fa-columns"></i> Columns <span class="badge">9</span>
+                                </button>
+
+                                <button class="btn btn-outline" type="button" data-bs-toggle="offcanvas"
+                                    data-bs-target="#filterSidebar" aria-controls="filterSidebar">
+                                    <i class="fa fa-filter"></i> Filter
+                                </button>
+
+                                {{-- Filter Side Bar --}}
+                                <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1"
+                                    id="filterSidebar" aria-labelledby="filterSidebarLabel">
+                                    <div class="offcanvas-header "
+                                        style="background: #f9fafb; border-bottom: 1px solid #e6e6e6;">
+                                        <h5 class="offcanvas-title" id="filterSidebarLabel">
+                                            Filters
+                                        </h5>
+                                        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                            aria-label="Close">
+                                            <i class="fa fa-close"></i>
+                                        </button>
+                                    </div>
+                                    <div class="offcanvas-body">
+                                        <div class="filter-item mb-2">
+                                            <label class="filter-label">Report period</label>
+                                            <select id="sidebar-filter-period" class="form-control filter-period">
+                                                <option value="all_dates">All Dates</option>
+                                                <option value="custom_date">Custom dates</option>
+                                                <option value="today">Today</option>
+                                                <option value="this_week">This week</option>
+                                                <option value="this_week_to_date">This week to date</option>
+                                                <option value="this_month">This month</option>
+                                                <option value="this_month_to_date" selected>This month to date</option>
+                                                <option value="this_quarter">This quarter</option>
+                                                <option value="this_quarter_to_date">This quarter to date</option>
+                                                <option value="this_year">This year</option>
+                                                <option value="this_year_to_date">This year to date</option>
+                                                <option value="this_year_to_last_month">This year to last month</option>
+                                                <option value="yesterday">Yesterday</option>
+                                                <option value="recent">Recent</option>
+                                                <option value="last_week">Last week</option>
+                                                <option value="last_week_to_date">Last week to date</option>
+                                                <option value="last_week_to_today">Last week to today</option>
+                                                <option value="last_month">Last month</option>
+                                                <option value="last_month_to_date">Last month to date</option>
+                                                <option value="last_month_to_today">Last month to today</option>
+                                                <option value="last_quarter">Last quarter</option>
+                                                <option value="last_quarter_to_date">Last quarter to date</option>
+                                                <option value="last_quarter_to_today">Last quarter to today</option>
+                                                <option value="last_year">Last year</option>
+                                                <option value="last_year_to_date">Last year to date</option>
+                                                <option value="last_year_to_today">Last year to today</option>
+                                                <option value="last_7_days">Last 7 days</option>
+                                                <option value="last_30_days">Last 30 days</option>
+                                                <option value="last_90_days">Last 90 days</option>
+                                                <option value="last_12_months">Last 12 months</option>
+                                                <option value="since_30_days_ago">Since 30 days ago</option>
+                                                <option value="since_60_days_ago">Since 60 days ago</option>
+                                                <option value="since_90_days_ago">Since 90 days ago</option>
+                                                <option value="since_365_days_ago">Since 365 days ago</option>
+                                                <option value="next_week">Next week</option>
+                                                <option value="next_4_weeks">Next 4 weeks</option>
+                                                <option value="next_month">Next month</option>
+                                                <option value="next_quarter">Next quarter</option>
+                                                <option value="next_year">Next year</option>
+                                            </select>
+
+                                        </div>
+
+                                        <div class="filter-item mb-2">
+                                             <label class="filter-label">from</label>
+                                            {{-- <input type="text" id="daterange" class="form-control "
+                                                value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                            <input type="date" class="form-control mb-2" name="start_date"
+                                                id="sidebar-filter-start-date"
+                                                value="{{ Carbon\Carbon::now()->startOfYear()->format('Y-m-d') }}">
+                                            <label class="filter-label">To </label>
+                                            {{-- <input type="text" id="daterange" class="form-control " value="{{ Carbon\Carbon::now()->format('m/d/Y') }}"> --}}
+                                           
+                                            <input type="date" class="form-control " name="end_date"
+                                                id="sidebar-filter-end-date"
+                                                value="{{ Carbon\Carbon::now()->format('Y-m-d') }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                {{-- JS to sync filters --}}
+                                <script>
+                                    $(document).ready(function() {
+                                        // Sync Report Period
+                                        $('#sidebar-filter-period').on('change', function() {
+                                            $('#header-filter-period').val($(this).val());
+                                        });
+                                        $('#header-filter-period').on('change', function() {
+                                            $('#sidebar-filter-period').val($(this).val());
+                                        });
+                                    });
+                                </script>
+                                {{-- Filter Side Bar --}}
+
+                                <button class="btn btn-outline" id="general-options-btn">
+                                    <i class="fa fa-cog"></i> General options
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Report Content -->
+        <div class="report-content">
+            <div class="report-title-section">
+                <h2 class="report-title">{{ $pageTitle }}</h2>
+                {{-- <p class="company-name">{{ config('app.name', 'Craig\'s Design and Landscaping Services') }}</p> --}}
+                <p class="date-range">
+                    <span id="date-range-display">
+                        {{ Carbon\Carbon::now()->startOfYear()->format('F j, Y') }} -
+                        {{ Carbon\Carbon::now()->format('F j, Y') }}
+                    </span>
+                </p>
+            </div>
+
+            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}')" id="ExprotExcel"
+                class="d-none">
+                <i class="fa fa-file-excel"></i> Excel
+            </button>
+
+            <button onclick="exportDataTable('customer-balance-table', '{{ $pageTitle }}', 'pdf')" id="ExprotPDF"
+                class="d-none">
+                <i class="fa fa-file-excel"></i> Excel
+            </button>
+
+            <div class="table-container p-2">
+                {!! $dataTable->table(['class' => 'table customer-balance-table', 'id' => 'customer-balance-table']) !!}
+            </div>
+        </div>
+    </div>
+
+    <!-- General Options Modal -->
+    <div class="modal-overlay" id="general-options-overlay">
+        <div class="general-options-modal">
+            <div class="modal-header">
+                <h5>General options <i class="fa fa-info-circle" title="Configure report settings"></i></h5>
+                <button type="button" class="btn-close" id="close-general-options">&times;</button>
+            </div>
+            <div class="modal-content">
+                <p class="modal-subtitle">Select general options for your report.</p>
+
+                <!-- Number format section -->
+                <div class="option-section">
+                    <h6 class="section-title">Number format <i class="fa fa-chevron-up"></i></h6>
+                    <div class="option-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="divide-by-1000"> Divide by 1000
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hide-zero-amounts"> Don't show zero amounts
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="round-whole-numbers"> Round to the nearest whole number
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Negative numbers section -->
+                <div class="option-section">
+                    <h6 class="section-title">Negative numbers</h6>
+                    <div class="option-group">
+                        <div class="negative-format-group">
+                            <select id="negative-format" class="form-control">
+                                <option value="-100" selected>-100</option>
+                                <option value="(100)">(100)</option>
+                                <option value="100-">100-</option>
+                            </select>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="show-in-red"> Show in red
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Header section -->
+                <div class="option-section">
+                    <h6 class="section-title">Header <i class="fa fa-chevron-up"></i></h6>
+                    <div class="option-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="company-logo"> Company logo
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="report-period" checked> Report period
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="company-name" checked> Company name
+                        </label>
+                    </div>
+                    <div class="alignment-group">
+                        <label class="alignment-label">Header alignment</label>
+                        <select id="header-alignment" class="form-control">
+                            <option value="center" selected>Center</option>
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Footer section -->
+                <div class="option-section">
+                    <h6 class="section-title">Footer <i class="fa fa-chevron-up"></i></h6>
+                    <div class="option-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="date-prepared" checked> Date prepared
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="time-prepared" checked> Time prepared
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="report-basis" checked> Report basis (cash vs. accrual)
+                        </label>
+                    </div>
+                    <div class="alignment-group">
+                        <label class="alignment-label">Footer alignment</label>
+                        <select id="footer-alignment" class="form-control">
+                            <option value="center" selected>Center</option>
+                            <option value="left">Left</option>
+                            <option value="right">Right</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columns Modal -->
+    <div class="modal-overlay" id="columns-overlay">
+        <div class="columns-modal">
+            <div class="modal-header">
+                <h5>Columns <i class="fa fa-info-circle"></i></h5>
+                <button type="button" class="btn-close" id="close-columns">&times;</button>
+            </div>
+            <div class="modal-content">
+                <p class="modal-subtitle">Drag columns to reorder the columns</p>
+
+                <div class="columns-list" id="sortable-columns">
+                    <div class="column-item" data-column="0">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> Customer Name
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="1">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> Current
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="2">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> 1-15 DAYS
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="3">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> 16-30 DAYS
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="4">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> 31-45 DAYS
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="5">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> > 45 DAYS
+                        </label>
+                    </div>
+                    <div class="column-item" data-column="6">
+                        <i class="fa fa-grip-vertical handle"></i>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked> Total
+                        </label>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="additional-columns">
+                    {{-- // additional columns will be added here --}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function buildColumnsFromTable() {
+            const headers = document.querySelectorAll('#customer-balance-table thead th');
+            const container = document.querySelector('#sortable-columns');
+            const table = window.LaravelDataTables?.['customer-balance-table'];
+
+            // Clear the old list
+            container.innerHTML = '';
+
+            headers.forEach((th) => {
+                const columnName = th.innerText.trim().toUpperCase();
+                const isHidden = th.classList.contains('default-hidden');
+
+                // Skip BUCKET column
+                if (columnName === 'BUCKET') {
+                    return;
+                }
+
+                // Determine DataTables column index safely
+                let colIndex = null;
+                if (table) {
+                    try {
+                        colIndex = table.column(th).index();
+                    } catch (e) {
+                        colIndex = $(th).index(); // fallback
+                    }
+                } else {
+                    colIndex = $(th).index();
+                }
+
+                // Build draggable/checkbox item
+                const div = document.createElement('div');
+                div.classList.add('column-item');
+                div.setAttribute('data-column', colIndex);
+                div.innerHTML = `
+                <i class="fa fa-grip-vertical handle"></i>
+                <label class="checkbox-label">
+                    <input type="checkbox" ${isHidden ? '' : 'checked'}> ${columnName}
+                </label>
+            `;
+
+                container.appendChild(div);
+            });
+        }
+
+        // Build once after DataTable is initialized
+        $(document).ready(function() {
+            buildColumnsFromTable();
+
+            const hideDefaultColumns = () => {
+                if (window.LaravelDataTables && window.LaravelDataTables['customer-balance-table']) {
+                    const table = window.LaravelDataTables['customer-balance-table'];
+
+                    $('#customer-balance-table thead th.default-hidden').each(function() {
+                        const colIndex = table.column(this).index();
+                        table.column(colIndex).visible(false);
+
+                        $(`.column-item[data-column="${colIndex}"] input[type="checkbox"]`).prop(
+                            'checked', false);
+                    });
+
+
+                    {{-- buildColumnsFromTable(); --}}
+                } else {
+                    setTimeout(hideDefaultColumns, 500); // retry until ready
+                    console.warn("DataTable instance not ready yet...");
+                }
+            };
+
+            hideDefaultColumns();
+        });
+
+        // Rebuild on every table redraw
+        $('#customer-balance-table').on('draw.dt', function() {
+            buildColumnsFromTable();
+        });
+
+        // Delegated event binding for dynamically created checkboxes
+        $(document).on('change', '#sortable-columns input[type="checkbox"]', function() {
+            const columnIndex = $(this).closest('.column-item').data('column');
+            const isVisible = $(this).prop('checked');
+
+            if (columnIndex !== undefined && window.LaravelDataTables?.['customer-balance-table']) {
+                try {
+                    window.LaravelDataTables['customer-balance-table'].column(columnIndex).visible(isVisible);
+                } catch (error) {
+                    console.error('Column visibility change failed:', columnIndex, isVisible, error);
+                }
+            }
+
+            // Update column count badge if function exists
+            if (typeof updateColumnCountBadge === 'function') {
+                updateColumnCountBadge();
+            }
+        });
+    </script>
+
+
+    <script>
+        $('#customer-balance-table').on('click', '.toggle-bucket', function() {
+            let $row = $(this);
+            let bucket = $row.attr('class').match(/bucket-([^\s]+)/)[1]; // "current"
+            let $icon = $row.find('.icon');
+
+            // toggle
+            $('.bucket-' + bucket).not($row).toggle(); // don’t hide the parent itself
+
+            // swap icon
+            $icon.text($icon.text() === '▶' ? '▼' : '▶');
+        });
+    </script>
+
+    <script>
+        $(document).on('click', '.toggle-section', handleSectionToggle);
+
+        window.viewState = {};
+        window.viewState.viewType = 'detailed'; // default view
+
+        function handleSectionToggle(e) {
+            e.preventDefault();
+
+            if (window.viewState.viewType === 'compact') {
+                return;
+            }
+
+            const $this = $(this);
+            // fallback: use data-group from .toggle-section if row-id missing
+            let group = $this.closest('tr').data('row-id');
+            if (!group) {
+                group = $this.data('group'); // <-- fix for this report
+            }
+
+            const $row = $this.closest('tr');
+            const $chevron = $this.find('.toggle-chevron');
+            // fallback: support both .section-total-amount and .section-total-display
+            const $sectionTotal = $row.find(
+                '.section-total-amount[data-group="' + group + '"], .section-total-display[data-group="' + group + '"]'
+            );
+            const $childRows = $('.group-' + group);
+
+            if ($chevron.length === 0) return;
+
+            if ($chevron.text() === "▼") {
+                // Collapse
+                $childRows.hide();
+                $chevron.text("▶");
+                $sectionTotal.show();
+            } else {
+                // Expand
+                $childRows.show();
+                $chevron.text("▼");
+                $sectionTotal.hide();
+            }
+        }
+
+
+        function toggleSection($headerRow) {
+            if (window.viewState.viewType === 'compact') {
+                return; // Don't allow toggle in compact view
+            }
+
+            const sectionId = $headerRow.attr('data-row-id');
+            if (!sectionId) return;
+
+            if ($headerRow.hasClass('section-expanded')) {
+                // Collapse section
+                collapseSection(sectionId);
+            } else {
+                // Expand section
+                expandSection(sectionId);
+            }
+        }
+
+        const expandCollapseInit = function() {
+            if (!window.LaravelDataTables || !window.LaravelDataTables['customer-balance-table']) {
+                setTimeout(expandCollapseInit, 500);
+                return;
+            }
+
+            // Attach handler once DataTable is initialized
+            window.LaravelDataTables['customer-balance-table']
+                .on('draw.dt', function() {
+                    console.log("Table redrawn, checking for toggle sections...");
+                    console.log($('.toggle-section'));
+                    $('.toggle-section').each(function() {
+                        {{-- console.log($(this)); --}}
+                        $(this).click();
+                    })
+                    // do your expand/collapse binding here
+                    {{-- $('.toggle-section').off('click').on('click', function() {
+                        console.log("Clicked section:", $(this).data('section'));
+                    }); --}}
+                });
+        };
+
+        $(document).ready(expandCollapseInit);
+
+
+        const collapseFunction3 = function(e) {
+            e.preventDefault();
+
+            // Find the icon inside the clicked row
+            const $row = $(this);
+            const $icon = $row.find('.chevron-icon');
+
+            const parentType = $icon.data('parent-type');
+            const parentId = $icon.data('parent-id');
+
+            if (!parentType || !parentId) return;
+
+            // Build selector for children rows
+            const childSelector = `.child-of-${parentType}-${parentId}`;
+            const $children = $(childSelector);
+
+            if ($children.length === 0) return;
+
+            // Toggle collapse/expand
+            if ($icon.text().trim() === "▼") {
+                // Collapse
+                $children.hide();
+                $icon.text("▶");
+            } else {
+                // Expand
+                $children.show();
+                $icon.text("▼");
+            }
+        }
+
+        // Attach once for chevron-icon style tables
+        $(document).on('click', '.subtype-header-row', collapseFunction3);
+
+        $(document).on('click', '.account-header-row', collapseFunction3);
+
+        $(document).on('click', '.chevron-icon', collapseFunction3)
+
+        $(document).on('click', '.section-header-row', collapseFunction3)
+    </script>
+
     <style>
-        .section-row {
-            background-color: #f2f2f2 !important;
-            font-weight: bold;
+        /* Base styling */
+        * {
+            box-sizing: border-box;
         }
 
-        .balance-sheet-table {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
 
-        .balance-sheet-table thead th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .balance-sheet-table tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .text-right {
-            text-align: right !important;
-        }
-
-        .section-header {
-            font-weight: 700;
-            font-size: 1.1em;
-            color: #495057;
-            text-transform: uppercase;
-        }
-
-        .section-total-amount {
-            font-size: 1em;
-            font-style: italic;
-            display: none;
+        .account-header-row,
+        subtype-header-row {
+            cursor: pointer;
         }
 
         .toggle-section {
-            user-select: none;
             cursor: pointer;
         }
 
-        .toggle-section:hover {
-            color: #007bff;
+        .content-wrapper {
+            background-color: #f5f6fa;
+            min-height: 100vh;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 14px;
+            color: #262626;
         }
 
-        .toggle-chevron {
-            transition: transform 0.2s ease;
-            color: #007bff;
-            font-size: 12px;
-            margin-right: 8px;
+        /* Header */
+        .report-header {
+            background: white;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e6e6e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .report-header h4 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #262626;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .last-updated {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
         }
 
-        .child-row {
-            display: none;
+        .btn-icon {
+            background: transparent;
+            color: #6b7280;
+            padding: 8px;
+            width: 32px;
+            height: 32px;
+            justify-content: center;
         }
 
-        .child-row td:first-child {
-            padding-left: 30px !important;
+        .btn-icon:hover {
+            background: #f3f4f6;
+            color: #262626;
         }
 
-        .amount-cell {
-            text-align: right;
-            display: block;
+        .btn-success {
+            background: #22c55e;
+            color: white;
+            font-weight: 500;
         }
 
-        .subtotal-row .total-amount {
-            border-top: 1px solid #000;
-            font-weight: bold;
+        .btn-success:hover {
+            background: #16a34a;
         }
 
-        .total-row .total-amount {
-            border-top: 2px solid #000;
-            border-bottom: 2px double #000;
-            font-weight: bold;
-        }
-
-        .section-header-row {
-            background-color: #f8f9fa !important;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .section-header-row:hover {
-            background-color: #e9ecef !important;
-        }
-
-        .subtotal-row {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-
-        .total-row {
-            background-color: #e9ecef;
-            font-weight: bold;
-            border-top: 2px solid #dee2e6;
-        }
-
-        .subtotal-label,
-        .total-label {
-            font-weight: bold;
-        }
-
-        /* Expanded state */
-        .section-expanded .child-row {
-            display: table-row !important;
-        }
-
-        .section-expanded .subtotal-row {
-            display: table-row !important;
-        }
-
-        .section-expanded .section-total-amount {
-            display: none !important;
-        }
-
-        /* Compact view */
-        .compact-view .child-row {
-            display: none !important;
-        }
-
-        .compact-view .subtotal-row {
-            display: none !important;
-        }
-
-        .compact-view .section-total-amount {
-            display: inline-block !important;
+        .btn-save {
+            padding: 8px 16px;
         }
 
         /* Filter Controls */
@@ -168,10 +823,13 @@
             box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.1);
         }
 
+        .date-input {
+            position: relative;
+        }
+
         .view-options {
             display: flex;
             align-items: center;
-            position: relative;
         }
 
         .btn-view-options {
@@ -180,65 +838,11 @@
             border: 1px solid #d1d5db;
             padding: 8px 12px;
             font-size: 13px;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
         }
 
         .btn-view-options:hover {
             background: #f9fafb;
             border-color: #9ca3af;
-        }
-
-        /* View Options Dropdown */
-        .view-options-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            display: none;
-            min-width: 200px;
-        }
-
-        .view-option-item {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f3f4f6;
-            font-size: 13px;
-        }
-
-        .view-option-item:last-child {
-            border-bottom: none;
-        }
-
-        .view-option-item:hover {
-            background: #f9fafb;
-        }
-
-        .view-option-item.divider {
-            border-top: 1px solid #e5e7eb;
-            margin-top: 4px;
-            padding-top: 8px;
-        }
-
-        .view-option-item .checkmark {
-            margin-right: 8px;
-            color: #10b981;
-            width: 16px;
-            visibility: hidden;
-        }
-
-        .view-option-item.active .checkmark {
-            visibility: visible;
         }
 
         /* Action buttons row */
@@ -254,12 +858,87 @@
             color: #374151;
             padding: 8px 12px;
             font-size: 13px;
-            cursor: pointer;
         }
 
         .btn-outline:hover {
             background: #f9fafb;
             border-color: #9ca3af;
+        }
+
+        .badge {
+            background: #e5e7eb;
+            color: #374151;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 4px;
+        }
+
+        /* Report Content */
+        .report-content {
+            background: white;
+            margin: 24px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .report-title-section {
+            text-align: center;
+            padding: 32px 24px 24px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+
+        .report-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #262626;
+            margin: 0 0 8px;
+        }
+
+        .company-name {
+            font-size: 16px;
+            color: #6b7280;
+            margin: 0 0 12px;
+        }
+
+        .date-range {
+            font-size: 14px;
+            color: #374151;
+            margin: 0;
+        }
+
+        /* Table Container */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .customer-balance-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .customer-balance-table th {
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .customer-balance-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #262626;
+        }
+
+        .customer-balance-table tbody tr:hover {
+            background: #f9fafb;
         }
 
         /* Modal Styles */
@@ -276,7 +955,7 @@
         }
 
         .general-options-modal,
-        .filter-modal {
+        .columns-modal {
             position: fixed;
             top: 0;
             right: 0;
@@ -391,369 +1070,341 @@
             font-weight: 500;
         }
 
-        .report-title-section {
-            text-align: center;
-            padding: 32px 24px 24px;
-            border-bottom: 1px solid #e6e6e6;
+        /* Columns Modal Specific */
+        .columns-list {
+            margin-bottom: 20px;
         }
 
-        .report-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #262626;
-            margin: 0 0 8px;
+        .column-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: move;
         }
 
-        .company-name {
-            font-size: 16px;
-            color: #6b7280;
-            margin: 0 0 12px;
+        .handle {
+            color: #9ca3af;
+            margin-right: 12px;
+            cursor: grab;
         }
 
-        .date-range {
-            font-size: 14px;
-            color: #374151;
-            margin: 0;
+        .handle:active {
+            cursor: grabbing;
         }
 
-        /* Filter modal specific styles */
-        .filter-section {
-            margin-bottom: 24px;
+        .additional-columns {
+            max-height: 300px;
+            overflow-y: auto;
         }
 
-        .filter-section-title {
-            font-size: 14px;
+        .additional-columns .column-item {
+            padding-left: 28px;
+            cursor: default;
+        }
+
+        /* Enhanced form controls */
+        select.form-control {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 12px;
+            padding-right: 32px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        /* Table enhancements */
+        .text-right {
+            text-align: right !important;
+        }
+
+        .negative-amount {
+            color: #dc2626;
+        }
+
+        .account-group {
+            background-color: #f8fafc;
             font-weight: 600;
-            color: #262626;
-            margin: 0 0 16px;
+            cursor: pointer;
         }
 
-        .date-filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        .account-row {
+            font-weight: normal;
         }
 
-        .date-filter-item {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .date-filter-label {
-            font-size: 12px;
+        .opening-balance {
+            font-style: italic;
             color: #6b7280;
-            font-weight: 500;
+        }
+
+        .expand-icon {
+            margin-right: 6px;
+            font-size: 11px;
+        }
+
+        /* QuickBooks specific styling */
+        .fa-info-circle {
+            color: #0969da;
+            font-size: 12px;
+        }
+
+        .fa-chevron-up {
+            font-size: 10px;
+            color: #6b7280;
+        }
+
+        .option-section hr {
+            border: none;
+            border-top: 1px solid #e6e6e6;
+            margin: 20px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            /* .filter-group {
+                                                                                                                                                                                                                                                                        flex-direction: column;
+                                                                                                                                                                                                                                                                        width: 100%;
+                                                                                                                                                                                                                                                                        gap: 16px;
+                                                                                                                                                                                                                                                                    } */
+
+            .filter-item {
+                width: 100%;
+                min-width: auto;
+            }
+
+            .general-options-modal,
+            .columns-modal {
+                width: 100%;
+                left: 0;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-end;
+            }
+
+            .actions {
+                flex-wrap: wrap;
+            }
+        }
+
+        .parent-row {
+            cursor: pointer;
+        }
+
+        i {
+            font-style: normal;
+        }
+        .summary-total{
+            font-weight: bold;
         }
     </style>
 
-    <!-- Filter Controls -->
-    <div class="filter-controls">
-        <div class="filter-row">
-            <div class="filter-group row mb-2">
-                <div class="filter-item col-md-2">
-                    <label class="filter-label">As of date</label>
-                    <input type="text" id="asOfDatePicker" class="form-control date-input"
-                        value="{{ \Carbon\Carbon::now()->format('M d, Y') }}">
-                    <input type="hidden" id="asOfDate" name="asOfDate"
-                        value="{{ \Carbon\Carbon::now()->format('Y-m-d') }}">
-                </div>
-
-                <div class="filter-item col-md-2">
-                    <label class="filter-label">Accounting method</label>
-                    <select id="accounting-method" class="form-control">
-                        <option value="accrual" selected>Accrual</option>
-                        <option value="cash">Cash</option>
-                    </select>
-                </div>
-
-                <div class="filter-item col-md-3 pt-4">
-                    <div class="view-options">
-                        <button class="btn btn-view-options" id="view-options-btn" type="button">
-                            <i class="fa fa-eye"></i> &nbsp; View options
-                        </button>
-                        <div class="view-options-dropdown" id="view-options-dropdown">
-                            <div class="view-option-item" data-value="normal">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>Normal view
-                            </div>
-                            <div class="view-option-item" data-value="compact">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>Compact view
-                            </div>
-                            <div class="view-option-item divider" data-value="expand">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>Expand all
-                            </div>
-                            <div class="view-option-item" data-value="collapse">
-                                <span class="checkmark"><i class="fa fa-check"></i></span>Collapse all
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="filter-item col-md-3 pt-4">
-                    <button class="btn btn-outline" id="general-options-btn" type="button">
-                        <i class="fa fa-cog"></i> General options
-                    </button>
-                </div>
-                <div class="filter-item col-md-2 pt-4">
-                    <button class="btn btn-outline" id="filter-btn" type="button">
-                        <i class="fa fa-filter"></i> Filter
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="content-wrapper">
-        <div class="d-flex flex-column w-tables rounded mt-3 bg-white" id="report-content">
-            <div class="report-title-section p-2">
-                <h2 class="report-title">Balance Sheet</h2>
-                <p class="date-range">
-                    <span class="text-lightest f-12 ml-2" id="as-of-date-display"></span>
-                </p>
-            </div>
-            <div class="table-responsive">
-                {!! $dataTable->table([
-                    'class' => 'table table-hover border-0 w-100 balance-sheet-table',
-                    'id' => 'balance-sheet-table',
-                ]) !!}
-            </div>
-        </div>
-    </div>
-
-    <!-- Filter Modal -->
-    <div class="modal-overlay" id="filter-overlay">
-        <div class="filter-modal">
-            <div class="modal-header">
-                <h5>Filter Options <i class="fa fa-filter" title="Configure filters"></i></h5>
-                <button type="button" class="btn-close" id="close-filter">&times;</button>
-            </div>
-            <div class="modal-content">
-                <p class="modal-subtitle">Configure as-of date and accounting method for your balance sheet.</p>
-
-                <!-- Date section -->
-                <div class="filter-section">
-                    <h6 class="filter-section-title">Balance Sheet Date</h6>
-                    <div class="date-filter-group">
-                        <div class="date-filter-item">
-                            <label class="date-filter-label">As of Date</label>
-                            <input type="text" id="modal-as-of-date" class="form-control date-input"
-                                value="{{ Carbon\Carbon::now()->format('M d, Y') }}">
-                        </div>
-
-                        <div class="date-filter-item">
-                            <label class="date-filter-label">Accounting Method</label>
-                            <select id="modal-accounting-method" class="form-control">
-                                <option value="accrual" selected>Accrual</option>
-                                <option value="cash">Cash</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Apply button -->
-                <div class="filter-section">
-                    <button class="btn btn-success w-100" id="apply-filters">
-                        Apply Filters
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- General Options Modal -->
-    <div class="modal-overlay" id="general-options-overlay">
-        <div class="general-options-modal">
-            <div class="modal-header">
-                <h5>General options <i class="fa fa-info-circle" title="Configure report settings"></i></h5>
-                <button type="button" class="btn-close" id="close-general-options">&times;</button>
-            </div>
-            <div class="modal-content">
-                <p class="modal-subtitle">Select general options for your report.</p>
-
-                <!-- Number format section -->
-                <div class="option-section">
-                    <h6 class="section-title">Number format <i class="fa fa-chevron-up"></i></h6>
-                    <div class="option-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="divide-by-1000"> Divide by 1000
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="hide-zero-amounts"> Don't show zero amounts
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="round-whole-numbers"> Round to the nearest whole number
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Negative numbers section -->
-                <div class="option-section">
-                    <h6 class="section-title">Negative numbers</h6>
-                    <div class="option-group">
-                        <div class="negative-format-group">
-                            <select id="negative-format" class="form-control">
-                                <option value="-100" selected>-100</option>
-                                <option value="(100)">(100)</option>
-                                <option value="100-">100-</option>
-                            </select>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="show-in-red"> Show in red
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Header section -->
-                <div class="option-section">
-                    <h6 class="section-title">Header <i class="fa fa-chevron-up"></i></h6>
-                    <div class="option-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="company-logo"> Company logo
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="report-period" checked> Report period
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="company-name" checked> Company name
-                        </label>
-                    </div>
-                    <div class="alignment-group">
-                        <label class="alignment-label">Header alignment</label>
-                        <select id="header-alignment" class="form-control">
-                            <option value="center" selected>Center</option>
-                            <option value="left">Left</option>
-                            <option value="right">Right</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Footer section -->
-                <div class="option-section">
-                    <h6 class="section-title">Footer <i class="fa fa-chevron-up"></i></h6>
-                    <div class="option-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="date-prepared" checked> Date prepared
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="time-prepared" checked> Time prepared
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="report-basis" checked> Report basis (cash vs. accrual)
-                        </label>
-                    </div>
-                    <div class="alignment-group">
-                        <label class="alignment-label">Footer alignment</label>
-                        <select id="footer-alignment" class="form-control">
-                            <option value="center" selected>Center</option>
-                            <option value="left">Left</option>
-                            <option value="right">Right</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {!! $dataTable->scripts() !!}
 @endsection
 
 @push('script-page')
-    @include('sections.datatable_js')
+    <!-- Include jQuery and required libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <script>
-        let balanceSheetTable;
-        let expandedSections = new Set();
+$(document).on('click', '.group-toggle', function() {
+    const key = $(this).data('group');
+    const icon = $(this).find('i.fas');
+    const rows = $('.group-' + key);
 
-        // Initialize global state - default to expanded
-        window.viewState = {
-            viewType: 'normal', // 'normal' or 'compact'
-            expandState: 'expand' // default to expand all
-        };
+    if (rows.is(':visible')) {
+        rows.hide();
+        icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+    } else {
+        rows.show();
+        icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+    }
+});
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        window.reportOptions = {
-            divideBy1000: false,
-            hideZeroAmounts: false,
-            roundWholeNumbers: false,
-            negativeFormat: '-100',
-            showInRed: false,
-            companyLogo: false,
-            reportPeriod: true,
-            companyName: true,
-            headerAlignment: 'center',
-            datePrepared: true,
-            timePrepared: true,
-            reportBasis: true,
-            footerAlignment: 'center'
-        };
+    <script>
+        let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        function exportDataTable(tableId, pageTitle, format = "excel") {
+            let table = $('#' + tableId).DataTable();
 
-        $(document).ready(function() {
-            // Get DataTable instance
-            balanceSheetTable = window.LaravelDataTables && window.LaravelDataTables["balance-sheet-table"];
+            // Only get visible columns (skip auto-index)
+            let columns = [];
+            $('#' + tableId + ' thead th:visible').each(function() {
+                columns.push($(this).text().trim());
+            });
 
-            if (!balanceSheetTable) {
-                console.warn('DataTable instance "balance-sheet-table" not found.');
+            // Get visible data rows
+            let data = [];
+
+            const getRealtimeTableData = () => {
+
+                let data = [];
+
+
+                table.rows({
+                    search: 'applied'
+                }).every(function() {
+                    let rowData = this.data();
+
+                    if (typeof rowData === 'object') {
+                        // Only keep values for visible columns
+                        let rowArray = [];
+                        table.columns(':visible').every(function(colIdx) {
+                            let val = rowData[this.dataSrc()] ?? '-';
+                            rowArray.push(val);
+                        });
+                        rowData = rowArray;
+                    }
+                    data.push(rowData);
+                });
+
+                return data
+
             }
 
-            initializeDatePickers();
-            initializeModalHandlers();
-            initializeViewOptions();
-            setupDataTableEvents();
+            // Get visible data rows (rendered DOM text, not raw data)
+            $('#' + tableId + ' tbody tr:visible').each(function() {
+                let rowArray = [];
+                $(this).find('td:visible').each(function() {
+                    let cellContent;
 
-            // Initial display update
-            updateAsOfDateDisplay();
+                    if ($(this).find('h4').length > 0 || $(this).find('strong').length > 0) {
+                        // If <h4> exists, keep HTML (preserve h4)
+                        cellContent = $(this).html()
+                            .replace(/[\n\r]+/g, ' ')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+                    } else {
+                        // Otherwise, use plain text
+                        cellContent = $(this).text()
+                            .replace(/[\n\r]+/g, ' ')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+                    }
 
-            // Ensure default expanded on first load
-            applyViewState();
+                    rowArray.push(cellContent);
+                });
 
-            // Close dropdowns when clicking outside
-            $(document).on('click', function(e) {
-                if (!$(e.target).closest('.view-options').length) {
-                    $('#view-options-dropdown').hide();
-                }
+                data.push(rowArray);
             });
-        });
 
-        function initializeDatePickers() {
-            // Main as-of date picker
-            $('#asOfDatePicker').daterangepicker({
-                singleDatePicker: true,
-                showDropdowns: true,
-                locale: {
-                    format: 'MMM DD, YYYY'
+
+
+            // Send to universal export route
+            $.ajax({
+                url: '{{ route('export.datatable') }}',
+                method: 'POST',
+                data: {
+                    columns: columns,
+                    data: data,
+                    pageTitle: pageTitle,
+                    ReportPeriod: window.reportOptions.reportPeriod ? $(".report-title-section .date-range")[0]
+                        .textContent : "",
+                    HeaderFooterAlignment: [window.reportOptions.headerAlignment, window.reportOptions
+                        .footerAlignment
+                    ],
+                    singleBold: pageTitle === "Balance Sheet - Standard" ? false : true,
+                    format: format,
+                    _token: '{{ csrf_token() }}'
                 },
-                startDate: moment($('#asOfDate').val() || undefined)
-            }, function(chosen) {
-                $('#asOfDate').val(chosen.format('YYYY-MM-DD'));
-                updateAsOfDateDisplay();
-                refreshTable();
-            });
-
-            // Modal as-of date picker - initialize with same date as main
-            $('#modal-as-of-date').daterangepicker({
-                singleDatePicker: true,
-                showDropdowns: true,
-                locale: {
-                    format: 'MMM DD, YYYY'
+                xhrFields: {
+                    responseType: 'blob'
                 },
-                startDate: moment($('#asOfDate').val() || undefined)
-            });
+                success: function(blob, status, xhr) {
+                    let filename = xhr.getResponseHeader('Content-Disposition')
+                        .split('filename=')[1]
+                        .replace(/"/g, '');
 
-            // If user changes date inside modal, immediately reflect the outside display (live preview)
-            $('#modal-as-of-date').on('apply.daterangepicker', function(ev, picker) {
-                const chosen = picker.startDate;
-                // Update main picker and hidden value
-                if ($('#asOfDatePicker').data('daterangepicker')) {
-                    $('#asOfDatePicker').data('daterangepicker').setStartDate(chosen);
-                } else {
-                    $('#asOfDatePicker').val(chosen.format('MMM DD, YYYY'));
+                    if (format === "print") {
+                        let fileURL = URL.createObjectURL(blob);
+                        let printWindow = window.open(fileURL);
+                        printWindow.onload = function() {
+                            printWindow.focus();
+                            printWindow.print();
+                        };
+                    } else {
+                        let link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(blob);
+                        link.download = filename;
+                        link.click();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Export failed:', xhr.responseText);
+                    alert('Export failed! Check console.');
                 }
-                $('#asOfDate').val(chosen.format('YYYY-MM-DD'));
-                refreshTable();
-                updateAsOfDateDisplay();
             });
         }
+    </script>
 
-        function initializeModalHandlers() {
+    <script>
+        $(document).ready(function() {
+            // Global variables
+            window.reportOptions = {
+                divideBy1000: false,
+                hideZeroAmounts: false,
+                roundWholeNumbers: false,
+                negativeFormat: '-100',
+                showInRed: false,
+                companyLogo: false,
+                reportPeriod: true,
+                companyName: true,
+                headerAlignment: 'center',
+                datePrepared: true,
+                timePrepared: true,
+                reportBasis: true,
+                footerAlignment: 'center'
+            };
+
+            // Initialize date range picker
+            $('#daterange').daterangepicker({
+                startDate: moment($('#filter-start-date').val()),
+                endDate: moment($('#filter-end-date').val()),
+                opens: 'left',
+                autoApply: true,
+                locale: {
+                    format: 'MM/DD/YYYY'
+                },
+                ranges: {
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1,
+                        'month').endOf('month')],
+                    'This Quarter': [moment().startOf('quarter'), moment().endOf('quarter')],
+                    'This Year': [moment().startOf('year'), moment().endOf('year')]
+                }
+            }, function(start, end) {
+                // Update hidden inputs with formatted dates for the server
+                $('#filter-start-date').val(start.format('YYYY-MM-DD'));
+                $('#filter-end-date').val(end.format('YYYY-MM-DD'));
+
+                // Update display
+                updateDateDisplay();
+
+                // Auto refresh data
+                refreshData();
+            });
+
             // General Options Modal
-            $('#general-options-btn').on('click', function(e) {
-                e.preventDefault();
+            $('#general-options-btn').on('click', function() {
                 $('#general-options-overlay').show();
             });
 
@@ -767,439 +1418,737 @@
                 }
             });
 
-            // Filter Modal
-            $('#filter-btn').on('click', function(e) {
-                e.preventDefault();
-                // Sync modal values with main controls
-                syncFilterModalValues();
-                $('#filter-overlay').show();
+            // Columns Modal
+            $('#columns-btn').on('click', function() {
+                $('#columns-overlay').show();
             });
 
-            $('#close-filter').on('click', function() {
-                $('#filter-overlay').hide();
+            $('#close-columns').on('click', function() {
+                $('#columns-overlay').hide();
             });
 
-            $('#filter-overlay').on('click', function(e) {
+            $('#columns-overlay').on('click', function(e) {
                 if (e.target === this) {
-                    $('#filter-overlay').hide();
+                    $('#columns-overlay').hide();
                 }
             });
 
-            // Apply filters button
-            $('#apply-filters').on('click', function() {
-                applyFiltersFromModal();
-                $('#filter-overlay').hide();
+            // Initialize Sortable for column reordering
+            if (document.getElementById('sortable-columns')) {
+                new Sortable(document.getElementById('sortable-columns'), {
+                    animation: 150,
+                    handle: '.handle',
+                    onEnd: function() {
+                        updateColumnOrder();
+                    }
+                });
+            }
+
+            // Handle period filter changes
+            $('.filter-period').on('change', function() {
+                updateDateRange($(this).val());
             });
 
-            // General options change handlers
+            // Update date range based on period selection
+            function updateDateRange(period) {
+                const today = moment();
+                let startDate, endDate;
+
+                switch (period) {
+                    case 'all_dates':
+                        startDate = null;
+                        endDate = null;
+                        break;
+
+                    case 'custom_date':
+                        // Do nothing, let user pick manually
+                        return;
+
+                    case 'today':
+                        startDate = today.clone();
+                        endDate = today.clone();
+                        break;
+
+                    case 'yesterday':
+                        startDate = today.clone().subtract(1, 'day');
+                        endDate = today.clone().subtract(1, 'day');
+                        break;
+
+                    case 'this_week':
+                        startDate = today.clone().startOf('week');
+                        endDate = today.clone().endOf('week');
+                        break;
+
+                    case 'this_week_to_date':
+                        startDate = today.clone().startOf('week');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_week':
+                        startDate = today.clone().subtract(1, 'week').startOf('week');
+                        endDate = today.clone().subtract(1, 'week').endOf('week');
+                        break;
+
+                    case 'last_week_to_date':
+                        startDate = today.clone().subtract(1, 'week').startOf('week');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_week_to_today':
+                        startDate = today.clone().subtract(1, 'week').startOf('week');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_month':
+                        startDate = today.clone().startOf('month');
+                        endDate = today.clone().endOf('month');
+                        break;
+
+                    case 'this_month_to_date':
+                        startDate = today.clone().startOf('month');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_month':
+                        startDate = today.clone().subtract(1, 'month').startOf('month');
+                        endDate = today.clone().subtract(1, 'month').endOf('month');
+                        break;
+
+                    case 'last_month_to_date':
+                        startDate = today.clone().subtract(1, 'month').startOf('month');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_month_to_today':
+                        startDate = today.clone().subtract(1, 'month').startOf('month');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_quarter':
+                        startDate = today.clone().startOf('quarter');
+                        endDate = today.clone().endOf('quarter');
+                        break;
+
+                    case 'this_quarter_to_date':
+                        startDate = today.clone().startOf('quarter');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_quarter':
+                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
+                        endDate = today.clone().subtract(1, 'quarter').endOf('quarter');
+                        break;
+
+                    case 'last_quarter_to_date':
+                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_quarter_to_today':
+                        startDate = today.clone().subtract(1, 'quarter').startOf('quarter');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_year':
+                        startDate = today.clone().startOf('year');
+                        endDate = today.clone().endOf('year');
+                        break;
+
+                    case 'this_year_to_date':
+                        startDate = today.clone().startOf('year');
+                        endDate = today.clone();
+                        break;
+
+                    case 'this_year_to_last_month':
+                        startDate = today.clone().startOf('year');
+                        endDate = today.clone().subtract(1, 'month').endOf('month');
+                        break;
+
+                    case 'last_year':
+                        startDate = today.clone().subtract(1, 'year').startOf('year');
+                        endDate = today.clone().subtract(1, 'year').endOf('year');
+                        break;
+
+                    case 'last_year_to_date':
+                        startDate = today.clone().subtract(1, 'year').startOf('year');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_year_to_today':
+                        startDate = today.clone().subtract(1, 'year').startOf('year');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_7_days':
+                        startDate = today.clone().subtract(6, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_30_days':
+                        startDate = today.clone().subtract(29, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_90_days':
+                        startDate = today.clone().subtract(89, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'last_12_months':
+                        startDate = today.clone().subtract(12, 'months').startOf('month');
+                        endDate = today.clone().endOf('month');
+                        break;
+
+                    case 'since_30_days_ago':
+                        startDate = today.clone().subtract(30, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'since_60_days_ago':
+                        startDate = today.clone().subtract(60, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'since_90_days_ago':
+                        startDate = today.clone().subtract(90, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'since_365_days_ago':
+                        startDate = today.clone().subtract(365, 'days');
+                        endDate = today.clone();
+                        break;
+
+                    case 'next_week':
+                        startDate = today.clone().add(1, 'week').startOf('week');
+                        endDate = today.clone().add(1, 'week').endOf('week');
+                        break;
+
+                    case 'next_4_weeks':
+                        startDate = today.clone().add(1, 'week').startOf('week');
+                        endDate = today.clone().add(4, 'week').endOf('week');
+                        break;
+
+                    case 'next_month':
+                        startDate = today.clone().add(1, 'month').startOf('month');
+                        endDate = today.clone().add(1, 'month').endOf('month');
+                        break;
+
+                    case 'next_quarter':
+                        startDate = today.clone().add(1, 'quarter').startOf('quarter');
+                        endDate = today.clone().add(1, 'quarter').endOf('quarter');
+                        break;
+
+                    case 'next_year':
+                        startDate = today.clone().add(1, 'year').startOf('year');
+                        endDate = today.clone().add(1, 'year').endOf('year');
+                        break;
+
+                    default:
+                        startDate = today.clone().startOf('month');
+                        endDate = today.clone();
+                }
+
+                // Update the inputs if not custom_date or all_dates
+                // if (startDate && endDate) {
+                //     $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
+                //     $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
+                // }
+                // Update hidden date fields
+                $('#filter-start-date').val(startDate.format('YYYY-MM-DD'));
+                $('#filter-end-date').val(endDate.format('YYYY-MM-DD'));
+
+                // Update DateRangePicker to reflect the new dates
+                // $('#daterange').data('daterangepicker').setStartDate(startDate);
+                // $('#daterange').data('daterangepicker').setEndDate(endDate);
+                updateDateDisplay();
+                refreshData();
+            }
+
+            const $last = $('.last-updated');
+            let lastUpdatedAt = Date.now();
+            let tickerId = null;
+
+            function formatRelative(ts) {
+                const s = Math.floor((Date.now() - ts) / 1000);
+                if (s < 5) return 'just now';
+                if (s < 60) return `${s} seconds ago`;
+                const m = Math.floor(s / 60);
+                if (m < 60) return m === 1 ? '1 minute ago' : `${m} minutes ago`;
+                const h = Math.floor(m / 60);
+                if (h < 24) return h === 1 ? '1 hour ago' : `${h} hours ago`;
+                const d = Math.floor(h / 24);
+                return d === 1 ? '1 day ago' : `${d} days ago`;
+            }
+
+            function updateLabel() {
+                $last.text(`Last updated ${formatRelative(lastUpdatedAt)}`);
+            }
+
+            function markNow() {
+                lastUpdatedAt = Date.now();
+                updateLabel();
+                if (tickerId) clearInterval(tickerId);
+                tickerId = setInterval(updateLabel, 30 * 1000);
+            }
+            markNow();
+
+            // Update date display
+            function updateDateDisplay() {
+                const startDate = moment($('#filter-start-date').val());
+                const endDate = moment($('#filter-end-date').val());
+
+                const formattedStart = startDate.format('MMMM D, YYYY');
+                const formattedEnd = endDate.format('MMMM D, YYYY');
+
+                $('#date-range-display').text(' As of  ' + formattedEnd);
+            }
+
+            // Refresh data function
+            function refreshData() {
+                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
+                    window.LaravelDataTables["customer-balance-table"].draw();
+                } else {
+                    console.log('DataTable not yet initialized');
+                    setTimeout(refreshData, 100);
+                }
+            }
+
+            // Handle date changes
+            $('#filter-start-date, #filter-end-date').on('apply.daterangepicker', function() {
+                updateDateDisplay();
+                refreshData();
+            });
+
+            // Handle account filter changes
+            $('#filter-account').on('change', function() {
+                refreshData();
+            });
+            $('#filter-end-date').on('change', function() {
+                $('#sidebar-filter-end-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+            $('#filter-start-date').on('change', function() {
+                $('#sidebar-filter-start-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+
+            $('#sidebar-filter-end-date').on('change', function() {
+                $('#filter-end-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+            $('#sidebar-filter-start-date').on('change', function() {
+                $('#filter-start-date').val($(this).val());
+                updateDateDisplay();
+                refreshData();
+            });
+
+            // Handle accounting method changes
+            $('#accounting-method').on('change', function() {
+                refreshData();
+            });
+
+            // Setup DataTable ajax parameters
+            $('#customer-balance-table').on('preXhr.dt', function(e, settings, data) {
+                data.startDate = moment($('#filter-start-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
+                data.endDate = moment($('#filter-end-date').val(), 'YYYY-MM-DD').format('YYYY-MM-DD');
+                data.account_id = $('#filter-account').val();
+                data.accounting_method = $('#accounting-method').val();
+                data.reportOptions = window.reportOptions;
+            });
+
+            // General Options functionality
+            function applyGeneralOptions() {
+                // Update global options object
+                window.reportOptions.divideBy1000 = $('#divide-by-1000').prop('checked');
+                window.reportOptions.hideZeroAmounts = $('#hide-zero-amounts').prop('checked');
+                window.reportOptions.roundWholeNumbers = $('#round-whole-numbers').prop('checked');
+                window.reportOptions.negativeFormat = $('#negative-format').val();
+                window.reportOptions.showInRed = $('#show-in-red').prop('checked');
+                window.reportOptions.companyLogo = $('#company-logo').prop('checked');
+                window.reportOptions.reportPeriod = $('#report-period').prop('checked');
+                window.reportOptions.companyName = $('#company-name').prop('checked');
+                window.reportOptions.headerAlignment = $('#header-alignment').val();
+                window.reportOptions.datePrepared = $('#date-prepared').prop('checked');
+                window.reportOptions.timePrepared = $('#time-prepared').prop('checked');
+                window.reportOptions.reportBasis = $('#report-basis').prop('checked');
+                window.reportOptions.footerAlignment = $('#footer-alignment').val();
+
+                // Apply number formatting
+                applyNumberFormatting(window.reportOptions);
+
+                // Apply header/footer settings
+                applyHeaderFooterSettings(window.reportOptions);
+
+                // Refresh the table with new settings
+                refreshData();
+            }
+
+            function applyNumberFormatting(options) {
+                // Remove any existing custom styles
+                $('#custom-number-format').remove();
+
+                // Create custom style tag
+                let customCSS = '<style id="custom-number-format">';
+
+                if (options.showInRed) {
+                    customCSS += '.negative-amount { color: #dc2626 !important; }';
+                }
+
+                if (options.hideZeroAmounts) {
+                    customCSS += '.zero-amount { display: none !important; }';
+                }
+
+                customCSS += '</style>';
+                $('head').append(customCSS);
+            }
+
+            function applyHeaderFooterSettings(options) {
+                // Update header alignment
+                $('.report-title-section').css('text-align', options.headerAlignment);
+
+                // Show/hide header elements
+                if (!options.companyName) {
+                    $('.company-name').hide();
+                } else {
+                    $('.company-name').show();
+                }
+
+                if (!options.reportPeriod) {
+                    $('.date-range').hide();
+                } else {
+                    $('.date-range').show();
+                }
+
+                // Add footer if it doesn't exist
+                if ($('.report-footer').length === 0) {
+                    const currentDate = new Date();
+                    const dateStr = currentDate.toLocaleDateString();
+                    const timeStr = currentDate.toLocaleTimeString();
+                    const basisStr = $('#accounting-method').val() === 'accrual' ? 'Accrual Basis' : 'Cash Basis';
+
+                    let footerHTML =
+                        '<div class="report-footer" style="padding: 20px; border-top: 1px solid #e6e6e6; text-align: ' +
+                        options.footerAlignment + '; font-size: 12px; color: #6b7280;">';
+
+                    if (options.datePrepared) {
+                        footerHTML += '<div>Date Prepared: ' + dateStr + '</div>';
+                    }
+
+                    if (options.timePrepared) {
+                        footerHTML += '<div>Time Prepared: ' + timeStr + '</div>';
+                    }
+
+                    if (options.reportBasis) {
+                        footerHTML += '<div>Report Basis: ' + basisStr + '</div>';
+                    }
+
+                    footerHTML += '</div>';
+
+                    $('.report-content').append(footerHTML);
+                } else {
+                    // Update existing footer
+                    $('.report-footer').css('text-align', options.footerAlignment);
+
+                    if (!options.datePrepared) {
+                        $('.report-footer div:contains("Date Prepared")').hide();
+                    } else {
+                        $('.report-footer div:contains("Date Prepared")').show();
+                    }
+
+                    if (!options.timePrepared) {
+                        $('.report-footer div:contains("Time Prepared")').hide();
+                    } else {
+                        $('.report-footer div:contains("Time Prepared")').show();
+                    }
+
+                    if (!options.reportBasis) {
+                        $('.report-footer div:contains("Report Basis")').hide();
+                    } else {
+                        $('.report-footer div:contains("Report Basis")').show();
+                    }
+                }
+            }
+
+            // Apply general options when checkboxes change
             $('.general-options-modal input, .general-options-modal select').on('change', function() {
                 applyGeneralOptions();
             });
-        }
 
-        function initializeViewOptions() {
-            // View Options Dropdown
-            $('#view-options-btn').on('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                $('#view-options-dropdown').toggle();
-            });
-
-            // View option click handlers
-            $('.view-option-item').on('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const value = $(this).data('value');
-
-                if (value === 'compact' || value === 'normal') {
-                    setViewType(value);
-                } else if (value === 'expand' || value === 'collapse') {
-                    setExpandState(value);
-                }
-
-                applyViewState();
-                updateViewCheckmarks();
-                $('#view-options-dropdown').hide();
-            });
-
-            // Initialize view state and UI
-            setExpandState('expand');
-            applyViewState();
-            updateViewCheckmarks();
-        }
-
-        function setupDataTableEvents() {
-            if (balanceSheetTable) {
-                // Handle table redraw
-                $('#balance-sheet-table').on('draw.dt', function() {
-                    attachToggleHandlers();
-                    // ensure view state (preserve expand/collapse on redraw)
-                    applyViewState();
-                });
-
-                // Send additional data with Ajax requests
-                $('#balance-sheet-table').on('preXhr.dt', function(e, settings, data) {
-                    data.asOfDate = $('#asOfDate').val() || moment().format('YYYY-MM-DD');
-                    data.accounting_method = $('#accounting-method').val();
-                });
-
-                refreshTable();
-
-                // initial attach if table already drawn
-                attachToggleHandlers();
-            }
-        }
-        $(document).on('click', '.toggle-section', handleSectionToggle);
-
-        function handleSectionToggle(e) {
-            e.preventDefault();
-
-            // Don't allow toggle in compact view
-            if (window.viewState.viewType === 'compact') {
-                return;
-            }
-
-            const $this = $(this);
-            const group = $this.closest('tr').data('row-id');
-            const $row = $this.closest('tr');
-            const $chevron = $this.find('.toggle-chevron');
-            const $sectionTotal = $row.find('.section-total-amount[data-group="' + group + '"]');
-            const $childRows = $('.group-' + group);
-
-            if ($chevron.length === 0) return;
-            if ($chevron.hasClass('fa-chevron-down')) {
-                // Collapse section
-                $childRows.hide();
-                $chevron.removeClass('fa-chevron-down').addClass('fa-chevron-right');
-                $sectionTotal.show();
-            } else {
-                // Expand section
-                $childRows.show();
-                $chevron.removeClass('fa-chevron-right').addClass('fa-chevron-down');
-                $sectionTotal.hide();
-            }
-        }
-
-        function toggleSection($headerRow) {
-            if (window.viewState.viewType === 'compact') {
-                return; // Don't allow toggle in compact view
-            }
-
-            const sectionId = $headerRow.attr('data-row-id');
-            if (!sectionId) return;
-
-            if ($headerRow.hasClass('section-expanded')) {
-                // Collapse section
-                collapseSection(sectionId);
-            } else {
-                // Expand section
-                expandSection(sectionId);
-            }
-        }
-
-        function expandSection(sectionId) {
-            const $headerRow = $('[data-row-id="' + sectionId + '"]');
-            const $childRows = $('[data-parent="' + sectionId + '"]');
-
-            $headerRow.addClass('section-expanded');
-            $childRows.addClass('section-expanded').show();
-            $headerRow.find('.toggle-chevron').removeClass('fa-chevron-right').addClass('fa-chevron-down');
-            $headerRow.find('.section-total-amount').hide();
-
-            expandedSections.add(sectionId);
-        }
-
-        function collapseSection(sectionId) {
-            const $headerRow = $('[data-row-id="' + sectionId + '"]');
-            const $childRows = $('[data-parent="' + sectionId + '"]');
-
-            $headerRow.removeClass('section-expanded');
-            $childRows.removeClass('section-expanded').hide();
-            $headerRow.find('.toggle-chevron').removeClass('fa-chevron-down').addClass('fa-chevron-right');
-            $headerRow.find('.section-total-amount').show();
-
-            expandedSections.delete(sectionId);
-        }
-
-        function setViewType(type) {
-            if (type === 'compact') {
-                window.viewState.viewType = 'compact';
-                window.viewState.expandState = 'collapse';
-            } else if (type === 'normal') {
-                window.viewState.viewType = 'normal';
-                // keep existing expandState
-            }
-        }
-
-        function setExpandState(state) {
-            if (state === 'collapse') {
-                window.viewState.expandState = 'collapse';
-                if (window.viewState.viewType !== 'compact') {
-                    window.viewState.viewType = 'normal';
-                }
-            } else if (state === 'expand') {
-                window.viewState.expandState = 'expand';
-                window.viewState.viewType = 'normal';
-            }
-        }
-
-        function applyViewState() {
-            const $reportContent = $('#report-content');
-            $reportContent.removeClass('compact-view');
-
-            if (window.viewState.viewType === 'compact') {
-                $reportContent.addClass('compact-view');
-                expandedSections.clear();
-                // set all header icons to collapsed state visually
-                $('.section-header-row').each(function() {
-                    $(this).removeClass('section-expanded').find('.toggle-chevron').removeClass('fa-chevron-down')
-                        .addClass('fa-chevron-right');
-                });
-                // hide child rows
-                $('.child-row').hide();
-                $('.subtotal-row').hide();
-                $('.section-total-amount').show();
-            } else {
-                if (window.viewState.expandState === 'expand') {
-                    expandAllSections();
-                } else {
-                    collapseAllSections();
-                }
-            }
-        }
-
-        function expandAllSections() {
-            $('.section-header-row').each(function() {
-                const sectionId = $(this).attr('data-row-id');
-                if (sectionId) {
-                    expandSection(sectionId);
-                }
-            });
-        }
-
-        function collapseAllSections() {
-            $('.section-header-row').each(function() {
-                const sectionId = $(this).attr('data-row-id');
-                if (sectionId) {
-                    collapseSection(sectionId);
-                }
-            });
-        }
-
-        function updateViewCheckmarks() {
-            $('.view-option-item').removeClass('active');
-            // view type
-            $('.view-option-item[data-value="' + window.viewState.viewType + '"]').addClass('active');
-            // expand/collapse
-            $('.view-option-item[data-value="' + window.viewState.expandState + '"]').addClass('active');
-        }
-
-        function syncFilterModalValues() {
-            // set modal datepicker start to main date
-            const mainPicker = $('#asOfDatePicker').data('daterangepicker');
-            if (mainPicker) {
-                $('#modal-as-of-date').data('daterangepicker').setStartDate(mainPicker.startDate);
-            } else {
-                $('#modal-as-of-date').val($('#asOfDatePicker').val());
-            }
-
-            $('#modal-accounting-method').val($('#accounting-method').val());
-        }
-
-        function applyFiltersFromModal() {
-            // Get values from modal
-            const modalPicker = $('#modal-as-of-date').data('daterangepicker');
-            const modalAsOfDate = modalPicker ? modalPicker.startDate : moment($('#modal-as-of-date').val(),
-                'MMM DD, YYYY');
-            const modalAccountingMethod = $('#modal-accounting-method').val();
-
-            // Update main controls
-            if ($('#asOfDatePicker').data('daterangepicker')) {
-                $('#asOfDatePicker').data('daterangepicker').setStartDate(modalAsOfDate);
-            } else {
-                $('#asOfDatePicker').val(modalAsOfDate.format('MMM DD, YYYY'));
-            }
-            $('#asOfDate').val(modalAsOfDate.format('YYYY-MM-DD'));
-            $('#accounting-method').val(modalAccountingMethod);
-
-            // Update display and refresh table
-            updateAsOfDateDisplay();
-            refreshTable();
-        }
-
-        function updateAsOfDateDisplay() {
-            const asOfDate = $('#asOfDate').val();
-            if (asOfDate) {
-                $('#as-of-date-display').text('As of ' + moment(asOfDate).format('MMM DD, YYYY'));
-            } else {
-                $('#as-of-date-display').text('As of ' + moment().format('MMM DD, YYYY'));
-            }
-        }
-
-        function refreshTable() {
-            if (balanceSheetTable) {
-                balanceSheetTable.draw(false);
-            }
-        }
-
-        function applyGeneralOptions() {
-            // Update global options object
-            window.reportOptions.divideBy1000 = $('#divide-by-1000').prop('checked');
-            window.reportOptions.hideZeroAmounts = $('#hide-zero-amounts').prop('checked');
-            window.reportOptions.roundWholeNumbers = $('#round-whole-numbers').prop('checked');
-            window.reportOptions.negativeFormat = $('#negative-format').val();
-            window.reportOptions.showInRed = $('#show-in-red').prop('checked');
-            window.reportOptions.companyLogo = $('#company-logo').prop('checked');
-            window.reportOptions.reportPeriod = $('#report-period').prop('checked');
-            window.reportOptions.companyName = $('#company-name').prop('checked');
-            window.reportOptions.headerAlignment = $('#header-alignment').val();
-            window.reportOptions.datePrepared = $('#date-prepared').prop('checked');
-            window.reportOptions.timePrepared = $('#time-prepared').prop('checked');
-            window.reportOptions.reportBasis = $('#report-basis').prop('checked');
-            window.reportOptions.footerAlignment = $('#footer-alignment').val();
-
-            // Apply formatting
-            applyNumberFormatting();
-            applyHeaderFooterSettings();
-            applyCellFormatting();
-            refreshTable();
-        }
-
-        function applyNumberFormatting() {
-            // Remove existing custom styles
-            $('#custom-number-format').remove();
-
-            let customCSS = '<style id="custom-number-format">';
-
-            if (window.reportOptions.showInRed) {
-                customCSS += '.negative-amount { color: #dc2626 !important; }';
-            }
-
-            if (window.reportOptions.hideZeroAmounts) {
-                customCSS += '.zero-amount { display: none !important; }';
-            }
-
-            customCSS += '</style>';
-            $('head').append(customCSS);
-        }
-
-        function applyHeaderFooterSettings() {
-            // Update header alignment
-            $('.report-title-section').css('text-align', window.reportOptions.headerAlignment);
-
-            // Show/hide header elements
-            $('.company-name').toggle(window.reportOptions.companyName);
-            $('.date-range').toggle(window.reportOptions.reportPeriod);
-
-            // Handle footer
-            updateReportFooter();
-        }
-
-        function updateReportFooter() {
-            $('.report-footer').remove();
-
-            if (window.reportOptions.datePrepared || window.reportOptions.timePrepared || window.reportOptions
-                .reportBasis) {
-                const currentDate = new Date();
-                const dateStr = currentDate.toLocaleDateString();
-                const timeStr = currentDate.toLocaleTimeString();
-                const basisStr = $('#accounting-method').val() === 'accrual' ? 'Accrual Basis' : 'Cash Basis';
-
-                let footerHTML =
-                    '<div class="report-footer" style="padding: 20px; border-top: 1px solid #e6e6e6; text-align: ' +
-                    window.reportOptions.footerAlignment + '; font-size: 12px; color: #6b7280;">';
-
-                if (window.reportOptions.datePrepared) {
-                    footerHTML += '<div>Date Prepared: ' + dateStr + '</div>';
-                }
-
-                if (window.reportOptions.timePrepared) {
-                    footerHTML += '<div>Time Prepared: ' + timeStr + '</div>';
-                }
-
-                if (window.reportOptions.reportBasis) {
-                    footerHTML += '<div>Report Basis: ' + basisStr + '</div>';
-                }
-
-                footerHTML += '</div>';
-                $('#report-content').append(footerHTML);
-            }
-        }
-
-        function applyCellFormatting() {
-            $('.balance-sheet-table tbody tr').each(function() {
-                const $row = $(this);
-
-                $row.find('td').each(function() {
-                    const $cell = $(this);
-                    const text = $cell.text().trim();
-
-                    if (text && !isNaN(text.replace(/[,$()]/g, '')) && text.replace(/[,$()]/g, '') !== '') {
-                        let value = parseFloat(text.replace(/[,$()]/g, ''));
-
-                        if (window.reportOptions.hideZeroAmounts && value === 0) {
-                            $cell.addClass('zero-amount');
-                            return;
-                        }
-
-                        if (window.reportOptions.divideBy1000) {
-                            value = value / 1000;
-                        }
-
-                        if (window.reportOptions.roundWholeNumbers) {
-                            value = Math.round(value);
-                        }
-
-                        // Format negatives
-                        if (value < 0) {
-                            $cell.addClass('negative-amount');
-                            switch (window.reportOptions.negativeFormat) {
-                                case '(100)':
-                                    $cell.text('(' + Math.abs(value).toLocaleString() + ')');
-                                    break;
-                                case '100-':
-                                    $cell.text(Math.abs(value).toLocaleString() + '-');
-                                    break;
-                                default:
-                                    $cell.text('-' + Math.abs(value).toLocaleString());
-                            }
-                        } else if (value > 0) {
-                            $cell.text(value.toLocaleString());
-                        }
+            // Column management
+            function updateColumnOrder() {
+                const order = [];
+                $('#sortable-columns .column-item').each(function() {
+                    const columnIndex = $(this).data('column');
+                    if (columnIndex !== undefined) {
+                        order.push(columnIndex);
                     }
                 });
-            });
-        }
 
-        // Format numbers after table draw
-        $(document).on('draw.dt', '#balance-sheet-table', function() {
-            applyCellFormatting();
-        });
+                // Store column order preference
+                localStorage.setItem('ledger-column-order', JSON.stringify(order));
+                console.log('Column order updated:', order);
 
-        // Keyboard shortcuts
-        $(document).on('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'e' || e.key === 'E')) {
-                e.preventDefault();
-                if (window.viewState.viewType !== 'compact') {
-                    setExpandState('expand');
-                    applyViewState();
-                    updateViewCheckmarks();
+                // Apply column order if DataTable supports it
+                if (window.LaravelDataTables && window.LaravelDataTables["customer-balance-table"]) {
+                    // Note: Column reordering requires ColReorder extension
+                    console.log('Column order would be applied:', order);
                 }
             }
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
-                e.preventDefault();
-                setExpandState('collapse');
-                applyViewState();
-                updateViewCheckmarks();
+
+            // Handle column visibility
+            $('.columns-modal input[type="checkbox"]').on('change', function() {
+                const columnIndex = $(this).closest('.column-item').data('column');
+                const isVisible = $(this).prop('checked');
+
+                if (columnIndex !== undefined && window.LaravelDataTables && window.LaravelDataTables[
+                        "customer-balance-table"]) {
+                    try {
+                        window.LaravelDataTables["customer-balance-table"].column(columnIndex).visible(
+                            isVisible);
+                    } catch (error) {
+                        console.log('Column visibility change:', columnIndex, isVisible);
+                    }
+                }
+
+                // Update column count badge
+                updateColumnCountBadge();
+            });
+
+            function updateColumnCountBadge() {
+                const visibleCount = $('.columns-modal input[type="checkbox"]:checked').length;
+                $('.badge').text(visibleCount);
             }
+
+            // Collapsible sections in General Options
+            $('.section-title').on('click', function() {
+                const section = $(this).next('.option-group');
+                const icon = $(this).find('.fa-chevron-up, .fa-chevron-down');
+
+                section.slideToggle();
+                if (icon.hasClass('fa-chevron-up')) {
+                    icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                } else {
+                    icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                }
+            });
+
+            // Add expand/collapse functionality for account groups
+            $(document).on('click', '.account-group', function() {
+                const accountId = $(this).data('account-id');
+                $('.account-row[data-parent="' + accountId + '"]').toggle();
+
+                // Toggle icon
+                const icon = $(this).find('.expand-icon');
+                if (icon.text() === '▼') {
+                    icon.text('►');
+                } else {
+                    icon.text('▼');
+                }
+            });
+
+            // Initialize with current selection
+            updateDateDisplay();
+
+            // Print functionality
+            $('.btn-icon[title="Print"]').on('click', function() {
+                // Create print-friendly version
+                const printWindow = window.open('', '_blank');
+                const printContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>A/R Aging Summary Report - Print</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; }
+                            .report-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                            .company-name { text-align: center; font-size: 16px; margin-bottom: 10px; }
+                            .date-range { text-align: center; font-size: 14px; margin-bottom: 20px; }
+                            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                            th { background-color: #f5f5f5; font-weight: bold; }
+                            .text-right { text-align: right; }
+                            .negative-amount { color: red; }
+                            @media print { body { margin: 0; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="report-title">A/R Aging Summary Report</div>
+                        <div class="company-name">${$('.company-name').text()}</div>
+                        <div class="date-range">${$('.date-range').text()}</div>
+                        <table>
+                            ${$('.customer-balance-table').html()}
+                        </table>
+                    </body>
+                    </html>
+                `;
+                printWindow.document.write(printContent);
+                printWindow.document.close();
+                printWindow.print();
+            });
+
+            // Save As functionality
+            $('.btn-save').on('click', function() {
+                const reportName = prompt('Enter report name:', 'A/R Aging Summary Report - ' + moment()
+                    .format(
+                        'YYYY-MM-DD'));
+                if (reportName) {
+                    // In a real application, this would save to the server
+                    alert('Report "' + reportName + '" would be saved with current settings');
+
+                    // Save current settings to localStorage for demo
+                    const settings = {
+                        name: reportName,
+                        startDate: $('#filter-start-date').val(),
+                        endDate: $('#filter-end-date').val(),
+                        account: $('#filter-account').val(),
+                        accountingMethod: $('#accounting-method').val(),
+                        options: window.reportOptions,
+                        savedAt: new Date().toISOString()
+                    };
+
+                    localStorage.setItem('saved-report-' + Date.now(), JSON.stringify(settings));
+                }
+            });
+
+            // Export functionality
+            /*$('.btn-icon[title="Export"]').on('click', function() {
+                // Create export menu
+                const exportOptions = [{
+                        text: 'Export to Excel',
+                        action: 'excel'
+                    },
+                    {
+                        text: 'Export to PDF',
+                        action: 'pdf'
+                    },
+                    {
+                        text: 'Export to CSV',
+                        action: 'csv'
+                    }
+                ];
+
+                const option = prompt(
+                    'Choose export format:\n1. Excel\n2. PDF\n3. CSV\n\nEnter number (1-3):');
+
+
+                // Get table ID dynamically (assumes closest table in DOM)
+                const tableId = $(this).closest('div').find('table').attr('id');
+                const pageTitle = document.title || 'Report';
+
+                switch (option) {
+                    case '1':
+                        // alert('Excel export would be triggered');
+                        $("#ExprotExcel").click();
+                        break;
+                    case '2':
+                        $("#ExprotPDF").click();
+                        // alert('PDF export would be triggered');
+                        break;
+                    case '3':
+                        alert('CSV export would be triggered');
+                        break;
+                    default:
+                        alert('Invalid option');
+                }
+            });*/
+
+            // View options functionality
+            $('#view-options-btn').on('click', function() {
+                alert('View options panel would open here with additional display settings');
+            });
+
+            // Filter button functionality
+            $('#filter-btn').on('click', function() {
+                alert('Advanced filter panel would open here');
+            });
+
+            // Refresh button functionality
+            $('.btn-icon[title="Refresh"]').on('click', function() {
+                $(this).find('i').addClass('fa-spin');
+                refreshData();
+                setTimeout(() => {
+                    $(this).find('i').removeClass('fa-spin');
+                }, 1000);
+            });
+
+            // Initialize general options with default values
+            setTimeout(function() {
+                applyGeneralOptions();
+                updateColumnCountBadge();
+            }, 100);
+
+            // Format numbers in table based on options
+            $(document).on('draw.dt', '#customer-balance-table', function() {
+                if (window.reportOptions) {
+                    $('.customer-balance-table tbody tr').each(function() {
+                        const $row = $(this);
+
+                        // Apply number formatting to amount columns
+                        $row.find('td').each(function(index) {
+                            const $cell = $(this);
+                            const text = $cell.text().trim();
+
+                            // Check if cell contains a number
+                            if (text && !isNaN(text.replace(/[,$()]/g, ''))) {
+                                let value = parseFloat(text.replace(/[,$()]/g, ''));
+
+                                if (window.reportOptions.hideZeroAmounts && value === 0) {
+                                    $cell.addClass('zero-amount');
+                                }
+
+                                if (window.reportOptions.divideBy1000) {
+                                    value = value / 1000;
+                                }
+
+                                if (window.reportOptions.roundWholeNumbers) {
+                                    value = Math.round(value);
+                                }
+
+                                // Format negative numbers
+                                if (value < 0) {
+                                    $cell.addClass('negative-amount');
+
+                                    switch (window.reportOptions.negativeFormat) {
+                                        case '(100)':
+                                            $cell.text('(' + Math.abs(value)
+                                                .toLocaleString() + ')');
+                                            break;
+                                        case '100-':
+                                            $cell.text(Math.abs(value).toLocaleString() +
+                                                '-');
+                                            break;
+                                        default:
+                                            $cell.text('-' + Math.abs(value)
+                                                .toLocaleString());
+                                    }
+                                } else if (value > 0) {
+                                    $cell.text(value.toLocaleString());
+                                }
+                            }
+                        });
+                    });
+                }
+            });
+
+            // Keyboard shortcuts
+            $(document).on('keydown', function(e) {
+                // Ctrl/Cmd + P for print
+                if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                    e.preventDefault();
+                    $('.btn-icon[title="Print"]').click();
+                }
+
+                // Escape to close modals
+                if (e.key === 'Escape') {
+                    $('.modal-overlay').hide();
+                }
+            });
+
+            console.log('QuickBooks-style General Ledger initialized successfully');
         });
-
-        //set time for 4 sec to run expand all function
-        setTimeout(function() {
-            expandAllSections();
-        }, 4000);
     </script>
-
-    {!! $dataTable->scripts() !!}
 @endpush

@@ -19,7 +19,6 @@
         <h1>QuickBooks Import</h1>
 
         <!-- QuickBooks Connection Status and Actions -->
-        <div class="mb-4">
             @php
                 $qbController = new \App\Http\Controllers\QuickBooksApiController();
                 $connected = $qbController->accessToken() && $qbController->realmId();
@@ -29,6 +28,72 @@
                 <div class="alert alert-success">
                     <strong>Connected to QuickBooks</strong>
                     <a href="{{ route('quickbooks.disconnect') }}" class="btn btn-sm btn-outline-danger ml-2">Disconnect</a>
+                </div>
+                <div class="buttons">
+                    <form action="{{ route('quickbooks.import.full') }}" method="POST" id="fullImportForm">
+                        @csrf
+                        <button type="submit" class="btn btn-primary btn-lg" id="startImportBtn">
+                            <i class="fa fa-play"></i> Start Full Import
+                        </button>
+                    </form>
+
+                    <!-- Progress Bar -->
+                    <div id="importProgress" class="mt-4" style="display: none;">
+                        <h4>Import Progress</h4>
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar" role="progressbar"
+                                style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                0%
+                            </div>
+                        </div>
+                        <div id="currentStep" class="text-muted mb-3">Preparing import...</div>
+                    </div>
+
+                    <!-- Logs Section -->
+                    <div id="importLogs" class="mt-4" style="display: none;">
+                        <h4>Import Logs</h4>
+                        <div id="logsContainer" class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto;">
+                            <div class="text-muted">Logs will appear here...</div>
+                        </div>
+                    </div>
+
+                    <!-- Legacy Import Buttons (Hidden by default, can be shown for debugging) -->
+                    <div id="legacyButtons" style="display: none;">
+                        <hr>
+                        <h5>Individual Imports (Legacy)</h5>
+                        <form action="{{ route('quickbooks.import.customers') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="btn btn-primary">Import Customers</button>
+                        </form>
+                        <form action="{{ route('quickbooks.import.chartOfAccounts') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="btn btn-primary">Import Chart of Accounts</button>
+                        </form>
+                        <form action="{{ route('quickbooks.import.vendors') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="btn btn-primary">Import Vendors</button>
+                        </form>
+                        <form action="{{ route('quickbooks.import.items') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="btn btn-primary">Import Items</button>
+                        </form>
+                        <form action="{{ route('quickbooks.import.invoices') }}" method="POST" id="importInvoicesForm">
+                            @csrf
+                            <button type="submit" class="btn btn-primary" id="importInvoicesBtn">Import Invoices</button>
+                        </form>
+                        <form action="{{ route('quickbooks.import.bills') }}" method="POST" id="importBillsForm">
+                            @csrf
+                            <button type="submit" class="btn btn-success" id="importBillsBtn">Import Bills</button>
+                        </form>
+                        <form action="{{ route('quickbooks.import.expenses') }}" method="POST" id="importExpensesForm">
+                            @csrf
+                            <button type="submit" class="btn btn-warning" id="importExpensesBtn">Import Expenses</button>
+                        </form>
+                        <form action="{{ route('quickbooks.import.journalReport') }}" method="POST" id="journalReportForm">
+                            @csrf
+                            <button type="submit" class="btn btn-info" id="journalReportBtn">Import Journal Report</button>
+                        </form>
+                    </div>
                 </div>
             @else
                 <div class="alert alert-warning">
@@ -131,6 +196,7 @@
 
                 progressDiv.style.display = 'block';
                 logsDiv.style.display = 'block';
+
 
                 // Clear previous logs and reset counters
                 displayedLogs.clear();

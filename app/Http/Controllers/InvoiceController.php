@@ -141,8 +141,9 @@ class InvoiceController extends Controller
 
 private function calculateInvoiceSummary($ownerId, $column)
 {
-    $now  = Carbon::today();
-    $from = $now->copy()->subDays(365);
+    $now = Carbon::today();
+    $from365 = $now->copy()->subDays(365);
+    $from30 = $now->copy()->subDays(30);
 
     $invoices = Invoice::where($column, '=', $ownerId)->get();
 
@@ -153,8 +154,8 @@ private function calculateInvoiceSummary($ownerId, $column)
         'partially_paid' => ['amount' => 0, 'count' => 0],
         'paid'           => ['amount' => 0, 'count' => 0],
         'approved'       => ['amount' => 0, 'count' => 0],
-        'overdue'        => ['amount' => 0, 'count' => 0],     // windowed (365d)
-        'not_due_yet'    => ['amount' => 0, 'count' => 0],     // windowed (365d)
+        'overdue'        => ['amount' => 0, 'count' => 0],     // 365d window
+        'not_due_yet'    => ['amount' => 0, 'count' => 0],     // 365d window
     ];
 
     foreach ($invoices as $invoice) {
@@ -164,34 +165,56 @@ private function calculateInvoiceSummary($ownerId, $column)
         $issueAt = $invoice->issue_date ? Carbon::parse($invoice->issue_date) : null;
         $dueAt   = $invoice->due_date   ? Carbon::parse($invoice->due_date)   : null;
 
-        $inWindow = $issueAt ? $issueAt->betweenIncluded($from, $now) : false;
+        $in365 = $issueAt ? $issueAt->betweenIncluded($from365, $now) : false;
+        $in30  = $issueAt ? $issueAt->betweenIncluded($from30, $now)  : false;
 
-        // ---- Left panel buckets (apply 365d window) ----
-        if ($due > 0 && $dueAt && $inWindow) {
+        // ---- Left panel: overdue / not due yet (365 days) ----
+        if ($due > 0 && $dueAt && $in365) {
             if ($dueAt->lt($now)) {
-                // unpaid & past due
                 $data['overdue']['amount'] += $due;
                 $data['overdue']['count']++;
             } elseif ($dueAt->gt($now)) {
-                // unpaid & due in future, regardless of status (draft/sent/partially paid/unpaid)
                 $data['not_due_yet']['amount'] += $due;
                 $data['not_due_yet']['count']++;
             }
-            // due today -> neither bucket
         }
 
-        // ---- Status buckets (leave as-is) ----
+        // ---- Status buckets ----
         switch ((int) $invoice->status) {
-            case 0: $data['draft']['amount'] += $total;            $data['draft']['count']++; break;
-            case 1: $data['sent']['amount'] += $total;             $data['sent']['count']++; break;
-            case 2: $data['unpaid']['amount'] += $due;             $data['unpaid']['count']++; break;
-            case 3: $data['partially_paid']['amount'] += $due;     $data['partially_paid']['count']++; break;
-            case 4: $data['paid']['amount'] += $total;             $data['paid']['count']++; break;
+            case 0:
+                $data['draft']['amount'] += $total;
+                $data['draft']['count']++;
+                break;
+
+            case 1:
+                $data['sent']['amount'] += $total;
+                $data['sent']['count']++;
+                break;
+
+            case 2:
+                $data['unpaid']['amount'] += $due;
+                $data['unpaid']['count']++;
+                break;
+
+            case 3: // partially paid — only count if within 30 days
+                if ($in30) {
+                    $data['partially_paid']['amount'] += $due;
+                    $data['partially_paid']['count']++;
+                }
+                break;
+
+            case 4: // paid — only count if within 30 days
+                if ($in30) {
+                    $data['paid']['amount'] += $total;
+                    $data['paid']['count']++;
+                }
+                break;
         }
     }
 
     return $data;
 }
+
 
     public function create($customerId)
     {

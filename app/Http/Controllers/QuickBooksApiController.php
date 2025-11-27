@@ -2,10 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Session;
-
+use App\Models\BankAccount;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Models\Invoice;
+use App\Models\InvoiceProduct;
+use App\Models\InvoicePayment;
+use App\Models\Product;
+use App\Models\Customer;
+use App\Models\Vender;
+use App\Models\ProductService;
+use App\Models\ChartOfAccount;
+use App\Models\ProductServiceCategory;
+use App\Models\ProductServiceUnit;
+use App\Models\ChartOfAccountType;
+use App\Models\ChartOfAccountSubType;
+use App\Models\ChartOfAccountParent;
+use App\Models\Bill;
+use App\Models\BillProduct;
+use App\Models\BillPayment;
+use App\Models\BillAccount;
+use App\Models\Employee;
+use App\Models\JournalEntry;
+use App\Models\JournalItem;
+use App\Models\TransactionLines;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
 class QuickBooksApiController extends Controller
 {
     protected $clientId;
@@ -15,18 +40,19 @@ class QuickBooksApiController extends Controller
     protected $scope;
     protected $redirectUri;
     public $baseUrl;
+    protected $userId;
 
-    // public function __construct() // production
-    // {
-    //     $this->clientId = 'AByYeIrpQQktbXur2EwxXINJWZzJTJrkuH8BRb7P5I2p9L4qrL';
-    //     $this->clientSecret = 'uBFqiKdEr9UvCps9SvmZh6ggRiu0CJxjPjMwhW4y';
-
-    //     $this->authUrl = 'https://appcenter.intuit.com/connect/oauth2';
-    //     $this->tokenUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
-    //     $this->scope = 'com.intuit.quickbooks.accounting openid profile email';
-    //     $this->redirectUri = 'https://update.creativesuite.co/quickbooks/callback';
-    //     $this->baseUrl = 'https://quickbooks.api.intuit.com';
-    // }
+    public function __construct() // production
+    {
+        $this->clientId = 'AByYeIrpQQktbXur2EwxXINJWZzJTJrkuH8BRb7P5I2p9L4qrL';
+        $this->clientSecret = 'uBFqiKdEr9UvCps9SvmZh6ggRiu0CJxjPjMwhW4y';
+        $this->userId = auth()->id();
+        $this->authUrl = 'https://appcenter.intuit.com/connect/oauth2';
+        $this->tokenUrl = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+        $this->scope = 'com.intuit.quickbooks.accounting openid profile email';
+        $this->redirectUri = 'https://update.creativesuite.co/quickbooks/callback';
+        $this->baseUrl = 'https://quickbooks.api.intuit.com';
+    }
     // public function __construct()
     // {
     //     // Directly read from env to avoid config caching issues
@@ -39,18 +65,18 @@ class QuickBooksApiController extends Controller
     //     $this->redirectUri = env('QB_REDIRECT_URI', 'http://localhost:8012/csuitequickbook/quickbooks/callback');
     //     $this->baseUrl = env('QB_BASE_URL', 'https://sandbox-quickbooks.api.intuit.com');
     // }
-    public function __construct() //my
-    {
-        // Directly read from env to avoid config caching issues
-        // $this->clientId     = env('QB_CLIENT_ID');
-        $this->clientId = 'ABpCTnsvhjnEcBTWVIofKoQ482JGuH6yXpb4ARb4uFvefO145m';
-        $this->clientSecret = 'gUVkoksUL0busJJRj8WNEj7BEjnCveF4EoWGU2xp';
-        $this->authUrl = env('QB_AUTH_URL', 'https://appcenter.intuit.com/connect/oauth2');
-        $this->tokenUrl = env('QB_TOKEN_URL', 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer');
-        $this->scope = env('QB_SCOPE', 'com.intuit.quickbooks.accounting com.intuit.quickbooks.payment openid profile email');
-        $this->redirectUri = env('QB_REDIRECT_URI', 'http://localhost:8012/csuite/new/quickbooks/callback');
-        $this->baseUrl = env('QB_BASE_URL', 'https://sandbox-quickbooks.api.intuit.com');
-    }
+    // public function __construct() //my
+    // {
+    //     // Directly read from env to avoid config caching issues
+    //     // $this->clientId     = env('QB_CLIENT_ID');
+    //     $this->clientId = 'ABpCTnsvhjnEcBTWVIofKoQ482JGuH6yXpb4ARb4uFvefO145m';
+    //     $this->clientSecret = 'gUVkoksUL0busJJRj8WNEj7BEjnCveF4EoWGU2xp';
+    //     $this->authUrl = env('QB_AUTH_URL', 'https://appcenter.intuit.com/connect/oauth2');
+    //     $this->tokenUrl = env('QB_TOKEN_URL', 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer');
+    //     $this->scope = env('QB_SCOPE', 'com.intuit.quickbooks.accounting com.intuit.quickbooks.payment openid profile email');
+    //     $this->redirectUri = env('QB_REDIRECT_URI', 'http://localhost:8012/csuite/new/quickbooks/callback');
+    //     $this->baseUrl = env('QB_BASE_URL', 'https://sandbox-quickbooks.api.intuit.com');
+    // }
     
     public function license()
     {
@@ -294,31 +320,108 @@ class QuickBooksApiController extends Controller
     {
         $data = $this->runQuery("SELECT * FROM Invoice STARTPOSITION 1 MAXRESULTS 50");
         dd($data, collect($data['QueryResponse']['Invoice'])->first());
+
     }
 
     public function bills()
     {
-        $data = $this->runQuery("SELECT * FROM Bill STARTPOSITION 1 MAXRESULTS 50");
-        dd($data);
+        $startPosition = 1;
+        $maxResults = 50;
+        $allBills = [];
+
+        do {
+            $query = "SELECT * FROM Bill STARTPOSITION $startPosition MAXRESULTS $maxResults";
+            $data = $this->runQuery($query);
+
+            $bills = $data['QueryResponse']['Bill'] ?? [];
+            $count = count($bills);
+
+            // Merge into main array
+            $allBills = array_merge($allBills, $bills);
+
+            // Next batch
+            $startPosition += $maxResults;
+
+        } while ($count === $maxResults);
+
+        dd(count($allBills), $allBills);
     }
+
 
     public function customers()
     {
-        $data = $this->runQuery("SELECT * FROM Customer STARTPOSITION 1 MAXRESULTS 50");
-        dd($data);
+        $startPosition = 1;
+        $maxResults = 50;
+        $allCustomer = [];
+
+        do {
+            // Run paginated query
+            $query = "SELECT * FROM Customer STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
+            $data = $this->runQuery($query);
+
+            // Extract vendors from response (adjust key path based on your runQuery response)
+            $Customer = $data['QueryResponse']['Customer'] ?? [];
+
+            // Merge into full vendor list
+            $allCustomer = array_merge($allCustomer, $Customer);
+
+            // Increment for next batch
+            $count = count($Customer);
+            $startPosition += $maxResults;
+
+        } while ($count === $maxResults);
+
+        dd($allCustomer);
     }
 
     public function chartOfAccounts()
     {
-        $data = $this->runQuery("SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 100");
-        dd($data);
+        $startPosition = 1;
+        $maxResults = 1000;
+        $allAccounts = [];
+
+        do {
+            $query = "SELECT * FROM Account WHERE Active IN (true, false) STARTPOSITION $startPosition MAXRESULTS $maxResults";
+            $data = $this->runQuery($query);
+
+            $accounts = $data['QueryResponse']['Account'] ?? [];
+            $count = count($accounts);
+
+            $allAccounts = array_merge($allAccounts, $accounts);
+            $startPosition += $maxResults;
+
+        } while ($count === $maxResults);
+
+        dd(count($allAccounts), $allAccounts);
     }
+
 
     public function vendors()
     {
-        $data = $this->runQuery("SELECT * FROM Vendor STARTPOSITION 1 MAXRESULTS 50");
-        dd($data);
+        $startPosition = 1;
+        $maxResults = 50;
+        $allVendors = [];
+
+        do {
+            // Run paginated query
+            $query = "SELECT * FROM Vendor STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
+            $data = $this->runQuery($query);
+
+            // Extract vendors from response (adjust key path based on your runQuery response)
+            $vendors = $data['QueryResponse']['Vendor'] ?? [];
+
+            // Merge into full vendor list
+            $allVendors = array_merge($allVendors, $vendors);
+
+            // Increment for next batch
+            $count = count($vendors);
+            $startPosition += $maxResults;
+
+        } while ($count === $maxResults);
+
+        dd($allVendors);
     }
+
     public function journalEntries()
     {
         $data = $this->runQuery("SELECT * FROM JournalEntry STARTPOSITION 1 MAXRESULTS 100");
@@ -336,62 +439,831 @@ class QuickBooksApiController extends Controller
 
 
     // 📘 Fetch QuickBooks “Journal Report” (Financial Report API)
+    // public function journalFRReport(Request $request)
+    // {
+    //     $token = $this->accessToken();
+    //     $realm = $this->realmId();
+
+    //     // Define base URL
+    //     $baseUrl = "{$this->baseUrl}/v3/company/{$realm}/reports/JournalReport";
+
+    //     // Get requested or default date range
+    //     $startDate = Carbon::parse($request->input('start_date', '2023-10-26'));
+    //     $endDate   = Carbon::parse($request->input('end_date', '2024-10-28'));
+    //     $accountingMethod = $request->input('accounting_method', 'Accrual');
+    //     $url = "{$baseUrl}?start_date=2023-10-26&end_date=2023-10-28";
+    //     $response = Http::timeout(0)
+    //             ->withToken($token)
+    //             ->accept('application/json')
+    //             ->get($url);
+    //                     $data = $response->json();
+
+    //     // To store all data from multiple years
+    //     $allData = [];
+
+    //     // Loop year by year
+    //     $currentStart = $startDate->copy();
+    //     while ($currentStart->lte($endDate)) {
+
+    //         $currentEnd = $currentStart->copy()->endOfYear();
+
+    //         // Ensure we don’t go beyond the requested end date
+    //         if ($currentEnd->gt($endDate)) {
+    //             $currentEnd = $endDate->copy();
+    //         }
+
+    //         // Build URL for the current year's range
+    //         $url = "{$baseUrl}?start_date={$currentStart->format('Y-m-d')}&end_date={$currentEnd->format('Y-m-d')}&accounting_method={$accountingMethod}";
+
+    //         // Call the API with timeout disabled (0 = unlimited)
+    //         $response = Http::timeout(0)
+    //             ->withToken($token)
+    //             ->accept('application/json')
+    //             ->get($url);
+
+    //         // Handle response errors
+    //         if ($response->failed()) {
+    //             \Log::error("QuickBooks JournalReport failed for {$currentStart->year}", [
+    //                 'status' => $response->status(),
+    //                 'body' => $response->body(),
+    //             ]);
+    //             // Move to next year even if failed
+    //             $currentStart->addYear();
+    //             continue;
+    //         }
+
+    //         // Parse response
+    //         $data = $response->json();
+    //         $rows = $data['Rows']['Row'] ?? [];
+
+    //         // Merge results
+    //         $allData = array_merge($allData, $rows);
+
+    //         // Log or print progress (optional)
+    //         \Log::info("Fetched JournalReport for year {$currentStart->year}", [
+    //             'rows_count' => count($rows)
+    //         ]);
+
+    //         // Move to next year
+    //         $currentStart->addYear();
+    //     }
+
+    //     // Return combined data (or process further)
+    //     return dd([
+    //         'success' => true,
+    //         'message' => 'Journal Report fetched successfully (year by year)',
+    //         'total_rows' => count($allData),
+    //         'data' => $allData,
+    //     ]);
+    // }
     public function journalFRReport(Request $request)
     {
-        $token = $this->accessToken();
-        $realm = $this->realmId();
+        $companyId = $this->realmId();
+        $accessToken = $this->accessToken();
+        $baseUrl = "{$this->baseUrl}/v3/company/{$companyId}";
 
         // Optional query parameters
         $startDate = $request->input('start_date', '2025-10-01');
-        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+
+        $endDate   = $request->input('end_date', now()->format('Y-m-d'));
         $accountingMethod = $request->input('accounting_method', 'Accrual');
-        $url = "{$this->baseUrl}/v3/company/{$realm}/reports/JournalReport"
-            . "?start_date={$startDate}&end_date={$endDate}&accounting_method={$accountingMethod}";
 
-        $response = Http::withToken($token)
-            ->accept('application/json')
-            ->get($url);
+        // Determine batch size (1 year chunks)
+        $batchSizeMonths = 12;
+        $batches = [];
+        $skippedEntries = []; // Track skipped entries
+        $current = $startDate->copy();
 
-        $data = $response->json();
-        dd($data);
+        while ($current->lt($endDate)) {
+            $batchStart = $current->copy();
+            $batchEnd = $current->copy()->addMonths($batchSizeMonths)->endOfMonth();
+            if ($batchEnd->gt($endDate)) $batchEnd = $endDate->copy();
+            $batches[] = [$batchStart->toDateString(), $batchEnd->toDateString()];
+            $current = $batchEnd->copy()->addDay();
+        }
+
+        $groupedEntries = [];
+        $totalImported = 0;
+
+        foreach ($batches as $index => [$batchStart, $batchEnd]) {
+
+            // 🧩 Refresh token before each batch
+            try {
+                $this->refreshTokenIfNeeded();
+                $accessToken = $this->accessToken(); // get fresh token
+            } catch (\Throwable $e) {
+                \Log::error("QuickBooks token refresh failed before batch {$index}", [
+                    'error' => $e->getMessage(),
+                ]);
+                continue; // Skip this batch if refresh fails
+            }
+
+            $url = "{$baseUrl}/reports/JournalReport?start_date=2025-05-23&end_date=2025-05-24&accounting_method={$accountingMethod}";
+
+            try {
+                $response = Http::withHeaders([
+                    'Authorization' => "Bearer {$accessToken}",
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/text',
+                ])
+                ->timeout(180)   // 3-minute timeout per batch
+                ->retry(3, 5000) // Retry 3 times, 5s interval
+                ->get($url);
+
+                if ($response->failed()) {
+                    \Log::warning("QuickBooks JournalReport batch failed", [
+                        'url' => $url,
+                        'status' => $response->status(),
+                        'response' => $response->body(),
+                    ]);
+                    continue;
+                }
+
+                $data = $response->json();
+                $rows = $data['Rows']['Row'] ?? [];
+                $batchEntries = $this->processJournalRows($rows);
+                $groupedEntries = array_merge($groupedEntries, $batchEntries);
+
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                dd($e);
+                \Log::error('QuickBooks JournalReport timeout', [
+                    'url' => $url,
+                    'message' => $e->getMessage(),
+                ]);
+                continue;
+            }
+
+            // Optional: Sleep a bit between years (avoid rate limit)
+            sleep(2);
+        }
+
+        // Create entries
+        $createdEntries = [];
+        foreach ($groupedEntries as $entryData) {
+            $result = $this->createJournalEntry($groupedEntries['11']);
+            
+            if ($result['status'] == 'created') {
+                $createdEntries[] = $result['data'];
+                $totalImported++;
+            } elseif ($result['status'] == 'skipped') {
+                $skippedEntries[] = $result['data'];
+            }
+        }
+        $excelPath = null;
+            if (!empty($skippedEntries)) {
+                $excelPath = $this->exportSkippedEntriesToExcel($skippedEntries);
+            }
+
+        $response = [
+            'success' => true,
+            'message' => 'Batched journal report import completed successfully.',
+            'imported_batches' => count($batches),
+            'imported_entries' => $totalImported,
+            'skipped_entries_count' => count($skippedEntries),
+            'date_range' => [
+                'start' => $startDate->toDateString(),
+                'end' => $endDate->toDateString(),
+            ]
+        ];
+
+        // Add download link if skipped entries exist
+        if ($excelPath) {
+            $response['skipped_entries_file'] = $excelPath;
+            $response['download_url'] = route('download.skipped.entries', ['file' => basename($excelPath)]);
+        }
+
+        return response()->json($response);
+    }
+
+    
+    private function processJournalRows(array $rows): array
+    {
+        $groupedEntries = [];
+        $entryBuffer = [];
+        $currentDateValue = null;
+        $entityType = null;
+        $entityId = null;
+        $name = null;
+        $transtype = null;
+
+        foreach ($rows as $row) {
+            $type = $row['type'] ?? null;
+
+            if ($type === 'Data') {
+                $colData = $row['ColData'] ?? [];
+                $firstValue = $colData[0]['value'] ?? null;
+
+                if (empty($firstValue) && empty($currentDateValue)) continue;
+
+                if ($currentDateValue === null && !empty($firstValue)) {
+                    $currentDateValue = $firstValue;
+                }
+
+                $tratype = $colData[1]['value'] ?? null;
+                if (!empty($tratype)) {
+                    $transtype = $tratype;
+                } else {
+                    $colData[1]['value'] = $transtype;
+                }
+
+                $entityName = $colData[3]['value'] ?? null;
+                if (!empty($entityName)) {
+                    [$entityType, $entityId] = $this->mapQuickBooksEntity($entityName);
+                    $name = $entityName;
+                    $colData[3]['emp_id'] = $entityId;
+                    $colData[3]['type'] = $entityType;
+                } else {
+                    $colData[3]['value'] = $name;
+                    $colData[3]['emp_id'] = $entityId;
+                    $colData[3]['type'] = $entityType;
+                }
+
+                $colData[0]['value'] = $currentDateValue;
+                $entryBuffer[] = $colData;
+
+            } elseif ($type === 'Section') {
+                if (!empty($entryBuffer)) {
+                    $groupedEntries[] = $entryBuffer;
+                    $entryBuffer = [];
+                    $currentDateValue = null;
+                    $entityType = null;
+                    $entityId = null;
+                    $name = null;
+                    $transtype = null;
+                }
+            }
+        }
+
+        if (!empty($entryBuffer)) {
+            $groupedEntries[] = $entryBuffer;
+        }
+
+        return $groupedEntries;
+    }
+
+    private function mapQuickBooksEntity($data)
+    {
+        $name = $data; // example: "Tania's Nursery"
+
+        if (!empty($name)) {
+            // Try to find in Vendors
+            $vendor = Vender::where('name', $name)->first();
+            if ($vendor) {
+                 return ['vendor', $vendor->id];
+            } else {
+                // Try to find in Customers
+                $customer = Customer::where('name', $name)->first();
+                if ($customer) {
+                     return ['customer', $customer->id];
+                } else {
+                    // Try to find in Employees
+                    $employee = Employee::where('name', $name)->first();
+                    if ($employee) {
+                        return ['employee', $employee->id];
+                    }
+                }
+            }
+        }
+        return [null, null];
+    }
+    private function createJournalEntry($entryData)
+    {   
+        try {
+            // Extract data from the first row (assuming it's the header row for the entry)
+            $firstRow = $entryData[0] ?? [];
+            $date = $firstRow[0]['value'] ?? now()->toDateString();
+            $transactionType = $firstRow[1]['value'] ?? 'Journal';
+            $num = $firstRow[2]['value'] ?? '';
+            $name = $firstRow[3]['value'] ?? '';
+            $memo = $firstRow[4]['value'] ?? '';
+            $accountName = $firstRow[5]['value'] ?? '';
+            $debit = $firstRow[6]['value'] ?? 0;
+            $credit = $firstRow[7]['value'] ?? 0;
+            $entityType = $firstRow[1]['value'] ?? '';
+            $entityId = $firstRow[3]['emp_id'] ?? null;
+            $entityName = $firstRow[3]['value'] ?? '';
+
+
+            $totalDebit = 0;
+            $totalCredit = 0;
+
+            // Calculate totals from all rows
+            foreach ($entryData as $row) {
+                $debitVal = floatval($row[6]['value'] ?? 0);
+                $creditVal = floatval($row[7]['value'] ?? 0);
+                $totalDebit += $debitVal;
+                $totalCredit += $creditVal;
+            }
+            if (abs($totalCredit - $totalDebit) > 0.0001) {
+                return [
+                    'status' => 'skipped',
+                    'data' => [
+                        'date' => $date,
+                        'reference' => $num,
+                        'description' => $memo,
+                        'entity_name' => $name,
+                        'total_debit' => $totalDebit,
+                        'total_credit' => $totalCredit,
+                        'difference' => abs($totalDebit - $totalCredit),
+                        'reason' => 'Unbalanced Entry',
+                        'rows' => $entryData,
+                    ]
+                ];
+            }
+            $journal = new JournalEntry();
+            $journal->journal_id = $this->journalNumber();
+            $journal->date = date('Y-m-d', strtotime($date));
+            $journal->reference = $num;
+            $journal->description = $memo;
+            $journal->created_by = Auth::user()->creatorId();
+            $journal->owned_by = Auth::user()->ownedId();
+            $journal->save();
+            $journal->created_at = date('Y-m-d H:i:s', strtotime($date));
+            $journal->updated_at = date('Y-m-d H:i:s', strtotime($date));
+            $journal->save();
+
+            foreach ($entryData as $row) {
+                $accountName = $row[5]['value'] ?? '';
+                $debit = floatval($row[6]['value'] ?? 0);
+                $credit = floatval($row[7]['value'] ?? 0);
+                $memo = $row[4]['value'] ?? '';
+
+                $account = $this->ensureCOA($accountName);
+                if (!$account) {
+                    dd($accountName);
+                    continue;
+                }
+
+                $journalItem = new JournalItem();
+                $journalItem->journal = $journal->id;
+                $journalItem->account = $account->id;
+                $journalItem->description = $memo;
+                $journalItem->debit = $debit;
+                $journalItem->credit = $credit;
+                $journalItem->type = $entityType;
+                $journalItem->name = $entityName;
+                if ($entityType === 'customer') {
+                    $journalItem->customer_id = $entityId;
+                } elseif ($entityType === 'vendor') {
+                    $journalItem->vendor_id = $entityId;
+                } elseif ($entityType === 'employee') {
+                    $journalItem->employee_id = $entityId;
+                }
+                $journalItem->save();
+                $journalItem->created_at = date('Y-m-d H:i:s', strtotime($date));
+                $journalItem->updated_at = date('Y-m-d H:i:s', strtotime($date));
+                $journalItem->save();
+
+                $bankAccounts = BankAccount::where('chart_account_id', '=', $account->id)->get();
+                if (!empty($bankAccounts)) {
+                    foreach ($bankAccounts as $bankAccount) {
+                        $old_balance = $bankAccount->opening_balance;
+                        if ($journalItem->debit > 0) {
+                            $new_balance = $old_balance - $journalItem->debit;
+                        }
+                        if ($journalItem->credit > 0) {
+                            $new_balance = $old_balance + $journalItem->credit;
+                        }
+                        if (isset($new_balance)) {
+                            $bankAccount->opening_balance = $new_balance;
+                            $bankAccount->save();
+                        }
+                    }
+                }
+
+                if ($debit > 0) {
+                    $data = [
+                        'account_id' => $account->id,
+                        'transaction_type' => 'Debit',
+                        'transaction_amount' => $debit,
+                        'reference' => 'Journal',
+                        'reference_id' => $journal->id,
+                        'reference_sub_id' => $journalItem->id,
+                        'date' => $journal->date,
+                    ];
+                } elseif ($credit > 0) {
+                    $data = [
+                        'account_id' => $account->id,
+                        'transaction_type' => 'Credit',
+                        'transaction_amount' => $credit,
+                        'reference' => 'Journal',
+                        'reference_id' => $journal->id,
+                        'reference_sub_id' => $journalItem->id,
+                        'date' => $journal->date,
+                    ];
+                } else {
+                    continue; // skipping entries of 0 in the trnasaction line table.
+                }
+                $this->addTransactionLines($data, 'create');
+            }
+
+            return [
+                'status' => 'created',
+                'data' => $journal
+            ];
+
+        } catch (\Exception $e) {
+            // Log error and skip
+            dd($e->getMessage());
+            \Log::error('Error creating journal entry: ' . $e->getMessage());
+            return null;
+        }
+    }
+    public static function addTransactionLines($data, $action)
+    {
+        $existingTransaction = TransactionLines::where('reference_id', $data['reference_id'])
+            ->where('reference_sub_id', $data['reference_sub_id'])->where('reference', $data['reference'])
+            ->first();
+        if ($existingTransaction && $action == 'edit') {
+            $transactionLines = $existingTransaction;
+        } else {
+            $transactionLines = new TransactionLines();
+        }
+        $transactionLines->account_id = $data['account_id'];
+        $transactionLines->reference = $data['reference'];
+        $transactionLines->reference_id = $data['reference_id'];
+        $transactionLines->reference_sub_id = $data['reference_sub_id'];
+        $transactionLines->date = $data['date'];
+        $transactionLines->product_id = @$data['product_id'] ?? @$transactionLines->product_id;
+        $transactionLines->product_type = @$data['product_type'] ?? @$transactionLines->product_type;
+        $transactionLines->product_item_id = @$data['product_item_id'] ?? @$transactionLines->product_item_id;
+        if ($data['transaction_type'] == "Credit") {
+            $transactionLines->credit = $data['transaction_amount'];
+            $transactionLines->debit = 0;
+        } else {
+            $transactionLines->credit = 0;
+            $transactionLines->debit = $data['transaction_amount'];
+        }
+        $transactionLines->created_by = Auth::user()->creatorId();
+        $transactionLines->created_at = date('Y-m-d H:i:s', strtotime($data['date']));
+        $transactionLines->updated_at = date('Y-m-d H:i:s', strtotime($data['date']));
+        $transactionLines->save();
+        $transactionLines->created_at = date('Y-m-d H:i:s', strtotime($data['date']));
+        $transactionLines->updated_at = date('Y-m-d H:i:s', strtotime($data['date']));
+        $transactionLines->save();
+    }
+    private function journalNumber()
+    {
+        $latest = JournalEntry::where('created_by', '=', Auth::user()->creatorId())->latest()->first();
+        if (!$latest) {
+            return 1;
+        }
+        return $latest->journal_id + 1;
+    }
+
+    private function ensureCOA($fullName)
+    {
+ 
+        $account = ChartOfAccount::where('name', $fullName)->where('created_by', Auth::user()->creatorId())->first();
+        if (!$account) {
+            $accountId = $this->getAccountIdByFullName($fullName);
+           
+            if($accountId){
+                $account = ChartOfAccount::where('id', $accountId)->where('created_by', Auth::user()->creatorId())->first();
+                return $account;
+            }
+            // dd($account);
+          $typeMapping = [
+                'accounts payable (a/p)' => 'Liabilities',
+                'accounts payable' => 'Liabilities',
+                'credit card' => 'Liabilities',
+                'long term liabilities' => 'Liabilities',
+                'other current liabilities' => 'Liabilities',
+                'loan payable' => 'Liabilities',
+                'notes payable' => 'Liabilities',
+                'board of equalization payable' => 'Liabilities',
+                'arizona dept. of revenue payable' => 'Liabilities',
+                'accounts receivable (a/r)' => 'Assets',
+                'accounts receivable' => 'Assets',
+                'bank' => 'Assets',
+                'checking' => 'Assets',
+                'savings' => 'Assets',
+                'undeposited funds' => 'Assets',
+                'inventory asset' => 'Assets',
+                'other current assets' => 'Assets',
+                'fixed assets' => 'Assets',
+                'truck' => 'Assets',
+                'equity' => 'Equity',
+                'opening balance equity' => 'Equity',
+                'retained earnings' => 'Equity',
+                'income' => 'Income',
+                'other income' => 'Income',
+                'sales of product income' => 'Income',
+                'service/fee income' => 'Income',
+                'sales' => 'Income',
+                'cost of goods sold' => 'Costs of Goods Sold',
+                'cogs' => 'Costs of Goods Sold',
+                'expenses' => 'Expenses',
+                'expense' => 'Expenses',
+                'other expense' => 'Expenses',
+                'marketing' => 'Expenses',
+                'insurance' => 'Expenses',
+                'utilities' => 'Expenses',
+                'rent or lease' => 'Expenses',
+                'meals and entertainment' => 'Expenses',
+                'bank charges' => 'Expenses',
+                'depreciation' => 'Expenses',
+            ];
+
+            // Convert to lowercase for comparison
+            $typeName = strtolower(trim($fullName));
+            $systemTypeName = 'Other'; // Default
+            $detailType = 'Other';
+
+            // Check for exact match first
+            if (isset($typeMapping[$typeName])) {
+                $systemTypeName = $typeMapping[$typeName];
+                $detailType = $typeName;
+            } else {
+                // Fuzzy match: if it contains the word "expense"
+                foreach ($typeMapping as $key => $value) {
+                    $typeName = str_replace([':', ',', '&', '|'], ' ', $typeName);
+                    $typeName = preg_replace('/\s+/', ' ', trim($typeName));
+                    if (str_contains($typeName, strtolower($key))) {
+                        $systemTypeName = $value;
+                        $detailType = $key;
+                        break;
+                    }
+                }
+                
+                // Additional fallback: if the name itself contains "expense"
+                // if (str_contains($typeName, 'expense')) {
+                //     $systemTypeName = 'Expenses';
+                // }
+                    // $type = ChartOfAccountType::firstOrCreate(
+                    //     ['name' => 'Other', 'created_by' => Auth::user()->creatorId()]
+                    // );
+                    // $subType = ChartOfAccountSubType::firstOrCreate([
+                    //     'type' => $type->id,
+                    //     'name' => 'Other',
+                    //     'created_by' => Auth::user()->creatorId(),
+                    // ]);
+                    // $account = ChartOfAccount::create([
+                    //     'name' => $fullName,
+                    //     'type' => $type->id,
+                    //     'sub_type' => $subType->id,
+                    //     'created_by' => Auth::user()->creatorId(),
+                    // ]);
+                }       
+                 $debugNames = [
+                    'Legal & Professional Fees:Lawyer',
+                    'Landscaping Services:Job Materials:Plants and Soil',
+                    'Landscaping Services:Job Materials:Fountains and Garden Lighting',
+                    'Legal & Professional Fees:Accounting',
+                    'Landscaping Services:Job Materials:Sprinklers and Drip Systems',
+                ];
+
+                // if (!in_array($fullName, $debugNames)) {
+                //     dd($fullName, $systemTypeName, $detailType, $typeName);
+                // }
+                // else{
+                //     dd($fullName,$systemTypeName,$detailType,$typeName,$typeMapping,'sds');
+                // }
+                 $type = ChartOfAccountType::firstOrCreate(
+                        ['name' => $systemTypeName, 'created_by' => Auth::user()->creatorId()]
+                    );
+
+                    $subType = ChartOfAccountSubType::firstOrCreate([
+                        'type' => $type->id,
+                        'name' => $detailType ?: 'Other',
+                        'created_by' => Auth::user()->creatorId(),
+                    ]);
+                    $acct = ChartOfAccount::where('name', $fullName)
+                            ->where('type', $type->id)
+                            ->where('sub_type', $subType->id)
+                            ->where('created_by', Auth::user()->creatorId())
+                            ->first();
+                if (!$acct) {
+                    $account = ChartOfAccount::create([
+                        'name' => $fullName,
+                        'type' => $type->id,
+                        'sub_type' => $subType->id,
+                        'created_by' => Auth::user()->creatorId(),
+                    ]);
+                }
+
+
+           
+        }
+        return $account;
+    }
+
+    public function getAccountIdByFullName($fullName)
+    {
+        $parts = explode(':', $fullName);
+        $parentId = null;
+        $account = null;
+        foreach ($parts as $part) {
+            $part = trim($part);
+            ;
+
+            if (is_null($parentId)) {
+                // Find top-level account (no parent)
+                $account = ChartOfAccount::where('name', $part)
+                    ->where(function ($q) {
+                        $q->whereNull('parent')->orWhere('parent', 0);
+                    })
+                    ->first();
+                    // dd($part,$parts,$account);
+            } else {
+                // Find parent name first in chart_of_account_parents
+                $parentRow = \DB::table('chart_of_account_parents')
+                    ->where('id', $parentId)
+                    ->first();
+
+                // Now find next child account using parent_id
+                $account = ChartOfAccount::where('name', $part)
+                    ->where('parent', $parentId)
+                    ->first();
+            }
+
+            // If not found, stop
+            if (!$account) {
+                return null;
+            }
+
+            // Now find this account’s parent row id for next iteration
+            $parentRow = \DB::table('chart_of_account_parents')
+                ->where('account', $account->id)
+                ->first();
+
+            $parentId = $parentRow ? $parentRow->id : null;
+        }
+
+        return $account ? $account->id : null;
+    }
+    protected function startQueueWorkerForJob()
+    {
+        try {
+            // Get the base path of the Laravel application
+            $basePath = base_path();
+            $artisanPath = $basePath . DIRECTORY_SEPARATOR . 'artisan';
+
+            // Build the command to run queue worker
+            // --once: Process only one job and then exit
+            // --timeout=3600: Allow job to run for 1 hour
+            // --tries=3: Retry failed jobs 3 times
+            $command = sprintf(
+                'php "%s" queue:work database --once --timeout=3600 --tries=3 > /dev/null 2>&1 &',
+                $artisanPath
+            );
+
+            // For Windows, use different command
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                $command = sprintf(
+                    'start /B php "%s" queue:work database --once --timeout=3600 --tries=3',
+                    $artisanPath
+                );
+            }
+
+            // Execute the command in the background
+            if (function_exists('exec')) {
+                exec($command);
+                \Log::info('Queue worker started automatically for import job');
+            } else {
+                \Log::warning('exec() function not available, queue worker not started automatically');
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to start queue worker automatically: ' . $e->getMessage());
+            // Don't throw exception - job is already dispatched and will be processed when worker runs manually
+        }
+    }
+    protected function refreshTokenIfNeeded()
+    {
+        try {
+            $token = \App\Models\QuickBooksToken::where('user_id', auth()->id())
+                ->latest()->first();
+            if (!$token) throw new \Exception("No QuickBooks tokens for user {auth()->id()}");
+
+            if ($token->expires_at && now()->addMinutes(5)->greaterThan($token->expires_at)) {
+                $this->logInfo('Refreshing QuickBooks token...');
+                $api = new QuickBooksApiController();
+                $new = $api->refreshToken($token->refresh_token);
+                if ($new) $this->logSuccess('QuickBooks token refreshed successfully');
+                else throw new \Exception('Token refresh failed');
+            }
+        } catch (\Throwable $e) {
+            dd($e);
+            $this->logError('Token refresh failed: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+    protected function logSuccess($msg) { $this->addLog('[SUCCESS]', $msg); }
+    protected function logError($msg) { $this->addLog('[ERROR]', $msg); }
+    protected function logInfo($msg) { $this->addLog('[INFO]', $msg); }
+
+    protected function addLog($type, $msg)
+    {
+        $key = "qb_import_progress_{auth()->id()}";
+        $progress = Cache::get($key, []);
+        $progress['logs'][] = "{$type} {$msg} at " . now();
+        Cache::put($key, $progress, 3600);
+    }
+    private function exportSkippedEntriesToExcel($skippedEntries)
+    {
+        try {
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // Set headers
+            $headers = ['Date', 'Reference', 'Description', 'Entity Name', 'Total Debit', 'Total Credit', 'Difference', 'Reason'];
+            $sheet->fromArray($headers, null, 'A1');
+
+            // Style header row
+            $headerStyle = [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '366092']],
+                'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+            ];
+            $sheet->getStyle('A1:H1')->applyFromArray($headerStyle);
+
+            // Add data rows
+            $row = 2;
+            foreach ($skippedEntries as $entry) {
+                $sheet->setCellValue("A{$row}", $entry['date'] ?? '');
+                $sheet->setCellValue("B{$row}", $entry['reference'] ?? '');
+                $sheet->setCellValue("C{$row}", $entry['description'] ?? '');
+                $sheet->setCellValue("D{$row}", $entry['entity_name'] ?? '');
+                $sheet->setCellValue("E{$row}", $entry['total_debit'] ?? 0);
+                $sheet->setCellValue("F{$row}", $entry['total_credit'] ?? 0);
+                $sheet->setCellValue("G{$row}", $entry['difference'] ?? 0);
+                $sheet->setCellValue("H{$row}", $entry['reason'] ?? 'Unknown');
+
+                // Highlight rows with difference
+                if (($entry['difference'] ?? 0) > 0) {
+                    $sheet->getStyle("A{$row}:H{$row}")->getFill()
+                        ->setFillType('solid')
+                        ->setStartColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FFFF00'));
+                }
+
+                $row++;
+            }
+
+            // Auto-fit column widths
+            foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            // Create file path
+            $fileName = 'skipped_entries_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+            $filePath = storage_path('app/exports/' . $fileName);
+            
+            // Ensure directory exists
+            if (!is_dir(dirname($filePath))) {
+                mkdir(dirname($filePath), 0755, true);
+            }
+
+            // Save file
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save($filePath);
+
+            \Log::info("Skipped entries exported to: {$filePath}");
+
+            return $filePath;
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to export skipped entries: ' . $e->getMessage());
+            return null;
+        }
     }
     // 💰 Fetch Bill Payments (Vendor Payments)
     public function billPayments()
-{
-    try {
-        $query = "SELECT * FROM BillPayment STARTPOSITION 1 MAXRESULTS 200";
-        $response = $this->runQuery($query);
+    {
+        try {
+            $query = "SELECT * FROM BillPayment STARTPOSITION 1 MAXRESULTS 200";
+            $response = $this->runQuery($query);
 
-        // ✅ If it's a JsonResponse (expired token, etc.), just return it
-        if ($response instanceof \Illuminate\Http\JsonResponse) {
-            return $response;
+            // ✅ If it's a JsonResponse (expired token, etc.), just return it
+            if ($response instanceof \Illuminate\Http\JsonResponse) {
+                return $response;
+            }
+
+            // ✅ If QuickBooks returned a fault (error)
+            if (isset($response['Fault'])) {
+                throw new \Exception($response['Fault']['Error'][0]['Message'] ?? 'Error fetching BillPayments');
+            }
+
+            // ✅ Extract the data safely
+            $billPayments = collect($response['QueryResponse']['BillPayment'] ?? []);
+
+            // ✅ Get one sample record
+            $first = $billPayments->first();
+
+            // ✅ Dump a clean, structured view
+            return dd([
+                'status' => 'success',
+                'count' => $billPayments->count(),
+                'sample' => $first,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
         }
-
-        // ✅ If QuickBooks returned a fault (error)
-        if (isset($response['Fault'])) {
-            throw new \Exception($response['Fault']['Error'][0]['Message'] ?? 'Error fetching BillPayments');
-        }
-
-        // ✅ Extract the data safely
-        $billPayments = collect($response['QueryResponse']['BillPayment'] ?? []);
-
-        // ✅ Get one sample record
-        $first = $billPayments->first();
-
-        // ✅ Dump a clean, structured view
-        return dd([
-            'status' => 'success',
-            'count' => $billPayments->count(),
-            'sample' => $first,
-        ]);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-        ], 500);
     }
-}
 
     // public function billsWithPayments()
     // {
@@ -500,122 +1372,505 @@ class QuickBooksApiController extends Controller
     //     }
     // }
     public function billsWithPayments()
-{
-    try {
-        // Step 1: Fetch Bills and Bill Payments
-        $billsResponse = $this->runQuery("SELECT * FROM Bill");
-        $paymentsResponse = $this->runQuery("SELECT * FROM BillPayment");
+    {
+        try {
+            // Step 1: Fetch Bills and Bill Payments
+            $billsResponse = $this->runQuery("SELECT * FROM Bill");
+            $paymentsResponse = $this->runQuery("SELECT * FROM BillPayment");
 
-        // Step 2: Map Bills (with expense + A/P accounts)
-        $bills = collect($billsResponse['QueryResponse']['Bill'] ?? [])->map(function ($bill) {
-            $expenseAccounts = collect($bill['Line'] ?? [])
-                ->map(function ($line) {
-                    if (isset($line['AccountBasedExpenseLineDetail']['AccountRef'])) {
-                        return [
-                            'Id' => $line['AccountBasedExpenseLineDetail']['AccountRef']['value'] ?? null,
-                            'Name' => $line['AccountBasedExpenseLineDetail']['AccountRef']['name'] ?? null,
-                            'Amount' => $line['Amount'] ?? 0,
-                            'Description' => $line['Description'] ?? null,
-                        ];
+            // Step 2: Map Bills (with expense + A/P accounts)
+            $bills = collect($billsResponse['QueryResponse']['Bill'] ?? [])->map(function ($bill) {
+                $expenseAccounts = collect($bill['Line'] ?? [])
+                    ->map(function ($line) {
+                        if (isset($line['AccountBasedExpenseLineDetail']['AccountRef'])) {
+                            return [
+                                'Id' => $line['AccountBasedExpenseLineDetail']['AccountRef']['value'] ?? null,
+                                'Name' => $line['AccountBasedExpenseLineDetail']['AccountRef']['name'] ?? null,
+                                'Amount' => $line['Amount'] ?? 0,
+                                'Description' => $line['Description'] ?? null,
+                            ];
+                        }
+                        return null;
+                    })
+                    ->filter()
+                    ->values()
+                    ->toArray();
+
+                $apAccount = [
+                    'Id' => $bill['APAccountRef']['value'] ?? null,
+                    'Name' => $bill['APAccountRef']['name'] ?? null,
+                ];
+
+                return [
+                    'BillId' => $bill['Id'] ?? null,
+                    'VendorName' => $bill['VendorRef']['name'] ?? null,
+                    'VendorId' => $bill['VendorRef']['value'] ?? null,
+                    'TxnDate' => $bill['TxnDate'] ?? null,
+                    'DueDate' => $bill['DueDate'] ?? null,
+                    'TotalAmount' => $bill['TotalAmt'] ?? 0,
+                    'Balance' => $bill['Balance'] ?? 0,
+                    'Currency' => $bill['CurrencyRef']['name'] ?? null,
+                    'Address' => $bill['VendorAddr']['Line1'] ?? null,
+                    'ExpenseAccounts' => $expenseAccounts,
+                    'APAccount' => $apAccount,
+                    'Payments' => [],
+                ];
+            });
+
+            // Step 3: Map Payments (with payment account)
+            $payments = collect($paymentsResponse['QueryResponse']['BillPayment'] ?? [])->map(function ($payment) {
+                $paymentAccount = null;
+                if (isset($payment['CreditCardPayment']['CCAccountRef'])) {
+                    $paymentAccount = $payment['CreditCardPayment']['CCAccountRef'];
+                } elseif (isset($payment['CheckPayment']['BankAccountRef'])) {
+                    $paymentAccount = $payment['CheckPayment']['BankAccountRef'];
+                } elseif (isset($payment['PayFromAccountRef'])) {
+                    $paymentAccount = $payment['PayFromAccountRef'];
+                }
+
+                return [
+                    'PaymentId' => $payment['Id'] ?? null,
+                    'VendorId' => $payment['VendorRef']['value'] ?? null,
+                    'VendorName' => $payment['VendorRef']['name'] ?? null,
+                    'TxnDate' => $payment['TxnDate'] ?? null,
+                    'TotalAmount' => $payment['TotalAmt'] ?? 0,
+                    'PayType' => $payment['PayType'] ?? null,
+                    'PaymentAccount' => $paymentAccount ? [
+                        'Id' => $paymentAccount['value'] ?? null,
+                        'Name' => $paymentAccount['name'] ?? null,
+                    ] : null,
+                    'LinkedTxn' => collect($payment['Line'] ?? [])
+                        ->pluck('LinkedTxn')
+                        ->flatten(1)
+                        ->toArray(),
+                ];
+            });
+
+            // Step 4: Attach payments to bills
+            $billsWithPayments = $bills->map(function ($bill) use ($payments) {
+                $linkedPayments = $payments->filter(function ($payment) use ($bill) {
+                    return collect($payment['LinkedTxn'])->contains(function ($txn) use ($bill) {
+                        return isset($txn['TxnType'], $txn['TxnId'])
+                            && $txn['TxnType'] === 'Bill'
+                            && $txn['TxnId'] == $bill['BillId'];
+                    });
+                })->values();
+
+                $bill['Payments'] = $linkedPayments;
+                return $bill;
+            })
+            // ✅ Only keep bills that actually have payments
+            ->filter(function ($bill) {
+                return count($bill['Payments']) > 0;
+            })
+            ->values();
+
+            // ✅ Return only one bill (the first one with payments)
+            $singleBill = $billsWithPayments->first();
+
+            // Step 5: Return response
+            return dd([
+                'status' => 'success',
+                'total_with_payments' => $billsWithPayments->count(),
+                'single_bill' => $singleBill,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+    public function checkUnbalancedBills()
+    {
+        try {
+            $token = $this->accessToken();
+            $realm = $this->realmId();
+
+            // 1️⃣ Fetch Bills
+            $billsResponse = $this->runQuery("select * from Bill", $token, $realm);
+            $allBills = collect($billsResponse['QueryResponse']['Bill'] ?? []);
+
+            // 2️⃣ Fetch BillPayments
+            $paymentsResponse = $this->runQuery("select * from BillPayment", $token, $realm);
+            $allPayments = collect($paymentsResponse['QueryResponse']['BillPayment'] ?? []);
+
+            $billPaymentsTotal = [];
+            $billPaymentDetails = [];
+
+            // 3️⃣ Map BillPayments → Bills
+            foreach ($allPayments as $payment) {
+                $paymentId = $payment['Id'] ?? null;
+                $paymentDate = $payment['TxnDate'] ?? null;
+                $lines = $payment['Line'] ?? [];
+
+                foreach ($lines as $line) {
+                    $amount = isset($line['Amount']) ? (float)$line['Amount'] : 0;
+
+                    if (isset($line['LinkedTxn'])) {
+                        $linkedTxns = is_array($line['LinkedTxn']) ? $line['LinkedTxn'] : [$line['LinkedTxn']];
+                        foreach ($linkedTxns as $lt) {
+                            if (isset($lt['TxnType']) && strtolower($lt['TxnType']) === 'bill') {
+                                $billId = $lt['TxnId'];
+
+                                // Sum payments per bill
+                                $billPaymentsTotal[$billId] = ($billPaymentsTotal[$billId] ?? 0) + $amount;
+
+                                // Store details
+                                $billPaymentDetails[$billId][] = [
+                                    'PaymentId' => $paymentId,
+                                    'Date' => $paymentDate,
+                                    'Amount' => $amount,
+                                ];
+                            }
+                        }
                     }
-                    return null;
-                })
-                ->filter()
-                ->values()
-                ->toArray();
-
-            $apAccount = [
-                'Id' => $bill['APAccountRef']['value'] ?? null,
-                'Name' => $bill['APAccountRef']['name'] ?? null,
-            ];
-
-            return [
-                'BillId' => $bill['Id'] ?? null,
-                'VendorName' => $bill['VendorRef']['name'] ?? null,
-                'VendorId' => $bill['VendorRef']['value'] ?? null,
-                'TxnDate' => $bill['TxnDate'] ?? null,
-                'DueDate' => $bill['DueDate'] ?? null,
-                'TotalAmount' => $bill['TotalAmt'] ?? 0,
-                'Balance' => $bill['Balance'] ?? 0,
-                'Currency' => $bill['CurrencyRef']['name'] ?? null,
-                'Address' => $bill['VendorAddr']['Line1'] ?? null,
-                'ExpenseAccounts' => $expenseAccounts,
-                'APAccount' => $apAccount,
-                'Payments' => [],
-            ];
-        });
-
-        // Step 3: Map Payments (with payment account)
-        $payments = collect($paymentsResponse['QueryResponse']['BillPayment'] ?? [])->map(function ($payment) {
-            $paymentAccount = null;
-            if (isset($payment['CreditCardPayment']['CCAccountRef'])) {
-                $paymentAccount = $payment['CreditCardPayment']['CCAccountRef'];
-            } elseif (isset($payment['CheckPayment']['BankAccountRef'])) {
-                $paymentAccount = $payment['CheckPayment']['BankAccountRef'];
-            } elseif (isset($payment['PayFromAccountRef'])) {
-                $paymentAccount = $payment['PayFromAccountRef'];
+                }
             }
 
-            return [
-                'PaymentId' => $payment['Id'] ?? null,
-                'VendorId' => $payment['VendorRef']['value'] ?? null,
-                'VendorName' => $payment['VendorRef']['name'] ?? null,
-                'TxnDate' => $payment['TxnDate'] ?? null,
-                'TotalAmount' => $payment['TotalAmt'] ?? 0,
-                'PayType' => $payment['PayType'] ?? null,
-                'PaymentAccount' => $paymentAccount ? [
-                    'Id' => $paymentAccount['value'] ?? null,
-                    'Name' => $paymentAccount['name'] ?? null,
-                ] : null,
-                'LinkedTxn' => collect($payment['Line'] ?? [])
-                    ->pluck('LinkedTxn')
-                    ->flatten(1)
-                    ->toArray(),
-            ];
-        });
+            // 4️⃣ Detect mismatches
+            $overpaidBills = [];
+            $underpaidBills = [];
+            $multiplePaymentBills = [];
 
-        // Step 4: Attach payments to bills
-        $billsWithPayments = $bills->map(function ($bill) use ($payments) {
-            $linkedPayments = $payments->filter(function ($payment) use ($bill) {
-                return collect($payment['LinkedTxn'])->contains(function ($txn) use ($bill) {
-                    return isset($txn['TxnType'], $txn['TxnId'])
-                        && $txn['TxnType'] === 'Bill'
-                        && $txn['TxnId'] == $bill['BillId'];
-                });
-            })->values();
+            foreach ($allBills as $bill) {
+                $billId = $bill['Id'];
+                $vendorName = $bill['VendorRef']['name'] ?? 'Unknown Vendor';
+                $total = (float)($bill['TotalAmt'] ?? 0);
+                $balance = (float)($bill['Balance'] ?? 0);
+                $paid = (float)($billPaymentsTotal[$billId] ?? 0);
 
-            $bill['Payments'] = $linkedPayments;
-            return $bill;
-        })
-        // ✅ Only keep bills that actually have payments
-        ->filter(function ($bill) {
-            return count($bill['Payments']) > 0;
-        })
-        ->values();
+                // Case A: Overpaid
+                if ($paid > 0 && $paid > $total) {
+                    $overpaidBills[] = [
+                        'BillId' => $billId,
+                        'VendorName' => $vendorName,
+                        'BillTotal' => $total,
+                        'TotalPayments' => $paid,
+                        'OverPaidBy' => round($paid - $total, 2),
+                        'Balance' => $balance,
+                        'Payments' => $billPaymentDetails[$billId] ?? [],
+                    ];
+                }
 
-        // ✅ Return only one bill (the first one with payments)
-        $singleBill = $billsWithPayments->first();
+                // Case B: Underpaid (one payment only)
+                if ($paid > 0 && $paid < $total && isset($billPaymentDetails[$billId]) && count($billPaymentDetails[$billId]) === 1) {
+                    $underpaidBills[] = [
+                        'BillId' => $billId,
+                        'VendorName' => $vendorName,
+                        'BillTotal' => $total,
+                        'TotalPayments' => $paid,
+                        'UnderPaidBy' => round($total - $paid, 2),
+                        'Balance' => $balance,
+                        'Payments' => $billPaymentDetails[$billId],
+                    ];
+                }
 
-        // Step 5: Return response
-        return dd([
-            'status' => 'success',
-            'total_with_payments' => $billsWithPayments->count(),
-            'single_bill' => $singleBill,
-        ]);
+                // Case C: Multiple payments on single bill
+                if (isset($billPaymentDetails[$billId]) && count($billPaymentDetails[$billId]) > 1) {
+                    $multiplePaymentBills[] = [
+                        'BillId' => $billId,
+                        'VendorName' => $vendorName,
+                        'BillTotal' => $total,
+                        'Balance' => $balance,
+                        'TotalPayments' => $paid,
+                        'Payments' => $billPaymentDetails[$billId],
+                    ];
+                }
+            }
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-        ]);
+            return response()->json([
+                'overpaid_count' => count($overpaidBills),
+                'underpaid_count' => count($underpaidBills),
+                'multiple_payment_count' => count($multiplePaymentBills),
+                'overpaid_bills' => $overpaidBills,
+                'underpaid_bills' => $underpaidBills,
+                'multiple_payment_bills' => $multiplePaymentBills,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
-}
 
+
+    // public function expensesWithPayments()
+    // {
+    //     try {
+    //         // --- CONFIG ---
+    //         // Payment-like types to fetch
+    //         $typesToQuery = [
+    //             'Payment',
+    //             'Check',
+    //             'BillPayment',
+    //             'CreditCardCredit',
+    //             'VendorCredit',
+    //             'Deposit',
+    //             'Purchase', // include as candidate payment
+    //         ];
+
+    //         // Fuzzy fallback config (only used when no explicit LinkedTxn matches found)
+    //         $useFuzzyFallback = true;
+    //         $fuzzyDateWindowDays = 7;      // +/- days
+    //         $fuzzyAmountTolerance = 0.5;   // tolerance in currency units (adjust as needed)
+
+    //         // --- 1) Fetch purchases (expenses) ---
+    //         $purchasesResp = $this->runQuery("SELECT * FROM Purchase");
+    //         $rawPurchases = $purchasesResp['QueryResponse']['Purchase'] ?? [];
+
+    //         // --- 2) Fetch all payment-like types and merge ---
+    //         $allRawPayments = collect();
+    //         foreach ($typesToQuery as $type) {
+    //             try {
+    //                 $resp = $this->runQuery("SELECT * FROM {$type}");
+    //                 $items = $resp['QueryResponse'][$type] ?? [];
+    //                 $allRawPayments = $allRawPayments->merge(collect($items));
+    //             } catch (\Exception $e) {
+    //                 \Log::warning("Failed to fetch {$type}: " . $e->getMessage());
+    //             }
+    //         }
+
+    //         // --- Helper: Extract & normalize LinkedTxn entries robustly ---
+    //         $extractLinkedTxn = function ($raw) {
+    //             $linked = [];
+
+    //             // 1) Top-level LinkedTxn
+    //             if (!empty($raw['LinkedTxn']) && is_array($raw['LinkedTxn'])) {
+    //                 $linked = array_merge($linked, $raw['LinkedTxn']);
+    //             }
+
+    //             // 2) Inside Line[].LinkedTxn
+    //             if (!empty($raw['Line']) && is_array($raw['Line'])) {
+    //                 $fromLines = collect($raw['Line'])
+    //                     ->pluck('LinkedTxn')
+    //                     ->flatten(1)
+    //                     ->filter()
+    //                     ->values()
+    //                     ->toArray();
+    //                 $linked = array_merge($linked, $fromLines);
+    //             }
+
+    //             // 3) Apply / ApplyTo / AppliedToTxn / ApplyToTxn - common alternative names
+    //             if (!empty($raw['Apply']) && is_array($raw['Apply'])) {
+    //                 $linked = array_merge($linked, $raw['Apply']);
+    //             }
+    //             if (!empty($raw['AppliedToTxn']) && is_array($raw['AppliedToTxn'])) {
+    //                 $linked = array_merge($linked, $raw['AppliedToTxn']);
+    //             }
+
+    //             // 4) Also check for shapes like ['TxnId'] / ['Id'] pairs directly on the raw (rare)
+    //             if (isset($raw['TxnId']) && isset($raw['TxnType'])) {
+    //                 $linked[] = ['TxnId' => $raw['TxnId'], 'TxnType' => $raw['TxnType']];
+    //             }
+
+    //             // Normalize each entry to have TxnId and TxnType keys (when possible)
+    //             $normalized = [];
+    //             foreach ($linked as $l) {
+    //                 if (!is_array($l))
+    //                     continue;
+
+    //                 // possible keys in different shapes
+    //                 $txnId = $l['TxnId'] ?? $l['Id'] ?? $l['AppliedToTxnId'] ?? $l['AppliedToTxnId'] ?? null;
+    //                 $txnType = $l['TxnType'] ?? $l['TxnTypeName'] ?? $l['Type'] ?? $l['TxnType'] ?? null;
+
+    //                 // some shapes use 'TxnId' numeric etc. cast to string for consistent comparison
+    //                 if ($txnId !== null) {
+    //                     $normalized[] = [
+    //                         'TxnId' => (string) $txnId,
+    //                         'TxnType' => $txnType ? (string) $txnType : null,
+    //                     ];
+    //                 }
+    //             }
+
+    //             // dedupe
+    //             $unique = [];
+    //             foreach ($normalized as $n) {
+    //                 $key = ($n['TxnId'] ?? '') . '|' . ($n['TxnType'] ?? '');
+    //                 if (!isset($unique[$key]))
+    //                     $unique[$key] = $n;
+    //             }
+
+    //             return array_values($unique);
+    //         };
+
+    //         // --- Helper: detect payment account and vendor info ---
+    //         $detectPaymentAccount = function ($raw) {
+    //             if (!empty($raw['CreditCardPayment']['CCAccountRef']))
+    //                 return $raw['CreditCardPayment']['CCAccountRef'];
+    //             if (!empty($raw['CheckPayment']['BankAccountRef']))
+    //                 return $raw['CheckPayment']['BankAccountRef'];
+    //             if (!empty($raw['BankAccountRef']))
+    //                 return $raw['BankAccountRef'];
+    //             if (!empty($raw['PayFromAccountRef']))
+    //                 return $raw['PayFromAccountRef'];
+    //             if (!empty($raw['DepositToAccountRef']))
+    //                 return $raw['DepositToAccountRef'];
+    //             if (!empty($raw['CCAccountRef']))
+    //                 return $raw['CCAccountRef'];
+    //             if (!empty($raw['AccountRef']))
+    //                 return $raw['AccountRef'];
+    //             return null;
+    //         };
+
+    //         // --- 3) Normalize all payments ---
+    //         $normalizedPayments = $allRawPayments->map(function ($raw) use ($extractLinkedTxn, $detectPaymentAccount) {
+    //             // vendor detection
+    //             $vendorId = $raw['VendorRef']['value'] ?? $raw['EntityRef']['value'] ?? $raw['PayeeRef']['value'] ?? $raw['CustomerRef']['value'] ?? null;
+    //             $vendorName = $raw['VendorRef']['name'] ?? $raw['EntityRef']['name'] ?? $raw['PayeeRef']['name'] ?? $raw['CustomerRef']['name'] ?? null;
+
+    //             $paymentAccount = $detectPaymentAccount($raw);
+
+    //             $total = $raw['TotalAmt'] ?? $raw['Amount'] ?? $raw['TotalAmount'] ?? null;
+
+    //             return [
+    //                 'Raw' => $raw,
+    //                 'PaymentId' => $raw['Id'] ?? ($raw['PaymentId'] ?? null),
+    //                 'TxnTypeRaw' => $raw['TxnType'] ?? null,
+    //                 'TxnDate' => $raw['TxnDate'] ?? null,
+    //                 'DocNumber' => $raw['DocNumber'] ?? null,
+    //                 'TotalAmount' => $total !== null ? (float) $total : null,
+    //                 'PaymentAccount' => $paymentAccount ? [
+    //                     'Id' => $paymentAccount['value'] ?? null,
+    //                     'Name' => $paymentAccount['name'] ?? null,
+    //                 ] : null,
+    //                 'VendorId' => $vendorId ? (string) $vendorId : null,
+    //                 'VendorName' => $vendorName ?? null,
+    //                 'LinkedTxn' => $extractLinkedTxn($raw),
+    //             ];
+    //         })->values();
+
+    //         // diagnostics pre-checks
+    //         $diag = [
+    //             'purchases_count' => count($rawPurchases),
+    //             'raw_payments_count' => $allRawPayments->count(),
+    //             'normalized_payments_count' => $normalizedPayments->count(),
+    //             'normalized_payments_with_linkedtxn' => $normalizedPayments->filter(fn($p) => !empty($p['LinkedTxn']))->count(),
+    //             'sample_normalized_payment' => $normalizedPayments->first() ? [
+    //                 'PaymentId' => $normalizedPayments->first()['PaymentId'] ?? null,
+    //                 'VendorId' => $normalizedPayments->first()['VendorId'] ?? null,
+    //                 'TotalAmount' => $normalizedPayments->first()['TotalAmount'] ?? null,
+    //                 'LinkedTxn' => $normalizedPayments->first()['LinkedTxn'] ?? [],
+    //             ] : null,
+    //         ];
+
+    //         // --- 4) Normalize purchases (expenses) ---
+    //         $expenses = collect($rawPurchases)->map(function ($purchase) {
+    //             $expenseAccounts = collect($purchase['Line'] ?? [])->map(function ($line) {
+    //                 if (!empty($line['AccountBasedExpenseLineDetail']['AccountRef'])) {
+    //                     $acct = $line['AccountBasedExpenseLineDetail']['AccountRef'];
+    //                 } elseif (!empty($line['AccountRef'])) {
+    //                     $acct = $line['AccountRef'];
+    //                 } else {
+    //                     return null;
+    //                 }
+    //                 return [
+    //                     'Id' => $acct['value'] ?? null,
+    //                     'Name' => $acct['name'] ?? null,
+    //                     'Amount' => $line['Amount'] ?? 0,
+    //                     'Description' => $line['Description'] ?? null,
+    //                 ];
+    //             })->filter()->values()->toArray();
+
+    //             $mainAccount = null;
+    //             if (!empty($purchase['AccountRef'])) {
+    //                 $mainAccount = [
+    //                     'Id' => $purchase['AccountRef']['value'] ?? null,
+    //                     'Name' => $purchase['AccountRef']['name'] ?? null,
+    //                 ];
+    //             }
+
+    //             return [
+    //                 'ExpenseId' => $purchase['Id'] ?? null,
+    //                 'VendorName' => $purchase['VendorRef']['name'] ?? ($purchase['EntityRef']['name'] ?? null),
+    //                 'VendorId' => $purchase['VendorRef']['value'] ?? ($purchase['EntityRef']['value'] ?? null),
+    //                 'TxnDate' => $purchase['TxnDate'] ?? null,
+    //                 'TotalAmount' => (float) ($purchase['TotalAmt'] ?? ($purchase['Amount'] ?? 0)),
+    //                 'Currency' => $purchase['CurrencyRef']['name'] ?? null,
+    //                 'Memo' => $purchase['Memo'] ?? null,
+    //                 'MainAccount' => $mainAccount,
+    //                 'ExpenseAccounts' => $expenseAccounts,
+    //                 'Payments' => [],
+    //             ];
+    //         });
+
+    //         // --- 5) Link payments to expenses (explicit LinkedTxn) + fuzzy fallback ---
+    //         $expensesWithPayments = $expenses->map(function ($exp) use ($normalizedPayments, $useFuzzyFallback, $fuzzyDateWindowDays, $fuzzyAmountTolerance) {
+    //             // exact matches by LinkedTxn
+    //             $linkedExact = $normalizedPayments->filter(function ($p) use ($exp) {
+    //                 if (empty($p['LinkedTxn']))
+    //                     return false;
+    //                 return collect($p['LinkedTxn'])->contains(function ($txn) use ($exp) {
+    //                     if (empty($txn['TxnId']))
+    //                         return false;
+    //                     // match by TxnId (type may vary or be null) — string compare
+    //                     return (string) $txn['TxnId'] === (string) $exp['ExpenseId'];
+    //                 });
+    //             })->values();
+
+    //             // If no explicit linked payments and fuzzy fallback enabled, perform vendor+amount+date heuristic
+    //             if ($linkedExact->isEmpty() && $useFuzzyFallback) {
+    //                 $expDate = $exp['TxnDate'] ? strtotime($exp['TxnDate']) : null;
+    //                 $linkedFuzzy = $normalizedPayments->filter(function ($p) use ($exp, $expDate, $fuzzyDateWindowDays, $fuzzyAmountTolerance) {
+    //                     // vendor must match if present
+    //                     if (!empty($exp['VendorId']) && !empty($p['VendorId']) && (string) $exp['VendorId'] !== (string) $p['VendorId']) {
+    //                         return false;
+    //                     }
+    //                     // amount must be similar within tolerance
+    //                     if ($p['TotalAmount'] === null)
+    //                         return false;
+    //                     if (abs($p['TotalAmount'] - $exp['TotalAmount']) > $fuzzyAmountTolerance) {
+    //                         return false;
+    //                     }
+    //                     // if both have dates, require within date window
+    //                     if ($expDate && !empty($p['TxnDate'])) {
+    //                         $pDate = strtotime($p['TxnDate']);
+    //                         $deltaDays = abs(($pDate - $expDate) / 86400);
+    //                         if ($deltaDays > $fuzzyDateWindowDays)
+    //                             return false;
+    //                     }
+    //                     return true;
+    //                 })->values();
+
+    //                 // prefer exact (none here), otherwise use fuzzy set
+    //                 $finalLinked = $linkedFuzzy;
+    //             } else {
+    //                 $finalLinked = $linkedExact;
+    //             }
+
+    //             $exp['Payments'] = $finalLinked;
+    //             return $exp;
+    //         });
+
+    //         // --- 6) Add diagnostics about matches ---
+    //         $diag['expenses_count'] = $expenses->count();
+    //         $diag['expenses_with_any_payment'] = $expensesWithPayments->filter(fn($e) => !empty($e['Payments']))->count();
+    //         $diag['example_expense_with_payment'] = $expensesWithPayments->first(function ($e) {
+    //             return !empty($e['Payments']);
+    //         });
+
+    //         // --- 7) Return response (includes diagnostics) ---
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'count' => $expensesWithPayments->count(),
+    //             'data' => $expensesWithPayments->values(),
+    //             'single' => collect($expensesWithPayments->values())->first(),
+    //             'diagnostics' => $diag,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => $e->getMessage(),
+    //         ]);
+    //     }
+    // }
     public function expensesWithPayments()
     {
         try {
             // --- CONFIG ---
-            // Payment-like types to fetch
             $typesToQuery = [
                 'Payment',
                 'Check',
@@ -623,19 +1878,28 @@ class QuickBooksApiController extends Controller
                 'CreditCardCredit',
                 'VendorCredit',
                 'Deposit',
-                'Purchase', // include as candidate payment
+                'Purchase',
             ];
 
-            // Fuzzy fallback config (only used when no explicit LinkedTxn matches found)
             $useFuzzyFallback = true;
-            $fuzzyDateWindowDays = 7;      // +/- days
-            $fuzzyAmountTolerance = 0.5;   // tolerance in currency units (adjust as needed)
+            $fuzzyDateWindowDays = 7;
+            $fuzzyAmountTolerance = 0.5;
 
             // --- 1) Fetch purchases (expenses) ---
             $purchasesResp = $this->runQuery("SELECT * FROM Purchase");
             $rawPurchases = $purchasesResp['QueryResponse']['Purchase'] ?? [];
 
-            // --- 2) Fetch all payment-like types and merge ---
+            // --- 2) Fetch items and accounts for product mapping ---
+            $itemsRaw = $this->runQuery("SELECT * FROM Item STARTPOSITION 1 MAXRESULTS 500");
+            $accountsRaw = $this->runQuery("SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 500");
+
+            $itemsList = collect($itemsRaw['QueryResponse']['Item'] ?? []);
+            $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
+
+            $itemsMap = $itemsList->keyBy(fn($it) => $it['Id'] ?? null)->toArray();
+            $accountsMap = $accountsList->keyBy(fn($a) => $a['Id'] ?? null)->toArray();
+
+            // --- 3) Fetch all payment-like types and merge ---
             $allRawPayments = collect();
             foreach ($typesToQuery as $type) {
                 try {
@@ -647,16 +1911,14 @@ class QuickBooksApiController extends Controller
                 }
             }
 
-            // --- Helper: Extract & normalize LinkedTxn entries robustly ---
+            // --- Helper: Extract & normalize LinkedTxn entries ---
             $extractLinkedTxn = function ($raw) {
                 $linked = [];
 
-                // 1) Top-level LinkedTxn
                 if (!empty($raw['LinkedTxn']) && is_array($raw['LinkedTxn'])) {
                     $linked = array_merge($linked, $raw['LinkedTxn']);
                 }
 
-                // 2) Inside Line[].LinkedTxn
                 if (!empty($raw['Line']) && is_array($raw['Line'])) {
                     $fromLines = collect($raw['Line'])
                         ->pluck('LinkedTxn')
@@ -667,7 +1929,6 @@ class QuickBooksApiController extends Controller
                     $linked = array_merge($linked, $fromLines);
                 }
 
-                // 3) Apply / ApplyTo / AppliedToTxn / ApplyToTxn - common alternative names
                 if (!empty($raw['Apply']) && is_array($raw['Apply'])) {
                     $linked = array_merge($linked, $raw['Apply']);
                 }
@@ -675,22 +1936,18 @@ class QuickBooksApiController extends Controller
                     $linked = array_merge($linked, $raw['AppliedToTxn']);
                 }
 
-                // 4) Also check for shapes like ['TxnId'] / ['Id'] pairs directly on the raw (rare)
                 if (isset($raw['TxnId']) && isset($raw['TxnType'])) {
                     $linked[] = ['TxnId' => $raw['TxnId'], 'TxnType' => $raw['TxnType']];
                 }
 
-                // Normalize each entry to have TxnId and TxnType keys (when possible)
                 $normalized = [];
                 foreach ($linked as $l) {
                     if (!is_array($l))
                         continue;
 
-                    // possible keys in different shapes
-                    $txnId = $l['TxnId'] ?? $l['Id'] ?? $l['AppliedToTxnId'] ?? $l['AppliedToTxnId'] ?? null;
-                    $txnType = $l['TxnType'] ?? $l['TxnTypeName'] ?? $l['Type'] ?? $l['TxnType'] ?? null;
+                    $txnId = $l['TxnId'] ?? $l['Id'] ?? $l['AppliedToTxnId'] ?? null;
+                    $txnType = $l['TxnType'] ?? $l['TxnTypeName'] ?? $l['Type'] ?? null;
 
-                    // some shapes use 'TxnId' numeric etc. cast to string for consistent comparison
                     if ($txnId !== null) {
                         $normalized[] = [
                             'TxnId' => (string) $txnId,
@@ -699,7 +1956,6 @@ class QuickBooksApiController extends Controller
                     }
                 }
 
-                // dedupe
                 $unique = [];
                 foreach ($normalized as $n) {
                     $key = ($n['TxnId'] ?? '') . '|' . ($n['TxnType'] ?? '');
@@ -710,7 +1966,7 @@ class QuickBooksApiController extends Controller
                 return array_values($unique);
             };
 
-            // --- Helper: detect payment account and vendor info ---
+            // --- Helper: Detect payment account ---
             $detectPaymentAccount = function ($raw) {
                 if (!empty($raw['CreditCardPayment']['CCAccountRef']))
                     return $raw['CreditCardPayment']['CCAccountRef'];
@@ -729,9 +1985,61 @@ class QuickBooksApiController extends Controller
                 return null;
             };
 
-            // --- 3) Normalize all payments ---
+            // --- Helper: Parse expense lines (products & accounts) ---
+            $parseExpenseLine = function ($line) use ($itemsMap, $accountsMap) {
+                $out = [];
+
+                if (!empty($line['ItemBasedExpenseLineDetail'])) {
+                    $sid = $line['ItemBasedExpenseLineDetail'];
+                    $out[] = [
+                        'DetailType' => $line['DetailType'] ?? 'ItemBasedExpenseLineDetail',
+                        'Description' => $line['Description'] ?? ($sid['ItemRef']['name'] ?? null),
+                        'Amount' => $line['Amount'] ?? 0,
+                        'Quantity' => $sid['Qty'] ?? 1,
+                        'ItemId' => $sid['ItemRef']['value'] ?? null,
+                        'ItemName' => $sid['ItemRef']['name'] ?? null,
+                        'AccountId' => null,
+                        'AccountName' => null,
+                        'RawLine' => $line,
+                        'HasProduct' => true,
+                    ];
+                    return $out;
+                }
+
+                if (!empty($line['AccountBasedExpenseLineDetail'])) {
+                    $accDetail = $line['AccountBasedExpenseLineDetail'];
+                    $out[] = [
+                        'DetailType' => $line['DetailType'] ?? 'AccountBasedExpenseLineDetail',
+                        'Description' => $line['Description'] ?? null,
+                        'Amount' => $line['Amount'] ?? 0,
+                        'Quantity' => 1,
+                        'ItemId' => null,
+                        'ItemName' => null,
+                        'AccountId' => $accDetail['AccountRef']['value'] ?? null,
+                        'AccountName' => $accDetail['AccountRef']['name'] ?? null,
+                        'RawLine' => $line,
+                        'HasProduct' => false,
+                    ];
+                    return $out;
+                }
+
+                $out[] = [
+                    'DetailType' => $line['DetailType'] ?? null,
+                    'Description' => $line['Description'] ?? null,
+                    'Amount' => $line['Amount'] ?? 0,
+                    'Quantity' => 1,
+                    'ItemId' => null,
+                    'ItemName' => null,
+                    'AccountId' => null,
+                    'AccountName' => null,
+                    'RawLine' => $line,
+                    'HasProduct' => false,
+                ];
+                return $out;
+            };
+
+            // --- 4) Normalize all payments ---
             $normalizedPayments = $allRawPayments->map(function ($raw) use ($extractLinkedTxn, $detectPaymentAccount) {
-                // vendor detection
                 $vendorId = $raw['VendorRef']['value'] ?? $raw['EntityRef']['value'] ?? $raw['PayeeRef']['value'] ?? $raw['CustomerRef']['value'] ?? null;
                 $vendorName = $raw['VendorRef']['name'] ?? $raw['EntityRef']['name'] ?? $raw['PayeeRef']['name'] ?? $raw['CustomerRef']['name'] ?? null;
 
@@ -756,44 +2064,11 @@ class QuickBooksApiController extends Controller
                 ];
             })->values();
 
-            // diagnostics pre-checks
-            $diag = [
-                'purchases_count' => count($rawPurchases),
-                'raw_payments_count' => $allRawPayments->count(),
-                'normalized_payments_count' => $normalizedPayments->count(),
-                'normalized_payments_with_linkedtxn' => $normalizedPayments->filter(fn($p) => !empty($p['LinkedTxn']))->count(),
-                'sample_normalized_payment' => $normalizedPayments->first() ? [
-                    'PaymentId' => $normalizedPayments->first()['PaymentId'] ?? null,
-                    'VendorId' => $normalizedPayments->first()['VendorId'] ?? null,
-                    'TotalAmount' => $normalizedPayments->first()['TotalAmount'] ?? null,
-                    'LinkedTxn' => $normalizedPayments->first()['LinkedTxn'] ?? [],
-                ] : null,
-            ];
-
-            // --- 4) Normalize purchases (expenses) ---
-            $expenses = collect($rawPurchases)->map(function ($purchase) {
-                $expenseAccounts = collect($purchase['Line'] ?? [])->map(function ($line) {
-                    if (!empty($line['AccountBasedExpenseLineDetail']['AccountRef'])) {
-                        $acct = $line['AccountBasedExpenseLineDetail']['AccountRef'];
-                    } elseif (!empty($line['AccountRef'])) {
-                        $acct = $line['AccountRef'];
-                    } else {
-                        return null;
-                    }
-                    return [
-                        'Id' => $acct['value'] ?? null,
-                        'Name' => $acct['name'] ?? null,
-                        'Amount' => $line['Amount'] ?? 0,
-                        'Description' => $line['Description'] ?? null,
-                    ];
-                })->filter()->values()->toArray();
-
-                $mainAccount = null;
-                if (!empty($purchase['AccountRef'])) {
-                    $mainAccount = [
-                        'Id' => $purchase['AccountRef']['value'] ?? null,
-                        'Name' => $purchase['AccountRef']['name'] ?? null,
-                    ];
+            // --- 5) Normalize purchases (expenses) ---
+            $expenses = collect($rawPurchases)->map(function ($purchase) use ($parseExpenseLine) {
+                $parsedLines = [];
+                foreach ($purchase['Line'] ?? [] as $line) {
+                    $parsedLines = array_merge($parsedLines, $parseExpenseLine($line));
                 }
 
                 return [
@@ -804,41 +2079,35 @@ class QuickBooksApiController extends Controller
                     'TotalAmount' => (float) ($purchase['TotalAmt'] ?? ($purchase['Amount'] ?? 0)),
                     'Currency' => $purchase['CurrencyRef']['name'] ?? null,
                     'Memo' => $purchase['Memo'] ?? null,
-                    'MainAccount' => $mainAccount,
-                    'ExpenseAccounts' => $expenseAccounts,
+                    'ParsedLines' => $parsedLines,
                     'Payments' => [],
+                    'RawExpense' => $purchase,
                 ];
             });
 
-            // --- 5) Link payments to expenses (explicit LinkedTxn) + fuzzy fallback ---
+            // --- 6) Link payments to expenses ---
             $expensesWithPayments = $expenses->map(function ($exp) use ($normalizedPayments, $useFuzzyFallback, $fuzzyDateWindowDays, $fuzzyAmountTolerance) {
-                // exact matches by LinkedTxn
                 $linkedExact = $normalizedPayments->filter(function ($p) use ($exp) {
                     if (empty($p['LinkedTxn']))
                         return false;
                     return collect($p['LinkedTxn'])->contains(function ($txn) use ($exp) {
                         if (empty($txn['TxnId']))
                             return false;
-                        // match by TxnId (type may vary or be null) — string compare
                         return (string) $txn['TxnId'] === (string) $exp['ExpenseId'];
                     });
                 })->values();
 
-                // If no explicit linked payments and fuzzy fallback enabled, perform vendor+amount+date heuristic
                 if ($linkedExact->isEmpty() && $useFuzzyFallback) {
                     $expDate = $exp['TxnDate'] ? strtotime($exp['TxnDate']) : null;
                     $linkedFuzzy = $normalizedPayments->filter(function ($p) use ($exp, $expDate, $fuzzyDateWindowDays, $fuzzyAmountTolerance) {
-                        // vendor must match if present
                         if (!empty($exp['VendorId']) && !empty($p['VendorId']) && (string) $exp['VendorId'] !== (string) $p['VendorId']) {
                             return false;
                         }
-                        // amount must be similar within tolerance
                         if ($p['TotalAmount'] === null)
                             return false;
                         if (abs($p['TotalAmount'] - $exp['TotalAmount']) > $fuzzyAmountTolerance) {
                             return false;
                         }
-                        // if both have dates, require within date window
                         if ($expDate && !empty($p['TxnDate'])) {
                             $pDate = strtotime($p['TxnDate']);
                             $deltaDays = abs(($pDate - $expDate) / 86400);
@@ -848,7 +2117,6 @@ class QuickBooksApiController extends Controller
                         return true;
                     })->values();
 
-                    // prefer exact (none here), otherwise use fuzzy set
                     $finalLinked = $linkedFuzzy;
                 } else {
                     $finalLinked = $linkedExact;
@@ -858,20 +2126,11 @@ class QuickBooksApiController extends Controller
                 return $exp;
             });
 
-            // --- 6) Add diagnostics about matches ---
-            $diag['expenses_count'] = $expenses->count();
-            $diag['expenses_with_any_payment'] = $expensesWithPayments->filter(fn($e) => !empty($e['Payments']))->count();
-            $diag['example_expense_with_payment'] = $expensesWithPayments->first(function ($e) {
-                return !empty($e['Payments']);
-            });
-
-            // --- 7) Return response (includes diagnostics) ---
             return response()->json([
                 'status' => 'success',
                 'count' => $expensesWithPayments->count(),
                 'data' => $expensesWithPayments->values(),
                 'single' => collect($expensesWithPayments->values())->first(),
-                'diagnostics' => $diag,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -880,162 +2139,640 @@ class QuickBooksApiController extends Controller
             ]);
         }
     }
+    // public function invoicesWithPayments()
+    // {
+    //     try {
+    //         // -----------------------
+    //         // 1) Fetch core data
+    //         // -----------------------
+    //         $invoicesRaw = $this->runQuery("SELECT * FROM Invoice");
+    //         $paymentsRaw = $this->runQuery("SELECT * FROM Payment");
+    //         $itemsRaw = $this->runQuery("SELECT * FROM Item");
+    //         $accountsRaw = $this->runQuery("SELECT * FROM Account");
 
-    public function invoicesWithPayments()
-    {
-        try {
-            // -----------------------
-            // 1) Fetch core data
-            // -----------------------
-            $invoicesRaw = $this->runQuery("SELECT * FROM Invoice");
-            $paymentsRaw = $this->runQuery("SELECT * FROM Payment");
-            $itemsRaw = $this->runQuery("SELECT * FROM Item");
-            $accountsRaw = $this->runQuery("SELECT * FROM Account");
+    //         $invoicesList = collect($invoicesRaw['QueryResponse']['Invoice'] ?? []);
+    //         $paymentsList = collect($paymentsRaw['QueryResponse']['Payment'] ?? []);
+    //         $itemsList = collect($itemsRaw['QueryResponse']['Item'] ?? []);
+    //         $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
 
-            $invoicesList = collect($invoicesRaw['QueryResponse']['Invoice'] ?? []);
-            $paymentsList = collect($paymentsRaw['QueryResponse']['Payment'] ?? []);
-            $itemsList = collect($itemsRaw['QueryResponse']['Item'] ?? []);
-            $accountsList = collect($accountsRaw['QueryResponse']['Account'] ?? []);
+    //         $itemsMap = $itemsList->keyBy(fn($it) => $it['Id'] ?? null)->toArray();
+    //         $accountsMap = $accountsList->keyBy(fn($a) => $a['Id'] ?? null)->toArray();
 
-            $itemsMap = $itemsList->keyBy(fn($it) => $it['Id'] ?? null)->toArray();
-            $accountsMap = $accountsList->keyBy(fn($a) => $a['Id'] ?? null)->toArray();
+    //         // -----------------------
+    //         // helpers
+    //         // -----------------------
+    //         $findARAccount = function () use ($accountsList) {
+    //             $ar = $accountsList->first(fn($a) => isset($a['AccountType']) && strcasecmp($a['AccountType'], 'AccountsReceivable') === 0);
+    //             if ($ar)
+    //                 return ['Id' => $ar['Id'], 'Name' => $ar['Name'] ?? null];
+    //             $ar = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'receivable') !== false);
+    //             return $ar ? ['Id' => $ar['Id'], 'Name' => $ar['Name'] ?? null] : null;
+    //         };
+    //         $findTaxPayableAccount = function () use ($accountsList) {
+    //             $found = $accountsList->first(function ($a) {
+    //                 if (isset($a['AccountType']) && strcasecmp($a['AccountType'], 'OtherCurrentLiability') === 0) {
+    //                     return (stripos($a['Name'] ?? '', 'tax') !== false) || (stripos($a['Name'] ?? '', 'payable') !== false);
+    //                 }
+    //                 return false;
+    //             });
+    //             if ($found)
+    //                 return ['Id' => $found['Id'], 'Name' => $found['Name'] ?? null];
+    //             $found = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'tax') !== false);
+    //             return $found ? ['Id' => $found['Id'], 'Name' => $found['Name'] ?? null] : null;
+    //         };
 
-            // -----------------------
-            // helpers
-            // -----------------------
-            $findARAccount = function () use ($accountsList) {
-                $ar = $accountsList->first(fn($a) => isset($a['AccountType']) && strcasecmp($a['AccountType'], 'AccountsReceivable') === 0);
-                if ($ar)
-                    return ['Id' => $ar['Id'], 'Name' => $ar['Name'] ?? null];
-                $ar = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'receivable') !== false);
-                return $ar ? ['Id' => $ar['Id'], 'Name' => $ar['Name'] ?? null] : null;
-            };
-            $findTaxPayableAccount = function () use ($accountsList) {
-                $found = $accountsList->first(function ($a) {
-                    if (isset($a['AccountType']) && strcasecmp($a['AccountType'], 'OtherCurrentLiability') === 0) {
-                        return (stripos($a['Name'] ?? '', 'tax') !== false) || (stripos($a['Name'] ?? '', 'payable') !== false);
+    //         $arAccount = $findARAccount();
+    //         $taxAccount = $findTaxPayableAccount();
+
+    //         // A small helper to detect the account for a sales-item line
+    //         $detectAccountForSalesItem = function ($sid) use ($itemsMap, $accountsMap) {
+    //             // sid = SalesItemLineDetail
+    //             if (!empty($sid['ItemAccountRef']['value'])) {
+    //                 return [
+    //                     'AccountId' => $sid['ItemAccountRef']['value'],
+    //                     'AccountName' => $sid['ItemAccountRef']['name'] ?? ($accountsMap[$sid['ItemAccountRef']['value']]['Name'] ?? null)
+    //                 ];
+    //             }
+    //             if (!empty($sid['ItemRef']['value'])) {
+    //                 $itemId = $sid['ItemRef']['value'];
+    //                 $item = $itemsMap[$itemId] ?? null;
+    //                 if ($item) {
+    //                     if (!empty($item['IncomeAccountRef']['value'])) {
+    //                         return ['AccountId' => $item['IncomeAccountRef']['value'], 'AccountName' => $item['IncomeAccountRef']['name'] ?? ($accountsMap[$item['IncomeAccountRef']['value']]['Name'] ?? null)];
+    //                     }
+    //                     if (!empty($item['ExpenseAccountRef']['value'])) {
+    //                         return ['AccountId' => $item['ExpenseAccountRef']['value'], 'AccountName' => $item['ExpenseAccountRef']['name'] ?? ($accountsMap[$item['ExpenseAccountRef']['value']]['Name'] ?? null)];
+    //                     }
+    //                     if (!empty($item['AssetAccountRef']['value'])) {
+    //                         return ['AccountId' => $item['AssetAccountRef']['value'], 'AccountName' => $item['AssetAccountRef']['name'] ?? ($accountsMap[$item['AssetAccountRef']['value']]['Name'] ?? null)];
+    //                     }
+    //                 }
+    //             }
+    //             return ['AccountId' => null, 'AccountName' => null];
+    //         };
+
+    //         // Parse one invoice line (handles GroupLine by expanding children).
+    //         $parseInvoiceLine = function ($line) use ($detectAccountForSalesItem, $itemsMap, $accountsMap) {
+    //             $out = [];
+    //             $detailType = $line['DetailType'] ?? null;
+
+    //             // Expand GroupLine children (if present). This prevents having a summary line and also child lines counted twice.
+    //             if (!empty($line['GroupLineDetail']) && !empty($line['GroupLineDetail']['Line'])) {
+    //                 foreach ($line['GroupLineDetail']['Line'] as $child) {
+    //                     // recursively parse each child (but avoid infinite recursion by not re-expanding groups in child)
+    //                     if (!empty($child['SalesItemLineDetail'])) {
+    //                         $sid = $child['SalesItemLineDetail'];
+    //                         $acc = $detectAccountForSalesItem($sid);
+    //                         $out[] = [
+    //                             'DetailType' => $child['DetailType'] ?? 'SalesItemLineDetail',
+    //                             'Description' => $child['Description'] ?? $sid['ItemRef']['name'] ?? null,
+    //                             'Amount' => $child['Amount'] ?? 0,
+    //                             'AccountId' => $acc['AccountId'],
+    //                             'AccountName' => $acc['AccountName'],
+    //                             'RawLine' => $child,
+    //                         ];
+    //                     } else {
+    //                         // for non-sales child lines, attempt to capture amount but leave account null (we'll surface these as unmapped)
+    //                         $out[] = [
+    //                             'DetailType' => $child['DetailType'] ?? null,
+    //                             'Description' => $child['Description'] ?? null,
+    //                             'Amount' => $child['Amount'] ?? 0,
+    //                             'AccountId' => null,
+    //                             'AccountName' => null,
+    //                             'RawLine' => $child,
+    //                         ];
+    //                     }
+    //                 }
+    //                 return $out;
+    //             }
+
+    //             // Normal single line
+    //             if (!empty($line['SalesItemLineDetail'])) {
+    //                 $sid = $line['SalesItemLineDetail'];
+    //                 $acc = $detectAccountForSalesItem($sid);
+    //                 $out[] = [
+    //                     'DetailType' => $line['DetailType'] ?? 'SalesItemLineDetail',
+    //                     'Description' => $line['Description'] ?? ($sid['ItemRef']['name'] ?? null),
+    //                     'Amount' => $line['Amount'] ?? 0,
+    //                     'AccountId' => $acc['AccountId'],
+    //                     'AccountName' => $acc['AccountName'],
+    //                     'RawLine' => $line,
+    //                 ];
+    //                 return $out;
+    //             }
+
+    //             // TaxLine -> handled separately by TaxTotal; still return it so we can notice unmapped tax lines if present
+    //             if (!empty($line['TaxLineDetail']) || stripos($detailType ?? '', 'Tax') !== false) {
+    //                 $out[] = [
+    //                     'DetailType' => $detailType,
+    //                     'Description' => $line['Description'] ?? null,
+    //                     'Amount' => $line['Amount'] ?? 0,
+    //                     'AccountId' => null,
+    //                     'AccountName' => null,
+    //                     'RawLine' => $line,
+    //                 ];
+    //                 return $out;
+    //             }
+
+    //             // Subtotal/Description/Other lines -> return as unmapped to avoid double counting
+    //             $out[] = [
+    //                 'DetailType' => $detailType,
+    //                 'Description' => $line['Description'] ?? null,
+    //                 'Amount' => $line['Amount'] ?? 0,
+    //                 'AccountId' => null,
+    //                 'AccountName' => null,
+    //                 'RawLine' => $line,
+    //             ];
+    //             return $out;
+    //         };
+
+    //         // -----------------------
+    //         // 2) Build invoice objects + invoice-line-level parsed lines
+    //         // -----------------------
+    //         $invoices = $invoicesList->map(function ($invoice) use ($parseInvoiceLine, $accountsMap, $arAccount, $taxAccount) {
+    //             $parsedLines = [];
+    //             foreach ($invoice['Line'] ?? [] as $line) {
+    //                 $parsedLines = array_merge($parsedLines, $parseInvoiceLine($line));
+    //             }
+
+    //             // collect unmapped (AccountId === null) separately
+    //             $unmapped = array_values(array_filter($parsedLines, fn($l) => empty($l['AccountId']) && (float) $l['Amount'] != 0.0));
+
+    //             // Invoice tax detection (TxnTaxDetail or TotalTax)
+    //             $taxTotal = 0;
+    //             if (!empty($invoice['TxnTaxDetail']['TotalTax']))
+    //                 $taxTotal = $invoice['TxnTaxDetail']['TotalTax'];
+    //             elseif (!empty($invoice['TotalTax']))
+    //                 $taxTotal = $invoice['TotalTax'];
+
+    //             $totalAmount = (float) ($invoice['TotalAmt'] ?? 0);
+
+    //             // Build reconstructed journal from invoice lines BUT only include lines with detected accountId (avoid double-counting)
+    //             $journalLines = [];
+
+    //             // Debit AR (invoice total)
+    //             if ($arAccount) {
+    //                 $journalLines[] = [
+    //                     'AccountId' => $arAccount['Id'],
+    //                     'AccountName' => $arAccount['Name'],
+    //                     'Debit' => $totalAmount,
+    //                     'Credit' => 0.0,
+    //                     'Note' => 'Accounts Receivable (invoice total)'
+    //                 ];
+    //             } else {
+    //                 $journalLines[] = [
+    //                     'AccountId' => null,
+    //                     'AccountName' => 'Accounts Receivable (not found)',
+    //                     'Debit' => $totalAmount,
+    //                     'Credit' => 0.0,
+    //                     'Note' => 'Accounts Receivable (invoice total, account not auto-detected)'
+    //                 ];
+    //             }
+
+    //             // Credit per parsed line only if AccountId is present (this prevents adding subtotal/group duplicates)
+    //             foreach ($parsedLines as $pl) {
+    //                 if ((float) $pl['Amount'] == 0.0)
+    //                     continue;
+    //                 if (empty($pl['AccountId']))
+    //                     continue; // skip unmapped lines here
+    //                 $journalLines[] = [
+    //                     'AccountId' => $pl['AccountId'],
+    //                     'AccountName' => $pl['AccountName'] ?? null,
+    //                     'Debit' => 0.0,
+    //                     'Credit' => (float) $pl['Amount'],
+    //                     'Note' => $pl['Description'] ?? 'Sales / line item'
+    //                 ];
+    //             }
+
+    //             // Tax payable (heuristic) — keep as separate credit so total credits + tax = AR debit
+    //             if ($taxTotal > 0) {
+    //                 $journalLines[] = [
+    //                     'AccountId' => $taxAccount['Id'] ?? null,
+    //                     'AccountName' => $taxAccount['Name'] ?? 'Sales Tax Payable (heuristic)',
+    //                     'Debit' => 0.0,
+    //                     'Credit' => (float) $taxTotal,
+    //                     'Note' => 'Sales/Tax payable'
+    //                 ];
+    //             }
+
+    //             $sumDebits = array_sum(array_map(fn($l) => $l['Debit'] ?? 0, $journalLines));
+    //             $sumCredits = array_sum(array_map(fn($l) => $l['Credit'] ?? 0, $journalLines));
+    //             $balanced = abs($sumDebits - $sumCredits) < 0.01;
+
+    //             return [
+    //                 'InvoiceId' => (string) ($invoice['Id'] ?? null),
+    //                 'Id' => $invoice['Id'] ?? null,
+    //                 'DocNumber' => $invoice['DocNumber'] ?? null,
+    //                 'CustomerName' => $invoice['CustomerRef']['name'] ?? null,
+    //                 'CustomerId' => $invoice['CustomerRef']['value'] ?? null,
+    //                 'TxnDate' => $invoice['TxnDate'] ?? null,
+    //                 'DueDate' => $invoice['DueDate'] ?? null,
+    //                 'TotalAmount' => $totalAmount,
+    //                 'Balance' => $invoice['Balance'] ?? 0,
+    //                 'Currency' => $invoice['CurrencyRef']['name'] ?? null,
+    //                 'Payments' => [],
+    //                 'ParsedLines' => $parsedLines,
+    //                 'UnmappedInvoiceLines' => $unmapped,
+    //                 'TaxTotal' => (float) $taxTotal,
+    //                 'ReconstructedJournal' => [
+    //                     'Source' => 'InvoiceLines',
+    //                     'Lines' => $journalLines,
+    //                     'SumDebits' => (float) $sumDebits,
+    //                     'SumCredits' => (float) $sumCredits,
+    //                     'Balanced' => $balanced,
+    //                 ],
+    //                 'RawInvoice' => $invoice,
+    //             ];
+    //         });
+
+    //         // -----------------------
+    //         // 3) Normalize payments and attach them to invoices
+    //         // -----------------------
+    //         $payments = $paymentsList->map(function ($payment) {
+    //             $linked = [];
+    //             foreach ($payment['Line'] ?? [] as $l) {
+    //                 if (!empty($l['LinkedTxn'])) {
+    //                     if (isset($l['LinkedTxn'][0]))
+    //                         $linked = array_merge($linked, $l['LinkedTxn']);
+    //                     else
+    //                         $linked[] = $l['LinkedTxn'];
+    //                 }
+    //             }
+    //             return [
+    //                 'PaymentId' => $payment['Id'] ?? null,
+    //                 'CustomerId' => $payment['CustomerRef']['value'] ?? null,
+    //                 'CustomerName' => $payment['CustomerRef']['name'] ?? null,
+    //                 'TxnDate' => $payment['TxnDate'] ?? null,
+    //                 'TotalAmount' => $payment['TotalAmt'] ?? 0,
+    //                 'PaymentMethod' => $payment['PaymentMethodRef']['name'] ?? null,
+    //                 'LinkedTxn' => $linked,
+    //                 'RawPayment' => $payment,
+    //             ];
+    //         });
+
+    //         $invoicesById = $invoices->keyBy('InvoiceId')->toArray();
+    //         foreach ($invoicesById as $invId => &$inv) {
+    //             $inv['Payments'] = collect($payments)->filter(function ($p) use ($invId) {
+    //                 return collect($p['LinkedTxn'])->contains(fn($txn) => isset($txn['TxnType'], $txn['TxnId']) && strcasecmp($txn['TxnType'], 'Invoice') === 0 && (string) $txn['TxnId'] === (string) $invId);
+    //             })->values()->toArray();
+    //         }
+    //         $invoicesWithPayments = collect($invoicesById);
+
+    //         // -----------------------
+    //         // 4) Fetch JournalEntries (paginated) for invoice date range
+    //         // -----------------------
+    //         $txnDates = $invoicesList->pluck('TxnDate')->filter()->values();
+    //         if ($txnDates->isEmpty()) {
+    //             $minDate = date('Y-m-d', strtotime('-90 days'));
+    //             $maxDate = date('Y-m-d');
+    //         } else {
+    //             $minDate = $txnDates->min();
+    //             $maxDate = $txnDates->max();
+    //         }
+
+    //         $startPosition = 1;
+    //         $maxResults = 1000;
+    //         $allJournalEntries = [];
+    //         while (true) {
+    //             $q = "SELECT * FROM JournalEntry WHERE TxnDate >= '{$minDate}' AND TxnDate <= '{$maxDate}' STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
+    //             $jesRaw = $this->runQuery($q);
+    //             $jesPage = $jesRaw['QueryResponse']['JournalEntry'] ?? [];
+    //             if (empty($jesPage))
+    //                 break;
+    //             foreach ($jesPage as $je)
+    //                 $allJournalEntries[] = $je;
+    //             if (count($jesPage) < $maxResults)
+    //                 break;
+    //             $startPosition += $maxResults;
+    //         }
+
+    //         // Index JEs by any LinkedTxn.TxnId found (may be DocNumber or Id)
+    //         $jeByLinkedTxn = [];
+    //         foreach ($allJournalEntries as $je) {
+    //             foreach ($je['Line'] ?? [] as $line) {
+    //                 $linked = $line['LinkedTxn'] ?? $line['JournalEntryLineDetail']['LinkedTxn'] ?? null;
+    //                 if (empty($linked))
+    //                     continue;
+    //                 if (isset($linked['TxnId']) && isset($linked['TxnType']))
+    //                     $linked = [$linked];
+    //                 foreach ($linked as $lt) {
+    //                     if (isset($lt['TxnType'], $lt['TxnId']) && strcasecmp($lt['TxnType'], 'Invoice') === 0) {
+    //                         $key = (string) $lt['TxnId'];
+    //                         if (!isset($jeByLinkedTxn[$key]))
+    //                             $jeByLinkedTxn[$key] = [];
+    //                         $jeByLinkedTxn[$key][] = $je;
+    //                     }
+    //                 }
+    //             }
+    //         }
+
+    //         // -----------------------
+    //         // 5) For invoices with no explicit LinkedTxn, attempt heuristic: match JE with AR line = invoice total ± tolerance, same customer (if present), date ±1 day
+    //         // -----------------------
+    //         $tolerance = 0.01;
+    //         foreach ($invoicesWithPayments as $invKey => &$invoice) {
+    //             $invoiceId = (string) $invoice['InvoiceId'];
+    //             $docNum = (string) ($invoice['DocNumber'] ?? '');
+    //             $total = (float) $invoice['TotalAmount'];
+    //             $invDate = $invoice['TxnDate'] ?? null;
+    //             $custId = (string) ($invoice['CustomerId'] ?? '');
+
+    //             // Try explicit linked txn (by Id or DocNumber)
+    //             $matchedJEs = $jeByLinkedTxn[$invoiceId] ?? [];
+    //             if (empty($matchedJEs) && $docNum !== '')
+    //                 $matchedJEs = $jeByLinkedTxn[$docNum] ?? [];
+
+    //             // Heuristic scan if none found
+    //             if (empty($matchedJEs)) {
+    //                 foreach ($allJournalEntries as $je) {
+    //                     // date within +/-1 day
+    //                     if ($invDate && !empty($je['TxnDate'])) {
+    //                         if (abs(strtotime($je['TxnDate']) - strtotime($invDate)) > 86400)
+    //                             continue;
+    //                     }
+    //                     // customer match if JE has CustomerRef
+    //                     if (!empty($je['CustomerRef']['value']) && $custId !== '') {
+    //                         if ((string) $je['CustomerRef']['value'] !== $custId)
+    //                             continue;
+    //                     }
+
+    //                     // find AR line in JE with amount ~= total
+    //                     $hasMatchingAR = false;
+    //                     foreach ($je['Line'] ?? [] as $jl) {
+    //                         $acctId = $jl['AccountRef']['value'] ?? ($jl['JournalEntryLineDetail']['AccountRef']['value'] ?? null);
+    //                         $amount = isset($jl['Amount']) ? (float) $jl['Amount'] : 0.0;
+    //                         $postingType = $jl['JournalEntryLineDetail']['PostingType'] ?? null;
+
+    //                         if ($arAccount && $acctId && (string) $acctId === (string) $arAccount['Id']) {
+    //                             if ($postingType && strcasecmp($postingType, 'Debit') === 0 && abs($amount - $total) <= $tolerance) {
+    //                                 $hasMatchingAR = true;
+    //                                 break;
+    //                             }
+    //                             if ($postingType === null && abs($amount - $total) <= $tolerance) {
+    //                                 $hasMatchingAR = true;
+    //                                 break;
+    //                             }
+    //                         } else {
+    //                             // check accountsMap for AR-typed acct
+    //                             if ($acctId && isset($accountsMap[$acctId]) && isset($accountsMap[$acctId]['AccountType']) && strcasecmp($accountsMap[$acctId]['AccountType'], 'AccountsReceivable') === 0) {
+    //                                 if ($postingType && strcasecmp($postingType, 'Debit') === 0 && abs($amount - $total) <= $tolerance) {
+    //                                     $hasMatchingAR = true;
+    //                                     break;
+    //                                 }
+    //                                 if ($postingType === null && abs($amount - $total) <= $tolerance) {
+    //                                     $hasMatchingAR = true;
+    //                                     break;
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+
+    //                     if ($hasMatchingAR) {
+    //                         $matchedJEs[] = $je;
+    //                         break; // use first match (can be changed to collect multiple)
+    //                     }
+    //                 }
+    //             }
+
+    //             // If matched JEs found, parse the JE lines into authoritative ReconstructedJournal
+    //             $invoice['LinkedJournalEntries'] = [];
+    //             $invoice['HasLinkedJournalEntry'] = !empty($matchedJEs);
+
+    //             if (!empty($matchedJEs)) {
+    //                 // compact summaries
+    //                 $invoice['LinkedJournalEntries'] = array_map(fn($je) => [
+    //                     'JournalEntryId' => $je['Id'] ?? null,
+    //                     'TxnDate' => $je['TxnDate'] ?? null,
+    //                     'TotalAmt' => $je['TotalAmt'] ?? null,
+    //                     'RawJournalEntry' => $je,
+    //                 ], $matchedJEs);
+
+    //                 // parse lines
+    //                 $mergedJournalLines = [];
+    //                 foreach ($matchedJEs as $je) {
+    //                     foreach ($je['Line'] ?? [] as $jl) {
+    //                         $amount = isset($jl['Amount']) ? (float) $jl['Amount'] : 0.0;
+    //                         $acctId = $jl['AccountRef']['value'] ?? ($jl['JournalEntryLineDetail']['AccountRef']['value'] ?? null);
+    //                         $acctName = $jl['AccountRef']['name'] ?? ($jl['JournalEntryLineDetail']['AccountRef']['name'] ?? ($accountsMap[$acctId]['Name'] ?? null));
+    //                         $postingType = $jl['JournalEntryLineDetail']['PostingType'] ?? null;
+
+    //                         $debit = 0.0;
+    //                         $credit = 0.0;
+    //                         if ($postingType) {
+    //                             if (strcasecmp($postingType, 'Debit') === 0)
+    //                                 $debit = $amount;
+    //                             elseif (strcasecmp($postingType, 'Credit') === 0)
+    //                                 $credit = $amount;
+    //                         } else {
+    //                             $acctInfo = $accountsMap[$acctId] ?? null;
+    //                             if ($acctInfo && isset($acctInfo['AccountType']) && strcasecmp($acctInfo['AccountType'], 'AccountsReceivable') === 0)
+    //                                 $debit = $amount;
+    //                             else
+    //                                 $credit = $amount;
+    //                         }
+
+    //                         $mergedJournalLines[] = [
+    //                             'AccountId' => $acctId,
+    //                             'AccountName' => $acctName,
+    //                             'Debit' => $debit,
+    //                             'Credit' => $credit,
+    //                             'Note' => $jl['Description'] ?? ($jl['JournalEntryLineDetail']['Memo'] ?? null),
+    //                         ];
+    //                     }
+    //                 }
+
+    //                 $sumDebits = array_sum(array_map(fn($l) => $l['Debit'] ?? 0, $mergedJournalLines));
+    //                 $sumCredits = array_sum(array_map(fn($l) => $l['Credit'] ?? 0, $mergedJournalLines));
+    //                 $balanced = abs($sumDebits - $sumCredits) < 0.01;
+
+    //                 // Replace invoice reconstructed journal with authoritative JE lines
+    //                 $invoice['ReconstructedJournal'] = [
+    //                     'Source' => 'JournalEntry',
+    //                     'Lines' => $mergedJournalLines,
+    //                     'SumDebits' => (float) $sumDebits,
+    //                     'SumCredits' => (float) $sumCredits,
+    //                     'Balanced' => $balanced,
+    //                 ];
+    //             }
+    //             // else: keep InvoiceLines-based ReconstructedJournal (and UnmappedInvoiceLines will show lines we could not map)
+    //         }
+
+    //         // -----------------------
+    //         // 6) Return
+    //         // -----------------------
+    //         // return response()->json([
+    //         //     'status' => 'success',
+    //         //     'count' => $invoicesWithPayments->count(),
+    //         //     'data' => array_values($invoicesWithPayments),
+    //         // ]);
+    //         return $invoicesWithPayments;
+    //         // dd($invoicesWithPayments->last(),$invoicesWithPayments->first(), $invoicesWithPayments);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => $e->getMessage(),
+    //         ]);
+    //     }
+    // }
+    
+public function invoicesWithPayments()
+{
+    try {
+        $targetInvoiceId = '43038';
+
+        // 1) Fetch the target invoice
+        $invoiceResponse = $this->runQuery("SELECT * FROM Invoice WHERE Id = '{$targetInvoiceId}'");
+        $invoiceRaw = $invoiceResponse['QueryResponse']['Invoice'][0] ?? null;
+        if (!$invoiceRaw) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Invoice {$targetInvoiceId} not found."
+            ], 404);
+        }
+
+        // 2) Fetch all payments
+        $allPayments = collect();
+        $start = 1;
+        $maxResults = 50;
+        do {
+            $response = $this->runQuery("SELECT * FROM Payment STARTPOSITION {$start} MAXRESULTS {$maxResults}");
+            $paymentsData = $response['QueryResponse']['Payment'] ?? [];
+            $allPayments = $allPayments->merge($paymentsData);
+            $fetched = count($paymentsData);
+            $start += $fetched;
+        } while ($fetched === $maxResults);
+
+        // 3) Gather all invoice IDs referenced by payments
+        $allInvoiceIds = [$targetInvoiceId];
+        foreach ($allPayments as $payment) {
+            foreach ($payment['Line'] ?? [] as $line) {
+                if (!empty($line['LinkedTxn'])) {
+                    $linked = is_array($line['LinkedTxn'][0] ?? null) ? $line['LinkedTxn'] : [$line['LinkedTxn']];
+                    foreach ($linked as $txn) {
+                        if (($txn['TxnType'] ?? null) === 'Invoice') {
+                            $allInvoiceIds[] = $txn['TxnId'];
+                        }
                     }
-                    return false;
-                });
-                if ($found)
-                    return ['Id' => $found['Id'], 'Name' => $found['Name'] ?? null];
-                $found = $accountsList->first(fn($a) => stripos($a['Name'] ?? '', 'tax') !== false);
-                return $found ? ['Id' => $found['Id'], 'Name' => $found['Name'] ?? null] : null;
-            };
+                }
+            }
+        }
+        $allInvoiceIds = array_unique($allInvoiceIds);
 
-            $arAccount = $findARAccount();
-            $taxAccount = $findTaxPayableAccount();
+        // 4) Fetch all these invoices in a single query (batch)
+        $invoicesMap = [];
+        $batchSize = 30; // QuickBooks has a limit on IN (...) queries, so batch
+        $chunks = array_chunk($allInvoiceIds, $batchSize);
 
-            // A small helper to detect the account for a sales-item line
-            $detectAccountForSalesItem = function ($sid) use ($itemsMap, $accountsMap) {
-                // sid = SalesItemLineDetail
-                if (!empty($sid['ItemAccountRef']['value'])) {
+        foreach ($chunks as $chunk) {
+            $idsStr = implode(',', array_map(fn($id) => "'{$id}'", $chunk));
+            $resp = $this->runQuery("SELECT * FROM Invoice WHERE Id IN ({$idsStr})");
+            foreach ($resp['QueryResponse']['Invoice'] ?? [] as $inv) {
+                $invoicesMap[$inv['Id']] = $inv;
+            }
+        }
+
+        // 5) Normalize payments with full invoice details
+        $normalizedPayments = $allPayments->map(function ($payment) use ($invoicesMap) {
+            $linked = [];
+            foreach ($payment['Line'] ?? [] as $line) {
+                if (!empty($line['LinkedTxn'])) {
+                    $linked = array_merge($linked, is_array($line['LinkedTxn'][0] ?? null) ? $line['LinkedTxn'] : [$line['LinkedTxn']]);
+                }
+            }
+
+            $relatedInvoices = [];
+            foreach ($linked as $txn) {
+                $txnId = $txn['TxnId'] ?? null;
+                if ($txnId && isset($invoicesMap[$txnId])) {
+                    $relatedInvoices[] = $invoicesMap[$txnId];
+                }
+            }
+
+            return [
+                'PaymentId' => $payment['Id'] ?? null,
+                'TxnDate' => $payment['TxnDate'] ?? null,
+                'TotalAmount' => $payment['TotalAmt'] ?? 0,
+                'PaymentMethod' => $payment['PaymentMethodRef']['name'] ?? null,
+                'LinkedTxn' => $linked,
+                'RelatedInvoices' => $relatedInvoices,
+                'RawPayment' => $payment,
+            ];
+        });
+
+        // 6) Attach payments relevant to target invoice
+        $paymentsForInvoice = $normalizedPayments->filter(function ($p) use ($targetInvoiceId) {
+            foreach ($p['RelatedInvoices'] as $inv) {
+                if (($inv['Id'] ?? null) === $targetInvoiceId) return true;
+            }
+            return false;
+        })->values()->toArray();
+
+        // 7) Parse invoice lines
+        $itemsRaw = $this->runQuery("SELECT * FROM Item STARTPOSITION 1 MAXRESULTS 500");
+        $accountsRaw = $this->runQuery("SELECT * FROM Account STARTPOSITION 1 MAXRESULTS 500");
+        $itemsMap = collect($itemsRaw['QueryResponse']['Item'] ?? [])->keyBy('Id')->toArray();
+        $accountsMap = collect($accountsRaw['QueryResponse']['Account'] ?? [])->keyBy('Id')->toArray();
+
+        $detectAccountForSalesItem = function ($sid) use ($itemsMap, $accountsMap) {
+            if (!empty($sid['ItemAccountRef']['value'])) {
+                return [
+                    'AccountId' => $sid['ItemAccountRef']['value'],
+                    'AccountName' => $sid['ItemAccountRef']['name'] ?? ($accountsMap[$sid['ItemAccountRef']['value']]['Name'] ?? null)
+                ];
+            }
+            if (!empty($sid['ItemRef']['value'])) {
+                $item = $itemsMap[$sid['ItemRef']['value']] ?? null;
+                if ($item && !empty($item['IncomeAccountRef']['value'])) {
                     return [
-                        'AccountId' => $sid['ItemAccountRef']['value'],
-                        'AccountName' => $sid['ItemAccountRef']['name'] ?? ($accountsMap[$sid['ItemAccountRef']['value']]['Name'] ?? null)
+                        'AccountId' => $item['IncomeAccountRef']['value'],
+                        'AccountName' => $item['IncomeAccountRef']['name'] ?? ($accountsMap[$item['IncomeAccountRef']['value']]['Name'] ?? null)
                     ];
                 }
-                if (!empty($sid['ItemRef']['value'])) {
-                    $itemId = $sid['ItemRef']['value'];
-                    $item = $itemsMap[$itemId] ?? null;
-                    if ($item) {
-                        if (!empty($item['IncomeAccountRef']['value'])) {
-                            return ['AccountId' => $item['IncomeAccountRef']['value'], 'AccountName' => $item['IncomeAccountRef']['name'] ?? ($accountsMap[$item['IncomeAccountRef']['value']]['Name'] ?? null)];
-                        }
-                        if (!empty($item['ExpenseAccountRef']['value'])) {
-                            return ['AccountId' => $item['ExpenseAccountRef']['value'], 'AccountName' => $item['ExpenseAccountRef']['name'] ?? ($accountsMap[$item['ExpenseAccountRef']['value']]['Name'] ?? null)];
-                        }
-                        if (!empty($item['AssetAccountRef']['value'])) {
-                            return ['AccountId' => $item['AssetAccountRef']['value'], 'AccountName' => $item['AssetAccountRef']['name'] ?? ($accountsMap[$item['AssetAccountRef']['value']]['Name'] ?? null)];
-                        }
+            }
+            return ['AccountId' => null, 'AccountName' => null];
+        };
+
+        $parseInvoiceLine = function ($line) use ($detectAccountForSalesItem) {
+            $out = [];
+            if (!empty($line['GroupLineDetail']['Line'])) {
+                foreach ($line['GroupLineDetail']['Line'] as $child) {
+                    if (!empty($child['SalesItemLineDetail'])) {
+                        $sid = $child['SalesItemLineDetail'];
+                        $acc = $detectAccountForSalesItem($sid);
+                        $out[] = [
+                            'Description' => $child['Description'] ?? $sid['ItemRef']['name'] ?? null,
+                            'Amount' => $child['Amount'] ?? 0,
+                            'Quantity' => $sid['Qty'] ?? 1,
+                            'AccountId' => $acc['AccountId'],
+                            'AccountName' => $acc['AccountName'],
+                            'HasProduct' => true,
+                            'RawLine' => $child,
+                        ];
                     }
                 }
-                return ['AccountId' => null, 'AccountName' => null];
-            };
+                return $out;
+            }
 
-            // Parse one invoice line (handles GroupLine by expanding children).
-            $parseInvoiceLine = function ($line) use ($detectAccountForSalesItem, $itemsMap, $accountsMap) {
-                $out = [];
-                $detailType = $line['DetailType'] ?? null;
-
-                // Expand GroupLine children (if present). This prevents having a summary line and also child lines counted twice.
-                if (!empty($line['GroupLineDetail']) && !empty($line['GroupLineDetail']['Line'])) {
-                    foreach ($line['GroupLineDetail']['Line'] as $child) {
-                        // recursively parse each child (but avoid infinite recursion by not re-expanding groups in child)
-                        if (!empty($child['SalesItemLineDetail'])) {
-                            $sid = $child['SalesItemLineDetail'];
-                            $acc = $detectAccountForSalesItem($sid);
-                            $out[] = [
-                                'DetailType' => $child['DetailType'] ?? 'SalesItemLineDetail',
-                                'Description' => $child['Description'] ?? $sid['ItemRef']['name'] ?? null,
-                                'Amount' => $child['Amount'] ?? 0,
-                                'AccountId' => $acc['AccountId'],
-                                'AccountName' => $acc['AccountName'],
-                                'RawLine' => $child,
-                            ];
-                        } else {
-                            // for non-sales child lines, attempt to capture amount but leave account null (we'll surface these as unmapped)
-                            $out[] = [
-                                'DetailType' => $child['DetailType'] ?? null,
-                                'Description' => $child['Description'] ?? null,
-                                'Amount' => $child['Amount'] ?? 0,
-                                'AccountId' => null,
-                                'AccountName' => null,
-                                'RawLine' => $child,
-                            ];
-                        }
-                    }
-                    return $out;
-                }
-
-                // Normal single line
-                if (!empty($line['SalesItemLineDetail'])) {
-                    $sid = $line['SalesItemLineDetail'];
-                    $acc = $detectAccountForSalesItem($sid);
-                    $out[] = [
-                        'DetailType' => $line['DetailType'] ?? 'SalesItemLineDetail',
-                        'Description' => $line['Description'] ?? ($sid['ItemRef']['name'] ?? null),
-                        'Amount' => $line['Amount'] ?? 0,
-                        'AccountId' => $acc['AccountId'],
-                        'AccountName' => $acc['AccountName'],
-                        'RawLine' => $line,
-                    ];
-                    return $out;
-                }
-
-                // TaxLine -> handled separately by TaxTotal; still return it so we can notice unmapped tax lines if present
-                if (!empty($line['TaxLineDetail']) || stripos($detailType ?? '', 'Tax') !== false) {
-                    $out[] = [
-                        'DetailType' => $detailType,
-                        'Description' => $line['Description'] ?? null,
-                        'Amount' => $line['Amount'] ?? 0,
-                        'AccountId' => null,
-                        'AccountName' => null,
-                        'RawLine' => $line,
-                    ];
-                    return $out;
-                }
-
-                // Subtotal/Description/Other lines -> return as unmapped to avoid double counting
+            if (!empty($line['SalesItemLineDetail'])) {
+                $sid = $line['SalesItemLineDetail'];
+                $acc = $detectAccountForSalesItem($sid);
                 $out[] = [
-                    'DetailType' => $detailType,
-                    'Description' => $line['Description'] ?? null,
+                    'Description' => $line['Description'] ?? $sid['ItemRef']['name'] ?? null,
                     'Amount' => $line['Amount'] ?? 0,
-                    'AccountId' => null,
-                    'AccountName' => null,
+                    'Quantity' => $sid['Qty'] ?? 1,
+                    'AccountId' => $acc['AccountId'],
+                    'AccountName' => $acc['AccountName'],
+                    'HasProduct' => true,
                     'RawLine' => $line,
                 ];
-                return $out;
-            };
+            }
+            return $out;
+        };
 
-            // -----------------------
-            // 2) Build invoice objects + invoice-line-level parsed lines
-            // -----------------------
-            $invoices = $invoicesList->map(function ($invoice) use ($parseInvoiceLine, $accountsMap, $arAccount, $taxAccount) {
-                $parsedLines = [];
-                foreach ($invoice['Line'] ?? [] as $line) {
-                    $parsedLines = array_merge($parsedLines, $parseInvoiceLine($line));
-                }
+        $parsedLines = [];
+        foreach ($invoiceRaw['Line'] ?? [] as $line) {
+            $parsedLines = array_merge($parsedLines, $parseInvoiceLine($line));
+        }
 
                 // collect unmapped (AccountId === null) separately
                 $unmapped = array_values(array_filter($parsedLines, fn($l) => empty($l['AccountId']) && (float) $l['Amount'] != 0.0));
@@ -1140,6 +2877,7 @@ class QuickBooksApiController extends Controller
                             $linked[] = $l['LinkedTxn'];
                     }
                 }
+
                 return [
                     'PaymentId' => $payment['Id'] ?? null,
                     'CustomerId' => $payment['CustomerRef']['value'] ?? null,
