@@ -17,8 +17,8 @@
                         </a>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ Request::route()->getName() == 'payment.index' || Request::route()->getName() == 'payment.create' || Request::route()->getName() == 'payment.edit' ? 'active' : '' }}"
-                            href="{{ route('payment.index') }}">
+                        <a class="nav-link {{ Request::route()->getName() == 'bill.payments' ? 'active' : '' }}"
+                            href="{{ route('bill.payments') }}">
                             <i class="ti ti-credit-card me-2"></i>{{ __('Bill Payments') }}
                         </a>
                     </li>

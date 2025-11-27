@@ -6,6 +6,8 @@
 @push('script-page')
     <script>
         $(document).ready(function() {
+
+
             // copy link handler from your existing code
             $('.copy_link').click(function(e) {
                 e.preventDefault();
@@ -99,9 +101,9 @@
                         '<td class="align-middle">' + dueDate + '</td>' +
                         '<td class="align-middle">' + statusHtml + '</td>' +
                         '<td class="align-middle text-end bill-amount-col">' + billAmount.toFixed(
-                        2) + '</td>' +
+                            2) + '</td>' +
                         '<td class="align-middle text-end bill-open-col">' + openBalance.toFixed(
-                        2) + '</td>' +
+                            2) + '</td>' +
                         '<td class="align-middle text-end payment-col">' +
                         '<input type="number" step="0.01" min="0" class="form-control form-control-sm payment-input" ' +
                         'value="' + paymentValue + '" name="payment_amounts[' + billId + ']">' +
@@ -265,6 +267,26 @@
 
         });
     </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const tableEl = document.querySelector(".datatable");
+
+            if (tableEl) {
+                // Destroy existing instance if your theme auto-inits
+                if (tableEl.simpleDatatables) {
+                    tableEl.simpleDatatables.destroy();
+                }
+
+                const dataTable = new simpleDatatables.DataTable(tableEl, {
+                    searchable: true,
+                    sortable: true,
+                    perPageSelect: false,
+                    paging: false, // Disable DataTables' pagination
+                });
+
+            }
+        });
+    </script>
 @endpush
 
 @section('breadcrumb')
@@ -322,6 +344,15 @@
                                 'readonly',
                             ]) }}
                         </div>
+                        {{-- Vendor --}}
+                        <div class="col-12 mb-3">
+                            {{ Form::label('vender', __('Vendor'), ['class' => 'form-label']) }}
+                            {{ Form::select('vender', $vender, request('vender'), [
+                                'class' => 'form-control select',
+                                'id' => 'vender',
+                            ]) }}
+                        </div>
+
 
                         {{-- Status --}}
                         <div class="col-12 mb-3">
@@ -330,6 +361,7 @@
                                 'class' => 'form-control select',
                             ]) }}
                         </div>
+
 
                         {{-- Buttons --}}
                         <div class="col-12 d-flex justify-content-between">
@@ -364,13 +396,16 @@
                                     <th class="text-center">
                                         <input type="checkbox" id="select-all-bills">
                                     </th>
-                                    <th> {{ __('Bill') }}</th>
-                                    <th> {{ __('Category') }}</th>
-                                    <th> {{ __('Bill Date') }}</th>
-                                    <th> {{ __('Due Date') }}</th>
-                                    <th>{{ __('Status') }}</th>
-                                    <th class="text-end">{{ __('Bill Amount') }}</th>
-                                    <th class="text-end">{{ __('Open Balance') }}</th>
+                                    <th class="text-center"> {{ __('Bill') }}</th>
+                                    <th class="text-center">{{ __('Vendor') }}</th>
+                                    {{-- <th>{{ __('	Paid Amount') }}</th> --}}
+                                    <th class="text-center">{{ __('Due Amount') }}</th>
+                                    {{-- <th> {{ __('Category') }}</th> --}}
+                                    <th class="text-center"> {{ __('Bill Date') }}</th>
+                                    <th class="text-center"> {{ __('Due Date') }}</th>
+                                    <th class="text-center">{{ __('Status') }}</th>
+                                    <th class="text-center">{{ __('Bill Amount') }}</th>
+                                    <th class="text-center">{{ __('Open Balance') }}</th>
                                     @if (Gate::check('edit bill') || Gate::check('delete bill') || Gate::check('show bill'))
                                         <th width="10%"> {{ __('Action') }}</th>
                                     @endif
@@ -382,6 +417,7 @@
                                         // compute amounts using model methods
                                         $billTotal = (float) $bill->getTotal();
                                         $billDue = (float) $bill->getDue();
+                                        // $billPaid = $billTotal - $billDue - $bill->billTotalDebitNote();
                                     @endphp
                                     <tr class="bills-main-row" data-bill-id="{{ $bill->id }}"
                                         data-bill-amount="{{ number_format($billTotal, 2, '.', '') }}"
@@ -395,8 +431,14 @@
                                             <a href="{{ route('bill.show', \Crypt::encrypt($bill->id)) }}"
                                                 class="btn btn-outline-primary bill-number">{{ AUth::user()->billNumberFormat($bill->bill_id) }}</a>
                                         </td>
-                                        <td class="bill-category align-middle">
-                                            {{ !empty($bill->category) ? $bill->category->name : '-' }}</td>
+                                        <td class="text-center align-middle">
+                                            {{ optional($bill->vender)->name ?? '-' }}
+                                        </td>
+
+                                        {{-- <td class="text-end align-middle">{{ \Auth::user()->priceFormat($billPaid) }}</td> --}}
+                                        <td class="align-middle">{{ \Auth::user()->priceFormat($billDue) }}</td>
+                                        {{-- <td class="bill-category align-middle">
+                                            {{ !empty($bill->category) ? $bill->category->name : '-' }}</td> --}}
                                         <td class="bill-date align-middle">{{ Auth::user()->dateFormat($bill->bill_date) }}
                                         </td>
                                         <td class="bill-due-date align-middle">
@@ -429,8 +471,8 @@
                                             @endif
                                         </td>
 
-                                        <td class="text-end align-middle">{{ number_format($billTotal, 2) }}</td>
-                                        <td class="text-end align-middle">{{ number_format($billDue, 2) }}</td>
+                                        <td class="align-middle">{{ number_format($billTotal, 2) }}</td>
+                                        <td class="align-middle">{{ number_format($billDue, 2) }}</td>
 
                                         @if (Gate::check('edit bill') || Gate::check('delete bill') || Gate::check('show bill'))
                                             <td class="Action align-middle">
@@ -499,13 +541,32 @@
                                         @endif
                                     </tr>
                                 @endforeach
+
                             </tbody>
+
+
                         </table>
+
+                        <div>
+                            {{ $bills->links() }}
+                        </div>
+
+
+
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    <style>
+        .text-muted.small {
+            font-size: 13px;
+            color: #6c757d !important;
+            padding-top: 8px;
+        }
+    </style>
+
+
 
     {{-- FULL SCREEN MODAL FOR PAYMENTS --}}
     <div class="modal fade" id="payBillModal" tabindex="-1" aria-labelledby="payBillModalLabel" aria-hidden="true">

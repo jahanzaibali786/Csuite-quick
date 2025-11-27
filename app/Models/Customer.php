@@ -23,6 +23,8 @@ class Customer extends Authenticatable
         'contact',
         'avatar',
         'is_active',
+        'qb_balance',
+        'balance',
         'created_by',
         'email_verified_at',
         'billing_name',
